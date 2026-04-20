@@ -24,7 +24,7 @@
     - Exhaustive unit tests added for `TemporalEngine` (fuzzy windows, late wake shifts).
     - Exhaustive unit tests added for `CollisionResolver` (safe gaps, conflict rules).
 - **Tooling:**
-    - Feature branch `feature/t2-health-sync` active.
+    - Feature branch `feature/t3-ambient-ui` active.
     - `gh` CLI integrated and authenticated.
     - Gradle wrapper missing (pending generation on local dev machine).
 
@@ -38,9 +38,14 @@
     - `phos_state.proto` defined for synchronized state.
     - `PhosStateSerializer` and `DataLayerRepository` implemented using Horologist for seamless Phone/Watch sync.
 
+## Current Implementation Status (T3 Ambient UI)
+- **Haptics:** Planning PWLE Haptic Vocabulary patterns.
+- **Wear OS:** Scaffolding Complication data sources.
+- **Phone UI:** Defining Material You vertical timeline structures.
+
 ## Next Steps
-1. Add unit tests for `AnchorManager` and `DataLayerRepository` (using mocks).
-2. Develop Wear OS haptic vocabulary prototypes (Track 3).
+1. Define "Haptic Vocabulary" using `WaveformEnvelopeBuilder` in `app-wear`.
+2. Implement Wear OS Complications.
 3. Integrate Gemini Nano for symptom correlation (Track 4).
 
 
