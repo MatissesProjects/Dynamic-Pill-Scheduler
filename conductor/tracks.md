@@ -19,7 +19,7 @@
 - [x] Setup Horologist-based cross-device DataStore sync.
 
 #### T3: Ambient UI
-- [ ] Define "Haptic Vocabulary" using `WaveformEnvelopeBuilder`.
+- [x] Define "Haptic Vocabulary" using `WaveformEnvelopeBuilder`.
 - [ ] Create Wear OS Complications for zero-tap med logging.
 - [ ] Implement Phone Dashboard with Material You vertical timeline.
 
