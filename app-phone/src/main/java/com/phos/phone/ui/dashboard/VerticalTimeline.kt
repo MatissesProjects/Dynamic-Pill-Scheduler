@@ -12,16 +12,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.phos.core.data.model.MedicationRecord
+import com.phos.core.data.proto.Medication
+import com.phos.core.data.proto.PhosState
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @Composable
 fun VerticalTimeline(
-    medications: List<MedicationRecord>,
-    tWakeEpoch: Long
+    state: PhosState
 ) {
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
 
@@ -31,10 +30,9 @@ fun VerticalTimeline(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        items(medications) { med ->
+        items(state.medicationsList) { med ->
             TimelineItem(
                 med = med,
-                scheduledTime = tWakeEpoch + med.frequencyOffset,
                 timeFormatter = timeFormatter
             )
         }
@@ -43,8 +41,7 @@ fun VerticalTimeline(
 
 @Composable
 fun TimelineItem(
-    med: MedicationRecord,
-    scheduledTime: Long,
+    med: Medication,
     timeFormatter: DateTimeFormatter
 ) {
     Row(
@@ -53,7 +50,7 @@ fun TimelineItem(
     ) {
         // Time Column
         Text(
-            text = timeFormatter.format(Instant.ofEpochMilli(scheduledTime)),
+            text = timeFormatter.format(Instant.ofEpochMilli(med.scheduledTime)),
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.width(60.dp)
         )
@@ -65,8 +62,7 @@ fun TimelineItem(
             modifier = Modifier
                 .size(12.dp)
                 .background(
-                    color = med.colorHex?.let { Color(android.graphics.Color.parseColor(it)) } 
-                        ?: MaterialTheme.colorScheme.primary,
+                    color = if (med.status == "TAKEN") Color.Gray else MaterialTheme.colorScheme.primary,
                     shape = CircleShape
                 )
         )
@@ -89,7 +85,7 @@ fun TimelineItem(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${med.dosage} • ${med.category}",
+                    text = med.status,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
