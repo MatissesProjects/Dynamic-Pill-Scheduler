@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,10 +32,43 @@ fun VerticalTimeline(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
+        if (state.lastAiInsight.isNotEmpty()) {
+            item {
+                AiInsightCard(insight = state.lastAiInsight)
+            }
+        }
+
         items(state.medicationsList) { med ->
             TimelineItem(
                 med = med,
                 timeFormatter = timeFormatter
+            )
+        }
+    }
+}
+
+@Composable
+fun AiInsightCard(insight: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = "AI Insight",
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = insight,
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }
