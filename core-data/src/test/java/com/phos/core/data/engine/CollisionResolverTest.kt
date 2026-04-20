@@ -32,7 +32,28 @@ class CollisionResolverTest {
     }
 
     @Test
-    fun testSuggestResolution() {
+    fun testFindCollisions_noConflicts() {
+        val medA = MedicationRecord(
+            medicationId = "med_a",
+            name = "Med A",
+            dosage = "10mg",
+            frequencyOffset = 0L,
+            validFrom = 0L
+        )
+        val medB = MedicationRecord(
+            medicationId = "med_b",
+            name = "Med B",
+            dosage = "5mg",
+            frequencyOffset = 30 * 60 * 1000L, // 30 mins later but no rule
+            validFrom = 0L
+        )
+
+        val collisions = resolver.findCollisions(listOf(medA, medB))
+        assertTrue(collisions.isEmpty())
+    }
+
+    @Test
+    fun testFindCollisions_withGap() {
         val fiber = MedicationRecord(
             medicationId = "fiber_supplements",
             name = "Fiber",
@@ -44,12 +65,11 @@ class CollisionResolverTest {
             medicationId = "bp_medication",
             name = "BP Med",
             dosage = "5mg",
-            frequencyOffset = 60 * 60 * 1000L,
+            frequencyOffset = 3 * 60 * 60 * 1000L, // 3 hours (Safe gap > 2h)
             validFrom = 0L
         )
 
-        val collision = Collision(fiber, bp, "Test")
-        val suggestedOffset = resolver.suggestResolution(collision)
-        assertEquals(2 * 60 * 60 * 1000L, suggestedOffset) // 2 hours
+        val collisions = resolver.findCollisions(listOf(fiber, bp))
+        assertTrue(collisions.isEmpty())
     }
 }

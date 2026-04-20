@@ -1,7 +1,7 @@
 # Tracks Registry: Dynamic Pill Scheduler (PHOS)
 | ID | Name | Description | Folder | Status |
 |----|------|-------------|--------|--------|
-| T1 | Core Engine | **Temporal Logic:** Room DB (validFrom/validTo), T-Wake logic, Collision Engine. | conductor/tracks/core-engine/ | Initializing |
+| T1 | Core Engine | **Temporal Logic:** Room DB (validFrom/validTo), T-Wake logic, Collision Engine. | conductor/tracks/core-engine/ | In Progress |
 | T2 | Health Sync | **Platform Sync:** Health Connect (SleepSession), Horologist DataStore (Protobuf). | conductor/tracks/health-sync/ | Pending |
 | T3 | Ambient UI | **Context UX:** PWLE Haptic Vocabulary, Wear OS 5 Complications, Material 3. | conductor/tracks/ambient-ui/ | Pending |
 | T4 | Edge AI | **Intelligence:** Gemini Nano AICore, micro-journaling parsing, symptom forecasting. | conductor/tracks/edge-ai/ | Pending |
@@ -9,9 +9,9 @@
 ### Track Milestones
 
 #### T1: Core Engine
-- [ ] Implement Room Entity with Temporal Versioning (`validFrom`, `validTo`).
-- [ ] Develop `T-Wake` offset calculator with unit tests.
-- [ ] Build "The Sponge Effect" Collision Resolver.
+- [x] Implement Room Entity with Temporal Versioning (`validFrom`, `validTo`).
+- [x] Develop `T-Wake` offset calculator with unit tests.
+- [x] Build "The Sponge Effect" Collision Resolver.
 
 #### T2: Health Sync
 - [ ] Initialize `HealthConnectClient` and permission workflow.
