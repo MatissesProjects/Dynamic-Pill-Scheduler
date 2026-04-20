@@ -10,6 +10,8 @@ data class MedicationRecord(
     val name: String,
     val dosage: String,
     val frequencyOffset: Long, // Offset in milliseconds from T-Wake
+    val colorHex: String? = null, // Material You theme primary color
+    val category: String? = "General", // e.g., "Heart", "Supplements", "Pain"
     
     // Temporal Versioning
     val validFrom: Long,
