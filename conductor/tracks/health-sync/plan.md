@@ -8,7 +8,7 @@ Integrate Android Health Connect to automate `T-Wake` anchoring via `SleepSessio
 - [x] Initialize `HealthConnectClient` and permission request flow
 - [x] Implement `HealthSyncManager` to query `SleepSessionRecord`
 - [x] Implement `T-Wake` auto-anchoring logic (latest sleep session end time)
-- [/] Configure Horologist DataStore for Wear OS <-> Phone synchronization (Proto defined, placeholder manager)
+- [x] Configure Horologist DataStore for Wear OS <-> Phone synchronization
 - [ ] Unit/Integration tests for record polling and sync logic
 
 ## Verification Plan

@@ -18,25 +18,39 @@ class HealthSyncManager(private val context: Context) {
     )
 
     suspend fun hasPermissions(): Boolean {
-        val granted = healthConnectClient.permissionController.getGrantedPermissions()
-        return granted.containsAll(permissions)
+        return try {
+            val granted = healthConnectClient.permissionController.getGrantedPermissions()
+            granted.containsAll(permissions)
+        } catch (e: Exception) {
+            // Log error or handle specific exceptions like API unavailable
+            false
+        }
     }
 
     /**
      * Fetches the latest sleep session end time to use as T-Wake.
+     * @return Instant? the end time of the latest sleep session, or null if no data or no permissions.
      */
     suspend fun fetchLatestTWake(): Instant? {
-        if (!hasPermissions()) return null
+        try {
+            if (!hasPermissions()) return null
 
-        val request = ReadRecordsRequest(
-            recordType = SleepSessionRecord::class,
-            timeRangeFilter = TimeRangeFilter.between(
-                Instant.now().minus(24, ChronoUnit.HOURS),
-                Instant.now()
+            val request = ReadRecordsRequest(
+                recordType = SleepSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(
+                    Instant.now().minus(24, ChronoUnit.HOURS),
+                    Instant.now()
+                )
             )
-        )
 
-        val response = healthConnectClient.readRecords(request)
-        return response.records.maxByOrNull { it.endTime }?.endTime
+            val response = healthConnectClient.readRecords(request)
+            // Filtering for valid sessions (at least 1 hour) to avoid naps/noise
+            return response.records
+                .filter { ChronoUnit.MINUTES.between(it.startTime, it.endTime) > 60 }
+                .maxByOrNull { it.endTime }?.endTime
+        } catch (e: Exception) {
+            // Handle specific Health Connect errors
+            return null
+        }
     }
 }
