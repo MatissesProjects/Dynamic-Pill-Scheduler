@@ -24,13 +24,23 @@
     - Exhaustive unit tests added for `TemporalEngine` (fuzzy windows, late wake shifts).
     - Exhaustive unit tests added for `CollisionResolver` (safe gaps, conflict rules).
 - **Tooling:**
-    - Feature branch `feature/t1-core-engine` active and pushed.
+    - Feature branch `feature/t2-health-sync` active.
     - `gh` CLI integrated and authenticated.
-    - Pull Request #1 created for Core Engine review.
-    - Gradle wrapper and CI environment verification pending.
+    - Gradle wrapper missing (pending generation on local dev machine).
+
+## Current Implementation Status (T2 Health Sync)
+- **Health Connect:**
+    - Dependencies and Manifest permissions (`READ_SLEEP`) added.
+    - `HealthSyncManager` implemented for `SleepSessionRecord` polling.
+- **T-Wake Anchoring:**
+    - `AnchorManager` implemented for automated database updates from Health Connect.
+- **Cross-Device Sync:**
+    - `phos_state.proto` defined for synchronized state.
+    - `DataLayerSyncManager` (placeholder) initialized with Horologist.
 
 ## Next Steps
-1. Verify Gradle build and run unit tests.
-2. Initialize `HealthConnectClient` in `core-data` for T-Wake sync.
-3. Develop Wear OS haptic vocabulary prototypes.
+1. Complete Horologist DataStore implementation (Serializers).
+2. Develop Wear OS haptic vocabulary prototypes.
+3. Integrate Gemini Nano for symptom correlation.
+
 

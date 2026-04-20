@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option java_package = "com.phos.core.data.proto";
+option java_multiple_files = true;
+
+message PhosState {
+  long t_wake_epoch = 1;
+  repeated Medication medications = 2;
+}
+
+message Medication {
+  string id = 1;
+  string name = 2;
+  long scheduled_time = 3;
+  string status = 4;
+}
