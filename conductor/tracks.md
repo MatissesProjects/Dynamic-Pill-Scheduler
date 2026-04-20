@@ -15,7 +15,7 @@
 
 #### T2: Health Sync
 - [x] Initialize `HealthConnectClient` and permission workflow.
-- [ ] Automate `SleepSessionRecord` polling for T-Wake anchoring.
+- [x] Automate `SleepSessionRecord` polling for T-Wake anchoring.
 - [ ] Setup Horologist-based cross-device DataStore sync.
 
 #### T3: Ambient UI
