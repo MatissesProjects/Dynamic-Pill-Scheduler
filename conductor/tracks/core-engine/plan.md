@@ -5,11 +5,11 @@ Implement the core temporal logic, Room database with versioning, and the collis
 
 ## Implementation Steps
 - [x] Initialize Android Project Structure (Multi-module)
-- [ ] Configure `core-data` module with Room and dependencies
-- [ ] Implement Room Entities with Temporal Versioning (`validFrom`, `validTo`)
-- [ ] Implement `T-Wake` logic and Offset Calculator
-- [ ] Implement "The Sponge Effect" Collision Resolver
-- [ ] Unit tests for Temporal and Collision logic
+- [x] Configure `core-data` module with Room and dependencies
+- [x] Implement Room Entities with Temporal Versioning (`validFrom`, `validTo`)
+- [x] Implement `T-Wake` logic and Offset Calculator
+- [x] Implement "The Sponge Effect" Collision Resolver
+- [ ] Unit tests for Temporal and Collision logic (Tests written, need execution environment)
 
 ## Verification Plan
 - Unit tests for `T-Wake` shift calculations.
