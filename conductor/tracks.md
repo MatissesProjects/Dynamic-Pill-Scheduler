@@ -1,0 +1,29 @@
+# Tracks Registry: Dynamic Pill Scheduler (PHOS)
+| ID | Name | Description | Folder | Status |
+|----|------|-------------|--------|--------|
+| T1 | Core Engine | **Temporal Logic:** Room DB (validFrom/validTo), T-Wake logic, Collision Engine. | conductor/tracks/core-engine/ | Initializing |
+| T2 | Health Sync | **Platform Sync:** Health Connect (SleepSession), Horologist DataStore (Protobuf). | conductor/tracks/health-sync/ | Pending |
+| T3 | Ambient UI | **Context UX:** PWLE Haptic Vocabulary, Wear OS 5 Complications, Material 3. | conductor/tracks/ambient-ui/ | Pending |
+| T4 | Edge AI | **Intelligence:** Gemini Nano AICore, micro-journaling parsing, symptom forecasting. | conductor/tracks/edge-ai/ | Pending |
+
+### Track Milestones
+
+#### T1: Core Engine
+- [ ] Implement Room Entity with Temporal Versioning (`validFrom`, `validTo`).
+- [ ] Develop `T-Wake` offset calculator with unit tests.
+- [ ] Build "The Sponge Effect" Collision Resolver.
+
+#### T2: Health Sync
+- [ ] Initialize `HealthConnectClient` and permission workflow.
+- [ ] Automate `SleepSessionRecord` polling for T-Wake anchoring.
+- [ ] Setup Horologist-based cross-device DataStore sync.
+
+#### T3: Ambient UI
+- [ ] Define "Haptic Vocabulary" using `WaveformEnvelopeBuilder`.
+- [ ] Create Wear OS Complications for zero-tap med logging.
+- [ ] Implement Phone Dashboard with Material You vertical timeline.
+
+#### T4: Edge AI
+- [ ] Integrate ML Kit GenAI Prompt API for on-device inference.
+- [ ] Develop prompt templates for barometric-to-symptom correlation.
+- [ ] Build the "Jet Lag Simulator" titration logic.
