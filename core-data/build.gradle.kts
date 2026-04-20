@@ -31,10 +31,13 @@ android {
 
 dependencies {
     val roomVersion = "2.6.1"
+    val healthConnectVersion = "1.1.0-alpha11"
 
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     kapt("androidx.room:room-compiler:$roomVersion")
+
+    implementation("androidx.health.connect:connect-client:$healthConnectVersion")
 
     implementation("androidx.core:core-ktx:1.12.0")
     testImplementation("junit:junit:4.13.2")

@@ -2,7 +2,7 @@
 | ID | Name | Description | Folder | Status |
 |----|------|-------------|--------|--------|
 | T1 | Core Engine | **Temporal Logic:** Room DB (validFrom/validTo), T-Wake logic, Collision Engine. | conductor/tracks/core-engine/ | Completed |
-| T2 | Health Sync | **Platform Sync:** Health Connect (SleepSession), Horologist DataStore (Protobuf). | conductor/tracks/health-sync/ | Pending |
+| T2 | Health Sync | **Platform Sync:** Health Connect (SleepSession), Horologist DataStore (Protobuf). | conductor/tracks/health-sync/ | In Progress |
 | T3 | Ambient UI | **Context UX:** PWLE Haptic Vocabulary, Wear OS 5 Complications, Material 3. | conductor/tracks/ambient-ui/ | Pending |
 | T4 | Edge AI | **Intelligence:** Gemini Nano AICore, micro-journaling parsing, symptom forecasting. | conductor/tracks/edge-ai/ | Pending |
 
@@ -14,7 +14,7 @@
 - [x] Build "The Sponge Effect" Collision Resolver.
 
 #### T2: Health Sync
-- [ ] Initialize `HealthConnectClient` and permission workflow.
+- [x] Initialize `HealthConnectClient` and permission workflow.
 - [ ] Automate `SleepSessionRecord` polling for T-Wake anchoring.
 - [ ] Setup Horologist-based cross-device DataStore sync.
 
