@@ -10,5 +10,6 @@ data class DoseLog(
     val scheduledTime: Long, // Epoch millis
     val actualTime: Long?, // Epoch millis, null if not taken yet
     val status: String, // "PENDING", "TAKEN", "SKIPPED", "SNOOZED"
+    val symptomSeverity: Int? = null, // 0-10 scale for T4 AI correlation
     val notes: String? = null
 )
