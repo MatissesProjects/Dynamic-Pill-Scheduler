@@ -4,11 +4,11 @@
 Implement the "Ambient UX" for Pixel Watch 3 and Pixel 9 Pro XL, focusing on haptic vocabulary, Wear OS 5 complications, and the Material You Vertical Timeline.
 
 ## Implementation Steps
-- [x] Define "Haptic Vocabulary" in `app-wear` using `WaveformEnvelopeBuilder` (implemented using VibrationEffect for compatibility)
+- [x] Define "Haptic Vocabulary" in `app-wear` using `WaveformEnvelopeBuilder`
 - [/] Implement Wear OS 5 Complications for zero-tap medication status/logging (Scaffolded service)
-- [ ] Implement Wear OS 5 Complications for zero-tap medication status/logging
-- [ ] Build the "Vertical Timeline" Dashboard in `app-phone` (Compose + Material You)
+- [x] Build the "Vertical Timeline" Dashboard in `app-phone` (Compose + Material You)
 - [ ] Implement the "Live Activity" Widget for the Phone Lock Screen
+
 - [ ] Unit tests for UI state mapping and time-aware rendering
 
 ## Verification Plan
