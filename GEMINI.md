@@ -24,7 +24,7 @@
     - Exhaustive unit tests added for `TemporalEngine` (fuzzy windows, late wake shifts).
     - Exhaustive unit tests added for `CollisionResolver` (safe gaps, conflict rules).
 - **Tooling:**
-    - Feature branch `feature/t3-ambient-ui` active.
+    - Feature branch `feature/t3-refinement-realtime` active.
     - `gh` CLI integrated and authenticated.
     - Gradle wrapper missing (pending generation on local dev machine).
 
@@ -39,13 +39,14 @@
     - `PhosStateSerializer` and `DataLayerRepository` implemented using Horologist for seamless Phone/Watch sync.
 
 ## Current Implementation Status (T3 Ambient UI)
-- **Haptics:** Planning PWLE Haptic Vocabulary patterns.
-- **Wear OS:** Scaffolding Complication data sources.
-- **Phone UI:** Defining Material You vertical timeline structures.
+- **Haptics:** PWLE Haptic Vocabulary patterns implemented in `app-wear`.
+- **Wear OS:** Complication service integrated with real-time DataStore.
+- **Phone UI:** 
+    - Vertical timeline Dashboard fully data-integrated.
+    - "Biometric Dashboard" Widget fully data-integrated via Jetpack Glance.
 
 ## Next Steps
-1. Define "Haptic Vocabulary" using `WaveformEnvelopeBuilder` in `app-wear`.
-2. Implement Wear OS Complications.
-3. Integrate Gemini Nano for symptom correlation (Track 4).
+1. Add unit tests for UI state mapping and time-aware rendering.
+2. Integrate Gemini Nano for symptom correlation (Track 4).
 
 

@@ -20,8 +20,8 @@
 
 #### T3: Ambient UI
 - [x] Define "Haptic Vocabulary" using `WaveformEnvelopeBuilder`.
-- [ ] Create Wear OS Complications for zero-tap med logging.
-- [ ] Implement Phone Dashboard with Material You vertical timeline.
+- [x] Create Wear OS Complications for zero-tap med logging.
+- [x] Implement Phone Dashboard with Material You vertical timeline.
 
 #### T4: Edge AI
 - [ ] Integrate ML Kit GenAI Prompt API for on-device inference.
