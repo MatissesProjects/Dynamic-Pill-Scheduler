@@ -1,37 +1,47 @@
 package com.phos.core.data.engine
 
+import com.phos.core.data.model.Collision
+import com.phos.core.data.model.FoodLog
+import com.phos.core.data.model.InteractionRule
+import com.phos.core.data.model.InteractionSeverity
 import com.phos.core.data.model.MedicationRecord
 import kotlin.math.abs
 
 data class Collision(
     val medicationA: MedicationRecord,
-    val medicationB: MedicationRecord,
-    val reason: String
+    val otherId: String, // Can be medicationId or foodId
+    val otherName: String,
+    val reason: String,
+    val severity: InteractionSeverity = InteractionSeverity.WARNING
 )
 
-class CollisionResolver {
+class CollisionResolver(
+    private val rules: List<InteractionRule> = emptyList()
+) {
     
-    // Example rules: medicationId to set of conflicting medicationIds
-    private val conflictRules = mapOf(
-        "fiber_supplements" to setOf("bp_medication", "heart_medication")
-    )
-    
-    private val MIN_GAP_MILLIS = 2 * 60 * 60 * 1000 // 2 hours
+    private val DEFAULT_GAP_MILLIS = 2 * 60 * 60 * 1000L // 2 hours default
 
     /**
-     * Checks for collisions between a list of medications based on their scheduled offsets.
+     * Checks for collisions between medications.
      */
-    fun findCollisions(medications: List<MedicationRecord>): List<Collision> {
+    fun findMedicationCollisions(medications: List<MedicationRecord>): List<Collision> {
         val collisions = mutableListOf<Collision>()
         for (i in medications.indices) {
             for (j in i + 1 until medications.size) {
                 val medA = medications[i]
                 val medB = medications[j]
                 
-                if (areConflicting(medA, medB)) {
+                val rule = findRule(medA.medicationId, medB.medicationId)
+                if (rule != null) {
                     val gap = abs(medA.frequencyOffset - medB.frequencyOffset)
-                    if (gap < MIN_GAP_MILLIS) {
-                        collisions.add(Collision(medA, medB, "Sponge Effect: Meds taken too close together (< 2 hours)"))
+                    if (gap < rule.gapMillis) {
+                        collisions.add(Collision(
+                            medA, 
+                            medB.medicationId, 
+                            medB.name,
+                            rule.reason,
+                            rule.severity
+                        ))
                     }
                 }
             }
@@ -39,16 +49,49 @@ class CollisionResolver {
         return collisions
     }
 
-    private fun areConflicting(medA: MedicationRecord, medB: MedicationRecord): Boolean {
-        return conflictRules[medA.medicationId]?.contains(medB.medicationId) == true ||
-               conflictRules[medB.medicationId]?.contains(medA.medicationId) == true
+    /**
+     * Checks for collisions between medications and recently consumed food.
+     * @param twakeMillis The absolute timestamp of today's T-Wake.
+     */
+    fun findFoodCollisions(
+        medications: List<MedicationRecord>, 
+        foodLogs: List<FoodLog>,
+        twakeMillis: Long
+    ): List<Collision> {
+        val collisions = mutableListOf<Collision>()
+        for (med in medications) {
+            val medAbsoluteTime = twakeMillis + med.frequencyOffset
+            
+            for (food in foodLogs) {
+                val rule = findRule(med.medicationId, food.foodId)
+                if (rule != null) {
+                    val gap = abs(medAbsoluteTime - food.timestamp)
+                    if (gap < rule.gapMillis) {
+                        collisions.add(Collision(
+                            med,
+                            food.foodId,
+                            food.name,
+                            rule.reason,
+                            rule.severity
+                        ))
+                    }
+                }
+            }
+        }
+        return collisions
+    }
+
+    private fun findRule(idA: String, idB: String): InteractionRule? {
+        return rules.find { 
+            (it.sourceId == idA && it.targetId == idB) || 
+            (it.sourceId == idB && it.targetId == idA) 
+        }
     }
     
     /**
-     * Suggests a new offset for medication B to resolve the collision.
+     * Suggests a new absolute timestamp or offset for medication to resolve the collision.
      */
-    fun suggestResolution(collision: Collision): Long {
-        // Simple strategy: push medB further out
-        return collision.medicationA.frequencyOffset + MIN_GAP_MILLIS
+    fun suggestResolution(medication: MedicationRecord, collisionSourceTime: Long, requiredGap: Long): Long {
+        return collisionSourceTime + requiredGap
     }
 }
