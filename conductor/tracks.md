@@ -6,6 +6,11 @@
 | T3 | Ambient UI | **Context UX:** PWLE Haptic Vocabulary, Wear OS 5 Complications, Material 3. | conductor/tracks/ambient-ui/ | Completed |
 | T4 | Edge AI | **Intelligence:** Gemini Nano AICore, micro-journaling parsing, symptom forecasting. | conductor/tracks/edge-ai/ | Completed |
 | T5 | Dynamic Titration | **Safety:** HR-based alert suppression, Jet Lag titration, predictive BP modeling. | conductor/tracks/dynamic-titration/ | Completed |
+| T6 | Bio-Interaction Engine | **Safety Expansion:** Food interactions, Fuzzy Window stress optimization. | conductor/tracks/bio-interaction/ | Completed |
+| T7 | Geo-Contextual Awareness | **Context:** Proximity alerts, Location-Anchored Doses (Geofencing). | conductor/tracks/geo-context/ | Planned |
+| T8 | Data Sovereignty & Reporting | **Export:** On-device PDF generation, secure Intent sharing for doctors. | conductor/tracks/reporting/ | Planned |
+| T9 | Zero-Touch Wearable | **Ambient UI:** Smart wrist-flick actions, gesture-based logging on Wear OS. | conductor/tracks/wearable-gestures/ | Planned |
+| T10 | Automated Dose Detection | **Sensor Fusion:** Detect hand-to-mouth gesture via Watch for auto-logging. | conductor/tracks/auto-detection/ | Planned |
 
 ### Track Milestones
 
@@ -33,3 +38,30 @@
 - [x] Implement `PhysiologicalSuppressor` for HR-based fuzzy windows.
 - [x] Build `JetLagManager` for multi-day titration schedules.
 - [x] Enhance AI engine with predictive sleep-debt modeling.
+
+#### T6: Bio-Interaction Engine
+- [x] Define `InteractionRule` entities for food interactions (e.g., Grapefruit).
+- [x] Update `CollisionResolver` with food-related safety rules.
+- [x] Enhance `PhysiologicalSuppressor` for HR-aware Fuzzy Window optimization.
+
+#### T7: Geo-Contextual Awareness
+- [ ] Integrate Geofencing/Location APIs into `app-phone`.
+- [ ] Implement Home boundary proximity alerts for missed T-Wake doses.
+- [ ] Build Location-Anchored dose scheduling in `TemporalEngine`.
+
+#### T8: Data Sovereignty & Reporting
+- [ ] Build SQLite data aggregation query for 30-day health metrics.
+- [ ] Implement on-device visual PDF generation.
+- [ ] Integrate Android ShareSheet (`Intent.ACTION_SEND`) for secure export.
+
+#### T9: Zero-Touch Wearable Interaction
+- [ ] Implement Pixel Watch 3 accelerometer gesture recognition.
+- [ ] Map "Smart Wrist-Flick" to "Dose Taken" action.
+- [ ] Map "Wrist-Shake" to "Snooze Dose" action.
+
+#### T10: Automated Dose Detection
+- [ ] Implement Wear OS background sensor listener (accelerometer/gyro).
+- [ ] Build hand-to-mouth gesture classifier (heuristic or TFLite).
+- [ ] Integrate gesture detection with Fuzzy Window validation.
+- [ ] Add Auto-Logging toggle in phone app settings.
+
