@@ -7,8 +7,8 @@
 | T4 | Edge AI | **Intelligence:** Gemini Nano AICore, micro-journaling parsing, symptom forecasting. | conductor/tracks/edge-ai/ | Completed |
 | T5 | Dynamic Titration | **Safety:** HR-based alert suppression, Jet Lag titration, predictive BP modeling. | conductor/tracks/dynamic-titration/ | Completed |
 | T6 | Bio-Interaction Engine | **Safety Expansion:** Food interactions, Fuzzy Window stress optimization. | conductor/tracks/bio-interaction/ | Completed |
-| T7 | Geo-Contextual Awareness | **Context:** Proximity alerts, Location-Anchored Doses (Geofencing). | conductor/tracks/geo-context/ | Planned |
-| T8 | Data Sovereignty & Reporting | **Export:** On-device PDF generation, secure Intent sharing for doctors. | conductor/tracks/reporting/ | Planned |
+| T7 | Geo-Contextual Awareness | **Context:** Proximity alerts, Location-Anchored Doses (Geofencing). | conductor/tracks/geo-context/ | Completed |
+| T8 | Data Sovereignty & Reporting | **Export:** On-device PDF generation, secure Intent sharing for doctors. | conductor/tracks/reporting/ | Completed |
 | T9 | Zero-Touch Wearable | **Ambient UI:** Smart wrist-flick actions, gesture-based logging on Wear OS. | conductor/tracks/wearable-gestures/ | Planned |
 | T10 | Automated Dose Detection | **Sensor Fusion:** Detect hand-to-mouth gesture via Watch for auto-logging. | conductor/tracks/auto-detection/ | Planned |
 
@@ -45,14 +45,14 @@
 - [x] Enhance `PhysiologicalSuppressor` for HR-aware Fuzzy Window optimization.
 
 #### T7: Geo-Contextual Awareness
-- [ ] Integrate Geofencing/Location APIs into `app-phone`.
-- [ ] Implement Home boundary proximity alerts for missed T-Wake doses.
-- [ ] Build Location-Anchored dose scheduling in `TemporalEngine`.
+- [x] Integrate Geofencing/Location APIs into `app-phone`.
+- [x] Implement Home boundary proximity alerts for missed T-Wake doses.
+- [x] Build Location-Anchored dose scheduling in `TemporalEngine`.
 
 #### T8: Data Sovereignty & Reporting
-- [ ] Build SQLite data aggregation query for 30-day health metrics.
-- [ ] Implement on-device visual PDF generation.
-- [ ] Integrate Android ShareSheet (`Intent.ACTION_SEND`) for secure export.
+- [x] Build SQLite data aggregation query for 30-day health metrics.
+- [x] Implement on-device visual PDF generation.
+- [x] Integrate Android ShareSheet (`Intent.ACTION_SEND`) for secure export.
 
 #### T9: Zero-Touch Wearable Interaction
 - [ ] Implement Pixel Watch 3 accelerometer gesture recognition.
@@ -64,4 +64,3 @@
 - [ ] Build hand-to-mouth gesture classifier (heuristic or TFLite).
 - [ ] Integrate gesture detection with Fuzzy Window validation.
 - [ ] Add Auto-Logging toggle in phone app settings.
-
