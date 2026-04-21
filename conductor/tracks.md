@@ -12,7 +12,7 @@
 | T9 | Zero-Touch Wearable | **Ambient UI:** Smart wrist-flick actions, gesture-based logging on Wear OS. | conductor/tracks/wearable-gestures/ | Completed |
 | T10 | Automated Dose Detection | **Sensor Fusion:** Detect hand-to-mouth gesture via Watch for auto-logging. | conductor/tracks/auto-detection/ | Completed |
 | T11 | Biometric Digital Twin | **Modeling:** Gemini Nano baseline vs. real-time physiological response. | conductor/tracks/digital-twin/ | Completed |
-| T12 | Predictive Inventory | **Supply Chain:** Adherence-aware pill tracking and auto-refill prediction. | conductor/tracks/inventory/ | Planned |
+| T12 | Predictive Inventory | **Supply Chain:** Adherence-aware pill tracking and auto-refill prediction. | conductor/tracks/inventory/ | Completed |
 
 ### Track Milestones
 
@@ -73,6 +73,6 @@
 - [x] Develop AI prompt templates for anomaly detection.
 
 #### T12: Predictive Inventory
-- [ ] Implement adherence-aware pill decrement logic.
-- [ ] Build depletion-date prediction engine.
-- [ ] Integrate "Refill Intelligence" with Android ShareSheet.
+- [x] Implement adherence-aware pill decrement logic.
+- [x] Build depletion-date prediction engine.
+- [x] Integrate "Refill Intelligence" with Android ShareSheet.
