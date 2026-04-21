@@ -11,7 +11,7 @@
 | T8 | Data Sovereignty & Reporting | **Export:** On-device PDF generation, secure Intent sharing for doctors. | conductor/tracks/reporting/ | Completed |
 | T9 | Zero-Touch Wearable | **Ambient UI:** Smart wrist-flick actions, gesture-based logging on Wear OS. | conductor/tracks/wearable-gestures/ | Completed |
 | T10 | Automated Dose Detection | **Sensor Fusion:** Detect hand-to-mouth gesture via Watch for auto-logging. | conductor/tracks/auto-detection/ | Completed |
-| T11 | Biometric Digital Twin | **Modeling:** Gemini Nano baseline vs. real-time physiological response. | conductor/tracks/digital-twin/ | Planned |
+| T11 | Biometric Digital Twin | **Modeling:** Gemini Nano baseline vs. real-time physiological response. | conductor/tracks/digital-twin/ | Completed |
 | T12 | Predictive Inventory | **Supply Chain:** Adherence-aware pill tracking and auto-refill prediction. | conductor/tracks/inventory/ | Planned |
 
 ### Track Milestones
@@ -68,9 +68,9 @@
 - [x] Add Auto-Logging toggle in phone app settings.
 
 #### T11: Biometric Digital Twin
-- [ ] Define `BiometricBaseline` schema for per-medication modeling.
-- [ ] Implement "Ghost Stream" expected-response simulation.
-- [ ] Develop AI prompt templates for anomaly detection.
+- [x] Define `BiometricBaseline` schema for per-medication modeling.
+- [x] Implement "Ghost Stream" expected-response simulation.
+- [x] Develop AI prompt templates for anomaly detection.
 
 #### T12: Predictive Inventory
 - [ ] Implement adherence-aware pill decrement logic.

@@ -15,9 +15,11 @@ import com.phos.core.data.model.*
         InteractionRule::class,
         FoodLog::class,
         GeoBoundary::class,
-        LocationAnchor::class
+        LocationAnchor::class,
+        BiometricLog::class,
+        BiometricBaseline::class
     ],
-    version = 4
+    version = 5
 )
 abstract class PhosDatabase : RoomDatabase() {
     abstract fun medicationDao(): MedicationDao
@@ -26,4 +28,5 @@ abstract class PhosDatabase : RoomDatabase() {
     abstract fun interactionDao(): InteractionDao
     abstract fun geoDao(): GeoDao
     abstract fun reportingDao(): ReportingDao
+    abstract fun biometricDao(): BiometricDao
 }
