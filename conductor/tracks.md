@@ -9,8 +9,8 @@
 | T6 | Bio-Interaction Engine | **Safety Expansion:** Food interactions, Fuzzy Window stress optimization. | conductor/tracks/bio-interaction/ | Completed |
 | T7 | Geo-Contextual Awareness | **Context:** Proximity alerts, Location-Anchored Doses (Geofencing). | conductor/tracks/geo-context/ | Completed |
 | T8 | Data Sovereignty & Reporting | **Export:** On-device PDF generation, secure Intent sharing for doctors. | conductor/tracks/reporting/ | Completed |
-| T9 | Zero-Touch Wearable | **Ambient UI:** Smart wrist-flick actions, gesture-based logging on Wear OS. | conductor/tracks/wearable-gestures/ | Planned |
-| T10 | Automated Dose Detection | **Sensor Fusion:** Detect hand-to-mouth gesture via Watch for auto-logging. | conductor/tracks/auto-detection/ | Planned |
+| T9 | Zero-Touch Wearable | **Ambient UI:** Smart wrist-flick actions, gesture-based logging on Wear OS. | conductor/tracks/wearable-gestures/ | Completed |
+| T10 | Automated Dose Detection | **Sensor Fusion:** Detect hand-to-mouth gesture via Watch for auto-logging. | conductor/tracks/auto-detection/ | Completed |
 
 ### Track Milestones
 
@@ -55,12 +55,12 @@
 - [x] Integrate Android ShareSheet (`Intent.ACTION_SEND`) for secure export.
 
 #### T9: Zero-Touch Wearable Interaction
-- [ ] Implement Pixel Watch 3 accelerometer gesture recognition.
-- [ ] Map "Smart Wrist-Flick" to "Dose Taken" action.
-- [ ] Map "Wrist-Shake" to "Snooze Dose" action.
+- [x] Implement Pixel Watch 3 accelerometer gesture recognition.
+- [x] Map "Smart Wrist-Flick" to "Dose Taken" action.
+- [x] Map "Wrist-Shake" to "Snooze Dose" action.
 
 #### T10: Automated Dose Detection
-- [ ] Implement Wear OS background sensor listener (accelerometer/gyro).
-- [ ] Build hand-to-mouth gesture classifier (heuristic or TFLite).
-- [ ] Integrate gesture detection with Fuzzy Window validation.
-- [ ] Add Auto-Logging toggle in phone app settings.
+- [x] Implement Wear OS background sensor listener (accelerometer/gyro).
+- [x] Build hand-to-mouth gesture classifier (heuristic or TFLite).
+- [x] Integrate gesture detection with Fuzzy Window validation.
+- [x] Add Auto-Logging toggle in phone app settings.
