@@ -2,14 +2,8 @@ package com.phos.core.data.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
-import com.phos.core.data.dao.IntelligenceDao
-import com.phos.core.data.dao.MedicationDao
-import com.phos.core.data.dao.TemporalAnchorDao
-import com.phos.core.data.model.DoseLog
-import com.phos.core.data.model.EnvironmentalLog
-import com.phos.core.data.model.MedicationRecord
-import com.phos.core.data.model.SymptomLog
-import com.phos.core.data.model.TemporalAnchor
+import com.phos.core.data.dao.*
+import com.phos.core.data.model.*
 
 @Database(
     entities = [
@@ -17,12 +11,19 @@ import com.phos.core.data.model.TemporalAnchor
         TemporalAnchor::class,
         DoseLog::class,
         SymptomLog::class,
-        EnvironmentalLog::class
+        EnvironmentalLog::class,
+        InteractionRule::class,
+        FoodLog::class,
+        GeoBoundary::class,
+        LocationAnchor::class
     ],
-    version = 1
+    version = 4
 )
 abstract class PhosDatabase : RoomDatabase() {
     abstract fun medicationDao(): MedicationDao
     abstract fun temporalAnchorDao(): TemporalAnchorDao
     abstract fun intelligenceDao(): IntelligenceDao
+    abstract fun interactionDao(): InteractionDao
+    abstract fun geoDao(): GeoDao
+    abstract fun reportingDao(): ReportingDao
 }
