@@ -3,8 +3,8 @@
 |----|------|-------------|--------|--------|
 | T1 | Core Engine | **Temporal Logic:** Room DB (validFrom/validTo), T-Wake logic, Collision Engine. | conductor/tracks/core-engine/ | Completed |
 | T2 | Health Sync | **Platform Sync:** Health Connect (SleepSession), Horologist DataStore (Protobuf). | conductor/tracks/health-sync/ | Completed |
-| T3 | Ambient UI | **Context UX:** PWLE Haptic Vocabulary, Wear OS 5 Complications, Material 3. | conductor/tracks/ambient-ui/ | In Progress |
-| T4 | Edge AI | **Intelligence:** Gemini Nano AICore, micro-journaling parsing, symptom forecasting. | conductor/tracks/edge-ai/ | Pending |
+| T3 | Ambient UI | **Context UX:** PWLE Haptic Vocabulary, Wear OS 5 Complications, Material 3. | conductor/tracks/ambient-ui/ | Completed |
+| T4 | Edge AI | **Intelligence:** Gemini Nano AICore, micro-journaling parsing, symptom forecasting. | conductor/tracks/edge-ai/ | Completed |
 
 ### Track Milestones
 
@@ -24,6 +24,6 @@
 - [x] Implement Phone Dashboard with Material You vertical timeline.
 
 #### T4: Edge AI
-- [ ] Integrate ML Kit GenAI Prompt API for on-device inference.
-- [ ] Develop prompt templates for barometric-to-symptom correlation.
-- [ ] Build the "Jet Lag Simulator" titration logic.
+- [x] Integrate ML Kit GenAI Prompt API for on-device inference.
+- [x] Develop prompt templates for barometric-to-symptom correlation.
+- [x] Build the "Jet Lag Simulator" titration logic.
