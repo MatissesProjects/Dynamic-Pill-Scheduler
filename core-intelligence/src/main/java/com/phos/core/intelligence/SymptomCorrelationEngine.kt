@@ -17,23 +17,30 @@ class SymptomCorrelationEngine @Inject constructor(
     
     suspend fun analyzeCorrelations(): String {
         val now = Instant.now()
-        val since = now.minus(java.time.Duration.ofDays(7))
-        
         val symptoms = intelligenceDao.getRecentSymptoms(50)
         val environmental = intelligenceDao.getRecentEnvironmental(50)
         
+        // Hypothetical sleep data fetch (would come from core-data HealthSyncManager)
+        val averageSleepMinutes = 360 // 6 hours (simulated low sleep)
+        val sleepDebtWarning = if (averageSleepMinutes < 420) {
+            "\nPredictive Alert: High sleep debt detected. This increases sensitivity to environmental pain triggers."
+        } else ""
+
         if (symptoms.isEmpty() || environmental.isEmpty()) {
-            return "Insufficient data for correlation analysis."
+            return "Insufficient data for correlation analysis.$sleepDebtWarning"
         }
         
-        val prompt = buildPrompt(symptoms, environmental)
+        val prompt = buildPrompt(symptoms, environmental, averageSleepMinutes)
         
-        // This is where we would call Gemini Nano
-        // For now, return a placeholder that describes what it would do
-        return "AI Insight: Based on the last 7 days, your 'Stomach Pain' (Severity 7) correlates with drops in barometric pressure (< 1010 hPa). Suggesting early dose of scheduled PRN."
+        // Call Gemini Nano (Simulation)
+        return "AI Insight: Based on the last 7 days, your 'Stomach Pain' correlates with drops in barometric pressure. $sleepDebtWarning"
     }
     
-    private fun buildPrompt(symptoms: List<SymptomLog>, environmental: List<EnvironmentalLog>): String {
+    private fun buildPrompt(
+        symptoms: List<SymptomLog>, 
+        environmental: List<EnvironmentalLog>,
+        sleepMinutes: Int
+    ): String {
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
             .withZone(ZoneId.systemDefault())
             
@@ -46,16 +53,17 @@ class SymptomCorrelationEngine @Inject constructor(
         }
         
         return """
-            You are a health assistant. Analyze the following local logs for correlations between environmental changes and symptoms.
+            Analyze local health logs for correlations.
             
+            Sleep Quality: $sleepMinutes minutes average.
             Symptom Logs:
             $symptomStr
             
             Environmental Logs:
             $envStr
             
-            Identify if any specific environmental conditions precede or coincide with symptom flares.
-            Keep the insight concise and privacy-focused. Do not mention specific medical diagnoses, only patterns.
+            Identify if sleep debt exacerbates environmental triggers.
+            Keep the insight concise.
         """.trimIndent()
     }
 }

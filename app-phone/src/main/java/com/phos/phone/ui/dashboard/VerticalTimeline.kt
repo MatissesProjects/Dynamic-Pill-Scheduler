@@ -38,6 +38,10 @@ fun VerticalTimeline(
             }
         }
 
+        item {
+            JetLagSimulator()
+        }
+
         items(state.medicationsList) { med ->
             TimelineItem(
                 med = med,

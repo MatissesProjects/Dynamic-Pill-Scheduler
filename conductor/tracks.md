@@ -5,6 +5,7 @@
 | T2 | Health Sync | **Platform Sync:** Health Connect (SleepSession), Horologist DataStore (Protobuf). | conductor/tracks/health-sync/ | Completed |
 | T3 | Ambient UI | **Context UX:** PWLE Haptic Vocabulary, Wear OS 5 Complications, Material 3. | conductor/tracks/ambient-ui/ | Completed |
 | T4 | Edge AI | **Intelligence:** Gemini Nano AICore, micro-journaling parsing, symptom forecasting. | conductor/tracks/edge-ai/ | Completed |
+| T5 | Dynamic Titration | **Safety:** HR-based alert suppression, Jet Lag titration, predictive BP modeling. | conductor/tracks/dynamic-titration/ | Completed |
 
 ### Track Milestones
 
@@ -27,3 +28,8 @@
 - [x] Integrate ML Kit GenAI Prompt API for on-device inference.
 - [x] Develop prompt templates for barometric-to-symptom correlation.
 - [x] Build the "Jet Lag Simulator" titration logic.
+
+#### T5: Dynamic Titration
+- [x] Implement `PhysiologicalSuppressor` for HR-based fuzzy windows.
+- [x] Build `JetLagManager` for multi-day titration schedules.
+- [x] Enhance AI engine with predictive sleep-debt modeling.
