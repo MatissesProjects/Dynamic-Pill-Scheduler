@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.phos.core.data.dao.*
 import com.phos.core.data.model.*
+import androidx.room.TypeConverters
 
 @Database(
     entities = [
@@ -22,6 +23,7 @@ import com.phos.core.data.model.*
     ],
     version = 6
 )
+@TypeConverters(Converters::class)
 abstract class PhosDatabase : RoomDatabase() {
     abstract fun medicationDao(): MedicationDao
     abstract fun temporalAnchorDao(): TemporalAnchorDao

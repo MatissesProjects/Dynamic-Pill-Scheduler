@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.first
 
 class BiometricDashboardWidget : GlanceAppWidget() {
 
-    override suspend fun provideContent(context: Context, id: GlanceId) {
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
         val state = context.phosDataStore.data.first()
         
         provideContent {
@@ -94,7 +94,7 @@ class BiometricDashboardWidget : GlanceAppWidget() {
             modifier = GlanceModifier
                 .width(24.dp)
                 .height(2.dp)
-                .background(GlanceTheme.colors.outlineVariant)
+                .background(GlanceTheme.colors.outline)
         ) {}
     }
 }

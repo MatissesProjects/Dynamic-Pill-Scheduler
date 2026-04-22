@@ -1,6 +1,5 @@
 package com.phos.core.data.engine
 
-import com.phos.core.data.model.Collision
 import com.phos.core.data.model.FoodLog
 import com.phos.core.data.model.InteractionRule
 import com.phos.core.data.model.InteractionSeverity

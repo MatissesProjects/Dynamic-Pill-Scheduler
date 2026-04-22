@@ -13,6 +13,8 @@
 | T10 | Automated Dose Detection | **Sensor Fusion:** Detect hand-to-mouth gesture via Watch for auto-logging. | conductor/tracks/auto-detection/ | Completed |
 | T11 | Biometric Digital Twin | **Modeling:** Gemini Nano baseline vs. real-time physiological response. | conductor/tracks/digital-twin/ | Completed |
 | T12 | Predictive Inventory | **Supply Chain:** Adherence-aware pill tracking and auto-refill prediction. | conductor/tracks/inventory/ | Completed |
+| T13 | Visual Medication Onboarding | **Computer Vision:** On-device pill identification via CameraX. | conductor/tracks/visual-onboarding/ | Planned |
+| T14 | Manual Data Entry UI | **Input UX:** Full dynamic logging UI and system settings. | conductor/tracks/data-entry-ui/ | Planned |
 
 ### Track Milestones
 
@@ -76,3 +78,14 @@
 - [x] Implement adherence-aware pill decrement logic.
 - [x] Build depletion-date prediction engine.
 - [x] Integrate "Refill Intelligence" with Android ShareSheet.
+
+#### T13: Visual Medication Onboarding
+- [ ] Integrate CameraX in `app-phone`.
+- [ ] Build pill identification CV pipeline (TFLite).
+- [ ] Create "Scan-to-Onboard" UI flow.
+
+#### T14: Manual Data Entry UI
+- [ ] Build medication creation/edit form.
+- [ ] Implement manual dose logging dashboard.
+- [ ] Create preference management settings screen.
+- [ ] Transition `MainActivity` from mock data to real-time Room flow.

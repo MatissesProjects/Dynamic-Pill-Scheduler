@@ -4,7 +4,7 @@ option java_package = "com.phos.core.data.proto";
 option java_multiple_files = true;
 
 message PhosState {
-  long t_wake_epoch = 1;
+  int64 t_wake_epoch = 1;
   repeated Medication medications = 2;
   string last_ai_insight = 3;
 }
@@ -12,6 +12,6 @@ message PhosState {
 message Medication {
   string id = 1;
   string name = 2;
-  long scheduled_time = 3;
+  int64 scheduled_time = 3;
   string status = 4;
 }

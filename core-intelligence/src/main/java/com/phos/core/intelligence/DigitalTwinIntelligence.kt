@@ -5,9 +5,8 @@ import com.phos.core.data.engine.DigitalTwinEngine
 import com.phos.core.data.model.BiometricType
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import javax.inject.Inject
 
-class DigitalTwinIntelligence @Inject constructor(
+class DigitalTwinIntelligence(
     private val biometricDao: BiometricDao,
     private val digitalTwinEngine: DigitalTwinEngine
 ) {

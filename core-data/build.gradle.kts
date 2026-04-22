@@ -1,13 +1,13 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    id("kotlin-kapt")
+    id("com.google.devtools.ksp")
     id("com.google.protobuf")
 }
 
 android {
     namespace = "com.phos.core.data"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 26
@@ -28,13 +28,6 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-    sourceSets {
-        getByName("main") {
-            proto {
-                srcDir("src/main/proto")
-            }
-        }
-    }
 }
 
 dependencies {
@@ -44,11 +37,12 @@ dependencies {
 
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
-    kapt("androidx.room:room-compiler:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
 
     implementation("androidx.health.connect:connect-client:$healthConnectVersion")
 
     implementation("com.google.android.horologist:horologist-datalayer:$horologistVersion")
+    implementation("com.google.android.horologist:horologist-datalayer-phone:$horologistVersion")
     implementation("com.google.protobuf:protobuf-kotlin-lite:3.25.1")
 
     implementation("androidx.core:core-ktx:1.12.0")

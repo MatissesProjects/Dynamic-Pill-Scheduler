@@ -4,9 +4,8 @@ import com.phos.core.data.dao.InventoryDao
 import com.phos.core.data.model.InventoryRecord
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import javax.inject.Inject
 
-class InventoryManager @Inject constructor(
+class InventoryManager(
     private val inventoryDao: InventoryDao
 ) {
     /**

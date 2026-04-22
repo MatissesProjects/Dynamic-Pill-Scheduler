@@ -7,9 +7,8 @@ import com.phos.core.data.model.SymptomLog
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import javax.inject.Inject
 
-class SymptomCorrelationEngine @Inject constructor(
+class SymptomCorrelationEngine(
     private val intelligenceDao: IntelligenceDao
 ) {
     // Placeholder for AICore model
