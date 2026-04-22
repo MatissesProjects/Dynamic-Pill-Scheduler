@@ -7,6 +7,7 @@ message PhosState {
   int64 t_wake_epoch = 1;
   repeated Medication medications = 2;
   string last_ai_insight = 3;
+  bool is_24_hour = 4;
 }
 
 message Medication {

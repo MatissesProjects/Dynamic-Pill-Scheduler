@@ -6,8 +6,13 @@ import androidx.room.Query
 import androidx.room.Transaction
 import com.phos.core.data.model.MedicationRecord
 
+import kotlinx.coroutines.flow.Flow
+
 @Dao
 interface MedicationDao {
+    @Query("SELECT * FROM medications WHERE validTo = :maxLong")
+    fun getAllActiveMedicationsFlow(maxLong: Long = Long.MAX_VALUE): Flow<List<MedicationRecord>>
+
     @Query("SELECT * FROM medications WHERE validTo = :maxLong")
     suspend fun getAllActiveMedications(maxLong: Long = Long.MAX_VALUE): List<MedicationRecord>
 
@@ -29,4 +34,7 @@ interface MedicationDao {
 
     @Query("UPDATE medications SET validTo = :timestamp WHERE id = :id")
     suspend fun markAsInactive(id: Long, timestamp: Long)
+
+    @Query("DELETE FROM medications WHERE id = :id")
+    suspend fun deletePermanently(id: Long)
 }
