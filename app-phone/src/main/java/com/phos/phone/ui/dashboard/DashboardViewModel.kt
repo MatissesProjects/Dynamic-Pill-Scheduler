@@ -31,12 +31,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val doseLogDao = db.doseLogDao()
     private val biometricDao = db.biometricDao()
     private val intelligenceDao = db.intelligenceDao()
+    private val appetiteDao = db.appetiteDao()
 
     private val dataLayerRepository = DataLayerRepository(application, application.phosDataStore)
     private val healthSyncManager = HealthSyncManager(application)
     private val napManager = NapManager(healthSyncManager)
     private val postureIntelligence = PostureIntelligence()
     private val jetLagManager = JetLagManager()
+    private val mealScheduler = MealScheduler()
     
     private val voiceParser = GeminiVoiceParser()
     private val voiceLogCoordinator = VoiceLogCoordinator(
@@ -128,6 +130,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             kotlinx.coroutines.delay(60000) // Refresh every minute
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val appetiteLogs: StateFlow<List<AppetiteLog>> = appetiteDao.getAppetiteLogsSince(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val eatingWindows: StateFlow<List<OptimalEatingWindow>> = combine(medications, temporalAnchorFlow, appetiteLogs) { meds, anchor, appetite ->
+        if (anchor == null) emptyList()
+        else mealScheduler.findOptimalEatingWindows(meds, anchor, appetite)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _travelProposal = MutableStateFlow<TravelProposal?>(null)
     val travelProposal: StateFlow<TravelProposal?> = _travelProposal.asStateFlow()
@@ -249,6 +259,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 )
             )
             clearPRNAdvisory()
+        }
+    }
+
+    fun logAppetite(hunger: Int, difficulty: Int) {
+        viewModelScope.launch {
+            appetiteDao.insertAppetiteLog(AppetiteLog(hungerLevel = hunger, difficultyLevel = difficulty))
         }
     }
 
