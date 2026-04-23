@@ -89,4 +89,33 @@ class CollisionResolverTest {
         val collisions = resolver.findMedicationCollisions(listOf(medA, medB))
         assertTrue(collisions.isEmpty())
     }
+
+    @Test
+    fun `test findAbsorptionSpacingSuggestions detects conflict`() {
+        val absorptionRules = listOf(
+            com.phos.core.data.model.AbsorptionRule(medicationId = "sucralfate", requiredGapMinutes = 120, reason = "Spacing required")
+        )
+        val resolverWithAbsorption = CollisionResolver(absorptionRules = absorptionRules)
+        
+        val sucralfate = MedicationRecord(id = 1L, medicationId = "sucralfate", name = "Sucralfate", dosage = "1g", frequencyOffset = 0L, validFrom = 0L)
+        val other = MedicationRecord(id = 2L, medicationId = "other", name = "Other", dosage = "10mg", frequencyOffset = 60 * 60 * 1000L, validFrom = 0L) // 60 mins < 120 mins
+        
+        val suggestions = resolverWithAbsorption.findAbsorptionSpacingSuggestions(listOf(sucralfate, other))
+        assertEquals(1, suggestions.size)
+        assertEquals("Spacing required", suggestions[0])
+    }
+
+    @Test
+    fun `test getSideEffectAlerts returns matches`() {
+        val sideEffectRules = listOf(
+            com.phos.core.data.model.SideEffectRule(medicationId = "lisinopril", sideEffect = "Cough", advice = "Watch out")
+        )
+        val resolverWithSideEffects = CollisionResolver(sideEffectRules = sideEffectRules)
+        
+        val med = MedicationRecord(medicationId = "lisinopril", name = "Lisinopril", dosage = "10mg", frequencyOffset = 0L, validFrom = 0L)
+        
+        val alerts = resolverWithSideEffects.getSideEffectAlerts(listOf(med))
+        assertEquals(1, alerts.size)
+        assertEquals("Cough", alerts[0].sideEffect)
+    }
 }
