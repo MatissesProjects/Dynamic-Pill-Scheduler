@@ -13,4 +13,7 @@ interface TemporalAnchorDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAnchor(anchor: TemporalAnchor)
+
+    @Query("SELECT * FROM temporal_anchors ORDER BY wakeTime DESC LIMIT 1")
+    fun getLatestAnchorFlow(): kotlinx.coroutines.flow.Flow<TemporalAnchor?>
 }

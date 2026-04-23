@@ -10,6 +10,11 @@ import com.phos.core.data.datastore.phosDataStore
 import com.phos.core.data.sync.DataLayerRepository
 import com.phos.core.data.proto.PhosState
 import com.phos.core.data.engine.CollisionResolver
+import com.phos.core.data.engine.NapManager
+import com.phos.core.data.engine.NapOverlap
+import com.phos.core.data.sync.HealthSyncManager
+import com.phos.core.intelligence.PostureIntelligence
+import com.phos.core.intelligence.PosturalRecommendation
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -21,10 +26,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     ).fallbackToDestructiveMigration().build()
 
     private val medicationDao = db.medicationDao()
+    private val temporalAnchorDao = db.temporalAnchorDao()
     private val interactionDao = db.interactionDao()
     private val dismissedInsightDao = db.dismissedInsightDao()
 
     private val dataLayerRepository = DataLayerRepository(application, application.phosDataStore)
+    private val healthSyncManager = HealthSyncManager(application)
+    private val napManager = NapManager(healthSyncManager)
+    private val postureIntelligence = PostureIntelligence()
 
     private val collisionResolverFlow = combine(
         interactionDao.getAllRules(),
@@ -80,6 +89,21 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             !dismissed.contains("side_effect_${alert.medicationId}_${alert.sideEffect}")
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val temporalAnchorFlow = temporalAnchorDao.getLatestAnchorFlow()
+    
+    val napOverlaps: StateFlow<List<NapOverlap>> = combine(medications, temporalAnchorFlow) { meds, anchor ->
+        if (anchor == null) emptyList()
+        else napManager.checkNapOverlaps(meds, anchor)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val postureRecommendation: StateFlow<PosturalRecommendation?> = flow {
+        while (true) {
+            val recentFood = interactionDao.getRecentFoodLogs(System.currentTimeMillis() - 2 * 3600000L)
+            emit(postureIntelligence.checkPostPrandialPosture(recentFood))
+            kotlinx.coroutines.delay(60000) // Refresh every minute
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun addMedication(name: String, dosage: String, offsetMillis: Long, frequency: Int = 1) {
         viewModelScope.launch {

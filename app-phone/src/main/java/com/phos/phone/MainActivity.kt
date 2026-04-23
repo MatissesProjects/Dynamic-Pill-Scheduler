@@ -26,6 +26,8 @@ class MainActivity : ComponentActivity() {
             val phosState by viewModel.phosState.collectAsState(initial = PhosState.getDefaultInstance())
             val healthInsights by viewModel.healthInsights.collectAsState()
             val sideEffectAlerts by viewModel.sideEffectAlerts.collectAsState()
+            val napOverlaps by viewModel.napOverlaps.collectAsState()
+            val postureRecommendation by viewModel.postureRecommendation.collectAsState()
             
             PhosTheme {
                 Surface(
@@ -38,6 +40,8 @@ class MainActivity : ComponentActivity() {
                         is24Hour = phosState.is24Hour,
                         healthInsights = healthInsights,
                         sideEffectAlerts = sideEffectAlerts,
+                        napOverlaps = napOverlaps,
+                        postureRecommendation = postureRecommendation,
                         onAddMedication = { name, dosage, offset, frequency ->
                             viewModel.addMedication(name, dosage, offset, frequency)
                         },
