@@ -24,7 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.phos.core.data.engine.NapOverlap
+import com.phos.core.data.engine.PRNAdvisory
 import com.phos.core.data.model.MedicationRecord
+import com.phos.core.data.model.PRNMedication
 import com.phos.core.data.model.SideEffectRule
 import com.phos.core.intelligence.PosturalRecommendation
 import com.phos.phone.ui.scanner.PillScanResult
@@ -37,6 +39,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun MainDashboard(
     medications: List<MedicationRecord>,
+    prnMedications: List<PRNMedication>,
     tWakeEpoch: Long,
     lastAiInsight: String,
     is24Hour: Boolean,
@@ -44,13 +47,17 @@ fun MainDashboard(
     sideEffectAlerts: List<SideEffectRule>,
     napOverlaps: List<NapOverlap>,
     postureRecommendation: PosturalRecommendation?,
+    prnAdvisory: PRNAdvisory?,
     onAddMedication: (String, String, Long, Int) -> Unit,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
     onDuplicateMedication: (MedicationRecord) -> Unit,
     onUpdateWakeTime: (Long) -> Unit,
     onToggleTimeFormat: (Boolean) -> Unit,
-    onDismissInsight: (String) -> Unit
+    onDismissInsight: (String) -> Unit,
+    onRequestPRNAdvisory: (PRNMedication) -> Unit,
+    onLogPRNDose: (PRNMedication) -> Unit,
+    onClearPRNAdvisory: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -83,12 +90,18 @@ fun MainDashboard(
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.CameraAlt, contentDescription = "Scanner") },
-                    label = { Text("Scanner") }
+                    icon = { Icon(Icons.Default.MedicalServices, contentDescription = "As-Needed") },
+                    label = { Text("PRN") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
+                    icon = { Icon(Icons.Default.CameraAlt, contentDescription = "Scanner") },
+                    label = { Text("Scanner") }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                     label = { Text("Settings") }
                 )
@@ -128,7 +141,11 @@ fun MainDashboard(
                     onUpdateWakeTime = onUpdateWakeTime,
                     onDismissInsight = onDismissInsight
                 )
-                1 -> {
+                1 -> PRNList(
+                    prnMedications = prnMedications,
+                    onRequestAdvisory = onRequestPRNAdvisory
+                )
+                2 -> {
                     if (hasCameraPermission) {
                         PillScannerScreen(onPillScanned = { result ->
                             prefilledName = result.detectedName ?: "${result.detectedColor} ${result.detectedShape} Pill"
@@ -150,7 +167,7 @@ fun MainDashboard(
                         }
                     }
                 }
-                2 -> Column(
+                3 -> Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp),
@@ -179,6 +196,19 @@ fun MainDashboard(
         }
     }
 
+    prnAdvisory?.let { advisory ->
+        PRNAdvisoryDialog(
+            advisory = advisory,
+            onDismiss = onClearPRNAdvisory,
+            onConfirm = {
+                // Find the med that triggered this
+                prnMedications.find { advisory.reason.contains(it.name) || it.name.contains(advisory.reason.split(" ").last().replace(".","")) }?.let {
+                    onLogPRNDose(it)
+                } ?: onClearPRNAdvisory()
+            }
+        )
+    }
+
     if (showAddDialog) {
         AddMedicationDialog(
             initialName = prefilledName,
@@ -191,6 +221,69 @@ fun MainDashboard(
             }
         )
     }
+}
+
+@Composable
+fun PRNList(
+    prnMedications: List<PRNMedication>,
+    onRequestAdvisory: (PRNMedication) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Text("As-Needed Medications", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("Select a medication to request a safety check before taking.", style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(16.dp))
+        }
+        
+        items(prnMedications) { med ->
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { onRequestAdvisory(med) },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(med.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(med.dosage, style = MaterialTheme.typography.bodySmall)
+                        med.reasonForUse?.let { Text("Used for: $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PRNAdvisoryDialog(
+    advisory: PRNAdvisory,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(if (advisory.isApproved) Icons.Default.CheckCircle else Icons.Default.Warning, contentDescription = null, tint = if (advisory.isApproved) Color.Green else MaterialTheme.colorScheme.error) },
+        title = { Text(if (advisory.isApproved) "Safety Check Passed" else "Safety Warning") },
+        text = {
+            Column {
+                Text(advisory.reason)
+                advisory.alternativeAdvice?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text("Recommendation: $it", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        },
+        confirmButton = {
+            if (advisory.isApproved) {
+                Button(onClick = onConfirm) { Text("Log Dose") }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(if (advisory.isApproved) "Cancel" else "Dismiss") }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
