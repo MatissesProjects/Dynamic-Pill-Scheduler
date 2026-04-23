@@ -103,9 +103,9 @@
 - [x] Implement Post-Prandial Posture (Stay Upright) guidance.
 
 #### T16: Advanced Travel Automation
-- [ ] Implement `TravelDetectionWorker` for future trip detection.
-- [ ] Build `proposeAdvanceTitration` logic in `JetLagManager`.
-- [ ] Create "Travel Alert" approval UI in dashboard.
+- [x] Implement `TravelDetectionWorker` for future trip detection.
+- [x] Build `proposeAdvanceTitration` logic in `JetLagManager`.
+- [x] Create "Travel Alert" approval UI in dashboard.
 
 #### T17: PRN Decision Intelligence
 - [x] Define `PRNRecord` and `PRNHistory` entities.
