@@ -1,5 +1,9 @@
 package com.phos.phone.ui.dashboard
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,10 +17,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.phos.core.data.model.MedicationRecord
+import com.phos.core.data.model.SideEffectRule
+import com.phos.phone.ui.scanner.PillScanResult
+import com.phos.phone.ui.scanner.PillScannerScreen
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
@@ -28,15 +38,34 @@ fun MainDashboard(
     tWakeEpoch: Long,
     lastAiInsight: String,
     is24Hour: Boolean,
-    onAddMedication: (String, String, Long) -> Unit,
+    healthInsights: List<String>,
+    sideEffectAlerts: List<SideEffectRule>,
+    onAddMedication: (String, String, Long, Int) -> Unit,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
     onDuplicateMedication: (MedicationRecord) -> Unit,
     onUpdateWakeTime: (Long) -> Unit,
-    onToggleTimeFormat: (Boolean) -> Unit
+    onToggleTimeFormat: (Boolean) -> Unit,
+    onDismissInsight: (String) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var prefilledName by remember { mutableStateOf("") }
+    var prefilledDosage by remember { mutableStateOf("") }
+    var prefilledFrequency by remember { mutableStateOf(1) }
+    
+    val context = LocalContext.current
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasCameraPermission = isGranted
+    }
 
     Scaffold(
         bottomBar = {
@@ -50,6 +79,12 @@ fun MainDashboard(
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
+                    icon = { Icon(Icons.Default.CameraAlt, contentDescription = "Scanner") },
+                    label = { Text("Scanner") }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                     label = { Text("Settings") }
                 )
@@ -57,7 +92,12 @@ fun MainDashboard(
         },
         floatingActionButton = {
             if (selectedTab == 0) {
-                FloatingActionButton(onClick = { showAddDialog = true }) {
+                FloatingActionButton(onClick = { 
+                    prefilledName = ""
+                    prefilledDosage = ""
+                    prefilledFrequency = 1
+                    showAddDialog = true 
+                }) {
                     Icon(Icons.Default.Add, contentDescription = "Add Medication")
                 }
             }
@@ -74,21 +114,46 @@ fun MainDashboard(
                     tWakeEpoch = tWakeEpoch,
                     lastAiInsight = lastAiInsight,
                     is24Hour = is24Hour,
+                    healthInsights = healthInsights,
+                    sideEffectAlerts = sideEffectAlerts,
                     onUpdateMedication = onUpdateMedication,
                     onDeleteMedication = onDeleteMedication,
                     onDuplicateMedication = onDuplicateMedication,
-                    onUpdateWakeTime = onUpdateWakeTime
+                    onUpdateWakeTime = onUpdateWakeTime,
+                    onDismissInsight = onDismissInsight
                 )
-                1 -> Column(
+                1 -> {
+                    if (hasCameraPermission) {
+                        PillScannerScreen(onPillScanned = { result ->
+                            prefilledName = result.detectedName ?: "${result.detectedColor} ${result.detectedShape} Pill"
+                            prefilledDosage = result.detectedDosage ?: ""
+                            prefilledFrequency = result.frequencyDosesPerDay
+                            showAddDialog = true
+                            selectedTab = 0 
+                        })
+                    } else {
+                        Column(
+                            Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Camera permission required for scanner")
+                            Button(onClick = { launcher.launch(Manifest.permission.CAMERA) }) {
+                                Text("Grant Permission")
+                            }
+                        }
+                    }
+                }
+                2 -> Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
                         text = "System Settings",
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        fontWeight = FontWeight.Bold
                     )
                     
                     ListItem(
@@ -101,7 +166,7 @@ fun MainDashboard(
                         }
                     )
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Divider()
                     JetLagSimulator()
                 }
             }
@@ -110,9 +175,12 @@ fun MainDashboard(
 
     if (showAddDialog) {
         AddMedicationDialog(
+            initialName = prefilledName,
+            initialDosage = prefilledDosage,
+            initialFrequency = prefilledFrequency,
             onDismiss = { showAddDialog = false },
-            onConfirm = { name, dosage, offset ->
-                onAddMedication(name, dosage, offset)
+            onConfirm = { name, dosage, offset, frequency ->
+                onAddMedication(name, dosage, offset, frequency)
                 showAddDialog = false
             }
         )
@@ -126,10 +194,13 @@ fun VerticalTimeline(
     tWakeEpoch: Long,
     lastAiInsight: String,
     is24Hour: Boolean,
+    healthInsights: List<String>,
+    sideEffectAlerts: List<SideEffectRule>,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
     onDuplicateMedication: (MedicationRecord) -> Unit,
-    onUpdateWakeTime: (Long) -> Unit
+    onUpdateWakeTime: (Long) -> Unit,
+    onDismissInsight: (String) -> Unit
 ) {
     val pattern = if (is24Hour) "HH:mm" else "hh:mm a"
     val timeFormatter = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
@@ -149,7 +220,15 @@ fun VerticalTimeline(
         }
 
         if (lastAiInsight.isNotEmpty()) {
-            item { AiInsightCard(insight = lastAiInsight) }
+            item { InsightCard(title = "AI Baseline Insight", insight = lastAiInsight, icon = Icons.Default.AutoAwesome, onDismiss = { onDismissInsight("baseline") }) }
+        }
+        
+        healthInsights.forEach { insight ->
+            item { InsightCard(title = "Absorption Spacing", insight = insight, icon = Icons.Default.Info, color = MaterialTheme.colorScheme.secondaryContainer, onDismiss = { onDismissInsight("absorption_${insight.hashCode()}") }) }
+        }
+
+        sideEffectAlerts.forEach { alert ->
+            item { InsightCard(title = "Side Effect Watch: ${alert.sideEffect}", insight = alert.advice, icon = Icons.Default.Warning, color = MaterialTheme.colorScheme.errorContainer, onDismiss = { onDismissInsight("side_effect_${alert.medicationId}_${alert.sideEffect}") }) }
         }
 
         if (medications.isEmpty()) {
@@ -190,11 +269,32 @@ fun VerticalTimeline(
             initialDosage = med.dosage,
             initialOffsetHours = (med.frequencyOffset / 3600000.0).toString(),
             onDismiss = { editingMedication = null },
-            onConfirm = { name, dosage, offset ->
+            onConfirm = { name, dosage, offset, _ ->
                 onUpdateMedication(med.copy(name = name, dosage = dosage, frequencyOffset = offset))
                 editingMedication = null
             }
         )
+    }
+}
+
+@Composable
+fun InsightCard(title: String, insight: String, icon: ImageVector, color: Color = MaterialTheme.colorScheme.tertiaryContainer, onDismiss: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = color)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.Close, contentDescription = "Dismiss", modifier = Modifier.size(16.dp))
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = insight, style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
 
@@ -253,7 +353,7 @@ fun TimelineItem(
         Text(
             text = timeFormatter.format(scheduledTime),
             style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.width(70.dp) // Slightly wider for AM/PM
+            modifier = Modifier.width(70.dp)
         )
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -289,27 +389,37 @@ fun AddMedicationDialog(
     initialName: String = "",
     initialDosage: String = "",
     initialOffsetHours: String = "1",
+    initialFrequency: Int = 1,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, Long) -> Unit
+    onConfirm: (String, String, Long, Int) -> Unit
 ) {
     var name by remember { mutableStateOf(initialName) }
     var dosage by remember { mutableStateOf(initialDosage) }
     var offsetHours by remember { mutableStateOf(initialOffsetHours) }
+    var frequency by remember { mutableStateOf(initialFrequency.toString()) }
+    
+    LaunchedEffect(initialName, initialDosage, initialFrequency) {
+        name = initialName
+        dosage = initialDosage
+        frequency = initialFrequency.toString()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialName.isEmpty()) "New Medication" else "Edit Medication") },
+        title = { Text(if (initialName.isEmpty() && initialDosage.isEmpty()) "New Medication" else "Review Medication") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
                 OutlinedTextField(value = dosage, onValueChange = { dosage = it }, label = { Text("Dosage") })
-                OutlinedTextField(value = offsetHours, onValueChange = { offsetHours = it }, label = { Text("T-Wake Offset (Hours)") })
+                OutlinedTextField(value = offsetHours, onValueChange = { offsetHours = it }, label = { Text("First T-Wake Offset (Hours)") })
+                OutlinedTextField(value = frequency, onValueChange = { frequency = it }, label = { Text("Frequency (times/day)") })
             }
         },
         confirmButton = {
             Button(onClick = { 
                 val offset = ((offsetHours.toDoubleOrNull() ?: 1.0) * 3600000L).toLong()
-                onConfirm(name, dosage, offset) 
+                val freq = frequency.toIntOrNull() ?: 1
+                onConfirm(name, dosage, offset, freq) 
             }) {
                 Text("Save")
             }
@@ -359,24 +469,4 @@ fun WakeTimePickerDialog(
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
-}
-
-@Composable
-fun AiInsightCard(insight: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = "AI Insight", modifier = Modifier.size(24.dp))
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(text = insight, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
 }

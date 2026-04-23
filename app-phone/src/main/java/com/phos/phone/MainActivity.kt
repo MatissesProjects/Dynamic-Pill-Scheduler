@@ -24,6 +24,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             val medications by viewModel.medications.collectAsState()
             val phosState by viewModel.phosState.collectAsState(initial = PhosState.getDefaultInstance())
+            val healthInsights by viewModel.healthInsights.collectAsState()
+            val sideEffectAlerts by viewModel.sideEffectAlerts.collectAsState()
             
             PhosTheme {
                 Surface(
@@ -34,8 +36,10 @@ class MainActivity : ComponentActivity() {
                         tWakeEpoch = phosState.tWakeEpoch,
                         lastAiInsight = phosState.lastAiInsight,
                         is24Hour = phosState.is24Hour,
-                        onAddMedication = { name, dosage, offset ->
-                            viewModel.addMedication(name, dosage, offset)
+                        healthInsights = healthInsights,
+                        sideEffectAlerts = sideEffectAlerts,
+                        onAddMedication = { name, dosage, offset, frequency ->
+                            viewModel.addMedication(name, dosage, offset, frequency)
                         },
                         onUpdateMedication = { record ->
                             viewModel.updateMedication(record)
@@ -51,6 +55,9 @@ class MainActivity : ComponentActivity() {
                         },
                         onToggleTimeFormat = { is24Hour ->
                             viewModel.toggleTimeFormat(is24Hour)
+                        },
+                        onDismissInsight = { id ->
+                            viewModel.dismissInsight(id)
                         }
                     )
                 }

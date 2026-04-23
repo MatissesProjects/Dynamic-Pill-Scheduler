@@ -1,9 +1,6 @@
 package com.phos.core.data.engine
 
-import com.phos.core.data.model.FoodLog
-import com.phos.core.data.model.InteractionRule
-import com.phos.core.data.model.InteractionSeverity
-import com.phos.core.data.model.MedicationRecord
+import com.phos.core.data.model.*
 import kotlin.math.abs
 
 data class Collision(
@@ -18,11 +15,45 @@ class CollisionResolver(
     private val rules: List<InteractionRule> = emptyList()
 ) {
     
-    private val DEFAULT_GAP_MILLIS = 2 * 60 * 60 * 1000L // 2 hours default
+    private val absorptionRules = listOf(
+        AbsorptionRule("sucralfate", 120, "Take Sucralfate on an empty stomach, at least 2 hours before other medications to protect gut absorption."),
+        AbsorptionRule("levothyroxine", 60, "Take Levothyroxine 60 minutes before other meds or food for optimal absorption.")
+    )
+    
+    private val sideEffectRules = listOf(
+        SideEffectRule("lisinopril", "Dizziness/Cough", "Monitor for a persistent dry cough or dizziness when standing up."),
+        SideEffectRule("metoprolol", "Low Heart Rate", "Watch for extreme fatigue or very low resting heart rate.")
+    )
 
     /**
-     * Checks for collisions between medications.
+     * Finds spacing suggestions for medications with specific absorption requirements.
      */
+    fun findAbsorptionSpacingSuggestions(medications: List<MedicationRecord>): List<String> {
+        val suggestions = mutableListOf<String>()
+        for (med in medications) {
+            val rule = absorptionRules.find { med.medicationId.equals(it.medicationId, ignoreCase = true) }
+            if (rule != null) {
+                val conflicts = medications.filter { 
+                    it.id != med.id && 
+                    abs(it.frequencyOffset - med.frequencyOffset) < (rule.requiredGapMinutes * 60 * 1000L)
+                }
+                if (conflicts.isNotEmpty()) {
+                    suggestions.add(rule.reason)
+                }
+            }
+        }
+        return suggestions
+    }
+
+    /**
+     * Gets side effect warnings for current medications.
+     */
+    fun getSideEffectAlerts(medications: List<MedicationRecord>): List<SideEffectRule> {
+        return medications.flatMap { med ->
+            sideEffectRules.filter { med.medicationId.equals(it.medicationId, ignoreCase = true) }
+        }
+    }
+
     fun findMedicationCollisions(medications: List<MedicationRecord>): List<Collision> {
         val collisions = mutableListOf<Collision>()
         for (i in medications.indices) {
@@ -48,10 +79,6 @@ class CollisionResolver(
         return collisions
     }
 
-    /**
-     * Checks for collisions between medications and recently consumed food.
-     * @param twakeMillis The absolute timestamp of today's T-Wake.
-     */
     fun findFoodCollisions(
         medications: List<MedicationRecord>, 
         foodLogs: List<FoodLog>,
@@ -82,14 +109,11 @@ class CollisionResolver(
 
     private fun findRule(idA: String, idB: String): InteractionRule? {
         return rules.find { 
-            (it.sourceId == idA && it.targetId == idB) || 
-            (it.sourceId == idB && it.targetId == idA) 
+            (idA.lowercase().contains(it.sourceId) && idB.lowercase().contains(it.targetId)) || 
+            (idB.lowercase().contains(it.sourceId) && idA.lowercase().contains(it.targetId)) 
         }
     }
     
-    /**
-     * Suggests a new absolute timestamp or offset for medication to resolve the collision.
-     */
     fun suggestResolution(medication: MedicationRecord, collisionSourceTime: Long, requiredGap: Long): Long {
         return collisionSourceTime + requiredGap
     }
