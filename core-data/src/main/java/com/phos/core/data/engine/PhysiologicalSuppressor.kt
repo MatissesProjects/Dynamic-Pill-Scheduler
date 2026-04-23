@@ -73,7 +73,7 @@ class PhysiologicalSuppressor {
         currentHeartRate: Int,
         medicationId: String,
         medicationName: String,
-        category: String?
+        category: String? = null
     ): SuppressionState {
         // Example: If it's a Beta Blocker and HR is high, we definitely want to wait until HR is closer to baseline.
         if (medicationId.contains("beta_blocker", ignoreCase = true) && currentHeartRate > 90) {

@@ -21,3 +21,22 @@ enum class InteractionSeverity {
     WARNING,
     CRITICAL
 }
+
+/**
+ * Specifically for rules about when to take a med relative to others for optimal gut health/absorption.
+ */
+data class AbsorptionRule(
+    val medicationId: String,
+    val requiredGapMinutes: Int,
+    val reason: String,
+    val mustBeBefore: Boolean = true // True if this med must be taken BEFORE others
+)
+
+/**
+ * For general side effects to watch out for when taking specific meds.
+ */
+data class SideEffectRule(
+    val medicationId: String,
+    val sideEffect: String,
+    val advice: String
+)

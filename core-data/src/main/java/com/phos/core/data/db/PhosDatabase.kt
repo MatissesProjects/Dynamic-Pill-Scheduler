@@ -2,9 +2,9 @@ package com.phos.core.data.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.phos.core.data.dao.*
 import com.phos.core.data.model.*
-import androidx.room.TypeConverters
 
 @Database(
     entities = [
@@ -19,9 +19,10 @@ import androidx.room.TypeConverters
         LocationAnchor::class,
         BiometricLog::class,
         BiometricBaseline::class,
-        InventoryRecord::class
+        InventoryRecord::class,
+        DismissedInsight::class
     ],
-    version = 6
+    version = 7
 )
 @TypeConverters(Converters::class)
 abstract class PhosDatabase : RoomDatabase() {
@@ -33,4 +34,5 @@ abstract class PhosDatabase : RoomDatabase() {
     abstract fun reportingDao(): ReportingDao
     abstract fun biometricDao(): BiometricDao
     abstract fun inventoryDao(): InventoryDao
+    abstract fun dismissedInsightDao(): DismissedInsightDao
 }

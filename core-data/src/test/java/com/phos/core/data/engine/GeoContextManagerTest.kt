@@ -48,8 +48,9 @@ class GeoContextManagerTest {
         )
         val doseLog = DoseLog(
             medicationId = "t_wake_med",
-            dosage = "10mg",
-            timestamp = System.currentTimeMillis()
+            scheduledTime = System.currentTimeMillis(),
+            actualTime = System.currentTimeMillis(),
+            status = "TAKEN"
         )
         
         val alerts = geoManager.checkProximityExit(
