@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.phos.core.data.engine.NapOverlap
+import com.phos.core.data.engine.OptimalEatingWindow
 import com.phos.core.data.engine.PRNAdvisory
 import com.phos.core.data.model.MedicationRecord
 import com.phos.core.data.model.PRNMedication
@@ -53,6 +54,7 @@ fun MainDashboard(
     postureRecommendation: PosturalRecommendation?,
     prnAdvisory: PRNAdvisory?,
     travelProposal: TravelProposal?,
+    eatingWindows: List<OptimalEatingWindow>,
     voiceState: VoiceState,
     voiceExtractedEntities: ExtractedEntities?,
     onAddMedication: (String, String, Long, Int) -> Unit,
@@ -71,10 +73,12 @@ fun MainDashboard(
     onClearVoiceResults: () -> Unit,
     onAcceptTravelProposal: (TravelProposal) -> Unit,
     onDismissTravelProposal: () -> Unit,
-    onDetectTravel: () -> Unit
+    onDetectTravel: () -> Unit,
+    onLogAppetite: (Int, Int) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var showAppetiteDialog by remember { mutableStateOf(false) }
     var prefilledName by remember { mutableStateOf("") }
     var prefilledDosage by remember { mutableStateOf("") }
     var prefilledFrequency by remember { mutableStateOf(1) }
@@ -122,8 +126,8 @@ fun MainDashboard(
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.CameraAlt, contentDescription = "Scanner") },
-                    label = { Text("Scanner") }
+                    icon = { Icon(Icons.Default.Restaurant, contentDescription = "Nutrition") },
+                    label = { Text("Meals") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 3,
@@ -136,6 +140,13 @@ fun MainDashboard(
         floatingActionButton = {
             if (selectedTab == 0) {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    FloatingActionButton(
+                        onClick = { showAppetiteDialog = true },
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                    ) {
+                        Icon(Icons.Default.Fastfood, contentDescription = "Log Appetite")
+                    }
+
                     FloatingActionButton(
                         onClick = { 
                             if (hasAudioPermission) {
@@ -190,28 +201,10 @@ fun MainDashboard(
                     prnMedications = prnMedications,
                     onRequestAdvisory = onRequestPRNAdvisory
                 )
-                2 -> {
-                    if (hasCameraPermission) {
-                        PillScannerScreen(onPillScanned = { result ->
-                            prefilledName = result.detectedName ?: "${result.detectedColor} ${result.detectedShape} Pill"
-                            prefilledDosage = result.detectedDosage ?: ""
-                            prefilledFrequency = result.frequencyDosesPerDay
-                            showAddDialog = true
-                            selectedTab = 0 
-                        })
-                    } else {
-                        Column(
-                            Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("Camera permission required for scanner")
-                            Button(onClick = { cameraLauncher.launch(Manifest.permission.CAMERA) }) {
-                                Text("Grant Permission")
-                            }
-                        }
-                    }
-                }
+                2 -> MealSyncDashboard(
+                    eatingWindows = eatingWindows,
+                    is24Hour = is24Hour
+                )
                 3 -> Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -265,6 +258,16 @@ fun MainDashboard(
         }
     }
 
+    if (showAppetiteDialog) {
+        AppetiteLogDialog(
+            onDismiss = { showAppetiteDialog = false },
+            onConfirm = { hunger, difficulty ->
+                onLogAppetite(hunger, difficulty)
+                showAppetiteDialog = false
+            }
+        )
+    }
+
     prnAdvisory?.let { advisory ->
         PRNAdvisoryDialog(
             advisory = advisory,
@@ -289,6 +292,60 @@ fun MainDashboard(
                 showAddDialog = false
             }
         )
+    }
+}
+
+@Composable
+fun AppetiteLogDialog(onDismiss: () -> Unit, onConfirm: (Int, Int) -> Unit) {
+    var hunger by remember { mutableStateOf(5f) }
+    var difficulty by remember { mutableStateOf(1f) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Appetite & Hunger Log") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("How hungry do you feel? (1-10)")
+                Slider(value = hunger, onValueChange = { hunger = it }, valueRange = 1f..10f, steps = 8)
+                Text("Difficulty eating right now? (1-10)")
+                Slider(value = difficulty, onValueChange = { difficulty = it }, valueRange = 1f..10f, steps = 8)
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(hunger.toInt(), difficulty.toInt()) }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+fun MealSyncDashboard(eatingWindows: List<OptimalEatingWindow>, is24Hour: Boolean) {
+    val timeFormatter = DateTimeFormatter.ofPattern(if (is24Hour) "HH:mm" else "hh:mm a").withZone(ZoneId.systemDefault())
+    
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        item {
+            Text("Optimal Eating Windows", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("Suggested medication-free zones for easier eating and digestion.", style = MaterialTheme.typography.bodySmall)
+        }
+        
+        items(eatingWindows) { window ->
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Restaurant, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("${timeFormatter.format(Instant.ofEpochMilli(window.startTime))} - ${timeFormatter.format(Instant.ofEpochMilli(window.endTime))}", fontWeight = FontWeight.Bold)
+                    }
+                    Text(window.reason, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
+                }
+            }
+        }
+        
+        if (eatingWindows.isEmpty()) {
+            item { Text("No clear windows detected. Consider adjusting medication offsets if eating becomes too difficult.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center) }
+        }
     }
 }
 
