@@ -44,12 +44,39 @@ class HealthSyncManager(private val context: Context) {
             )
 
             val response = healthConnectClient.readRecords(request)
-            // Filtering for valid sessions (at least 1 hour) to avoid naps/noise
+            // Filtering for valid sessions (at least 3 hours) to avoid naps/noise as T-Wake
             return response.records
-                .filter { ChronoUnit.MINUTES.between(it.startTime, it.endTime) > 60 }
+                .filter { ChronoUnit.MINUTES.between(it.startTime, it.endTime) > 180 }
                 .maxByOrNull { it.endTime }?.endTime
         } catch (e: Exception) {
             // Handle specific Health Connect errors
+            return null
+        }
+    }
+
+    /**
+     * Fetches the latest nap (short sleep session < 3 hours) in the last 12 hours.
+     */
+    suspend fun fetchLatestNap(): SleepSessionRecord? {
+        try {
+            if (!hasPermissions()) return null
+
+            val request = ReadRecordsRequest(
+                recordType = SleepSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(
+                    Instant.now().minus(12, ChronoUnit.HOURS),
+                    Instant.now()
+                )
+            )
+
+            val response = healthConnectClient.readRecords(request)
+            return response.records
+                .filter { 
+                    val mins = ChronoUnit.MINUTES.between(it.startTime, it.endTime)
+                    mins in 15..179 
+                }
+                .maxByOrNull { it.endTime }
+        } catch (e: Exception) {
             return null
         }
     }

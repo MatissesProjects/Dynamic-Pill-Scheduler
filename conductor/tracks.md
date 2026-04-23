@@ -15,7 +15,7 @@
 | T12 | Predictive Inventory | **Supply Chain:** Adherence-aware pill tracking and auto-refill prediction. | conductor/tracks/inventory/ | Completed |
 | T13 | Visual Medication Onboarding | **Computer Vision:** On-device pill identification via CameraX. | conductor/tracks/visual-onboarding/ | Completed |
 | T14 | Manual Data Entry UI | **Input UX:** Full dynamic logging UI and system settings. | conductor/tracks/data-entry-ui/ | Completed |
-| T15 | Interaction & Side Effect Intel | **Intelligence:** AI spacing suggestions and side effect tracking. | conductor/tracks/interaction-intel/ | Planned |
+| T15 | Interaction & Side Effect Intel | **Intelligence:** AI spacing suggestions and side effect tracking. | conductor/tracks/interaction-intel/ | Completed |
 
 ### Track Milestones
 
@@ -92,8 +92,10 @@
 - [x] Transition `MainActivity` from mock data to real-time Room flow.
 
 #### T15: Interaction & Side Effect Intelligence
-- [ ] Define `SideEffectRule` and `AbsorptionRule` schemas.
-- [ ] Build local Knowledge Base of interaction guidelines.
-- [ ] Integrate "Spacing Insights" into Collision Engine.
-- [ ] Display proactive health alerts in Vertical Timeline.
+- [x] Define `SideEffectRule` and `AbsorptionRule` schemas.
+- [x] Build local Knowledge Base of interaction guidelines.
+- [x] Integrate "Spacing Insights" into Collision Engine.
+- [x] Display proactive health alerts in Vertical Timeline.
+- [x] Implement Nap Detection and dose shift suggestions.
+- [x] Implement Post-Prandial Posture (Stay Upright) guidance.
 

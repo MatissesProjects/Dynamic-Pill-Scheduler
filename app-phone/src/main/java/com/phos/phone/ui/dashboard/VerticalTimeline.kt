@@ -23,8 +23,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.phos.core.data.engine.NapOverlap
 import com.phos.core.data.model.MedicationRecord
 import com.phos.core.data.model.SideEffectRule
+import com.phos.core.intelligence.PosturalRecommendation
 import com.phos.phone.ui.scanner.PillScanResult
 import com.phos.phone.ui.scanner.PillScannerScreen
 import java.time.Instant
@@ -40,6 +42,8 @@ fun MainDashboard(
     is24Hour: Boolean,
     healthInsights: List<String>,
     sideEffectAlerts: List<SideEffectRule>,
+    napOverlaps: List<NapOverlap>,
+    postureRecommendation: PosturalRecommendation?,
     onAddMedication: (String, String, Long, Int) -> Unit,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
@@ -116,6 +120,8 @@ fun MainDashboard(
                     is24Hour = is24Hour,
                     healthInsights = healthInsights,
                     sideEffectAlerts = sideEffectAlerts,
+                    napOverlaps = napOverlaps,
+                    postureRecommendation = postureRecommendation,
                     onUpdateMedication = onUpdateMedication,
                     onDeleteMedication = onDeleteMedication,
                     onDuplicateMedication = onDuplicateMedication,
@@ -196,6 +202,8 @@ fun VerticalTimeline(
     is24Hour: Boolean,
     healthInsights: List<String>,
     sideEffectAlerts: List<SideEffectRule>,
+    napOverlaps: List<NapOverlap>,
+    postureRecommendation: PosturalRecommendation?,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
     onDuplicateMedication: (MedicationRecord) -> Unit,
@@ -221,6 +229,14 @@ fun VerticalTimeline(
 
         if (lastAiInsight.isNotEmpty()) {
             item { InsightCard(title = "AI Baseline Insight", insight = lastAiInsight, icon = Icons.Default.AutoAwesome, onDismiss = { onDismissInsight("baseline") }) }
+        }
+        
+        postureRecommendation?.let { rec ->
+            item { InsightCard(title = rec.title, insight = rec.recommendation, icon = Icons.Default.VerticalAlignTop, color = MaterialTheme.colorScheme.primaryContainer, onDismiss = { onDismissInsight("posture_${rec.hashCode()}") }) }
+        }
+
+        napOverlaps.forEach { overlap ->
+            item { InsightCard(title = "Nap Detected: ${overlap.medicationName} Shift", insight = "Your ${overlap.overlapDurationMinutes}-minute nap overlapped with this dose. Suggesting a shift of ${(overlap.suggestedShiftMillis / 60000)} minutes.", icon = Icons.Default.Bedtime, color = MaterialTheme.colorScheme.secondaryContainer, onDismiss = { onDismissInsight("nap_${overlap.medicationId}") }) }
         }
         
         healthInsights.forEach { insight ->
