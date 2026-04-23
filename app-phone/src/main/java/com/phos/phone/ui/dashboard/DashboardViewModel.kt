@@ -9,14 +9,9 @@ import com.phos.core.data.model.*
 import com.phos.core.data.datastore.phosDataStore
 import com.phos.core.data.sync.DataLayerRepository
 import com.phos.core.data.proto.PhosState
-import com.phos.core.data.engine.CollisionResolver
-import com.phos.core.data.engine.NapManager
-import com.phos.core.data.engine.NapOverlap
-import com.phos.core.data.engine.PRNAdvisor
-import com.phos.core.data.engine.PRNAdvisory
+import com.phos.core.data.engine.*
 import com.phos.core.data.sync.HealthSyncManager
-import com.phos.core.intelligence.PostureIntelligence
-import com.phos.core.intelligence.PosturalRecommendation
+import com.phos.core.intelligence.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -34,11 +29,19 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val prnDao = db.prnDao()
     private val doseLogDao = db.doseLogDao()
     private val biometricDao = db.biometricDao()
+    private val intelligenceDao = db.intelligenceDao()
 
     private val dataLayerRepository = DataLayerRepository(application, application.phosDataStore)
     private val healthSyncManager = HealthSyncManager(application)
     private val napManager = NapManager(healthSyncManager)
     private val postureIntelligence = PostureIntelligence()
+    
+    private val voiceParser = GeminiVoiceParser()
+    private val voiceLogCoordinator = VoiceLogCoordinator(
+        doseLogDao, interactionDao, medicationDao, intelligenceDao, voiceParser
+    )
+    
+    val voiceManager = VoiceManager(application)
 
     private val collisionResolverFlow = combine(
         interactionDao.getAllRules(),
@@ -123,6 +126,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             kotlinx.coroutines.delay(60000) // Refresh every minute
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private val _voiceExtractedEntities = MutableStateFlow<ExtractedEntities?>(null)
+    val voiceExtractedEntities: StateFlow<ExtractedEntities?> = _voiceExtractedEntities.asStateFlow()
 
     fun addMedication(name: String, dosage: String, offsetMillis: Long, frequency: Int = 1) {
         viewModelScope.launch {
@@ -216,5 +222,21 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             )
             clearPRNAdvisory()
         }
+    }
+
+    fun processVoiceCommand(text: String) {
+        viewModelScope.launch {
+            _voiceExtractedEntities.value = voiceLogCoordinator.processVoiceCommand(text)
+        }
+    }
+
+    fun clearVoiceResults() {
+        _voiceExtractedEntities.value = null
+        voiceManager.reset()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        voiceManager.destroy()
     }
 }

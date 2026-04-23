@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -28,6 +30,7 @@ import com.phos.core.data.engine.PRNAdvisory
 import com.phos.core.data.model.MedicationRecord
 import com.phos.core.data.model.PRNMedication
 import com.phos.core.data.model.SideEffectRule
+import com.phos.core.intelligence.ExtractedEntities
 import com.phos.core.intelligence.PosturalRecommendation
 import com.phos.phone.ui.scanner.PillScanResult
 import com.phos.phone.ui.scanner.PillScannerScreen
@@ -48,6 +51,8 @@ fun MainDashboard(
     napOverlaps: List<NapOverlap>,
     postureRecommendation: PosturalRecommendation?,
     prnAdvisory: PRNAdvisory?,
+    voiceState: VoiceState,
+    voiceExtractedEntities: ExtractedEntities?,
     onAddMedication: (String, String, Long, Int) -> Unit,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
@@ -57,7 +62,11 @@ fun MainDashboard(
     onDismissInsight: (String) -> Unit,
     onRequestPRNAdvisory: (PRNMedication) -> Unit,
     onLogPRNDose: (PRNMedication) -> Unit,
-    onClearPRNAdvisory: () -> Unit
+    onClearPRNAdvisory: () -> Unit,
+    onStartVoiceListening: () -> Unit,
+    onStopVoiceListening: () -> Unit,
+    onProcessVoiceCommand: (String) -> Unit,
+    onClearVoiceResults: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -72,10 +81,22 @@ fun MainDashboard(
         )
     }
     
-    val launcher = rememberLauncherForActivityResult(
+    val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasCameraPermission = isGranted
+    }
+
+    var hasAudioPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val audioLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasAudioPermission = isGranted
     }
 
     Scaffold(
@@ -109,13 +130,29 @@ fun MainDashboard(
         },
         floatingActionButton = {
             if (selectedTab == 0) {
-                FloatingActionButton(onClick = { 
-                    prefilledName = ""
-                    prefilledDosage = ""
-                    prefilledFrequency = 1
-                    showAddDialog = true 
-                }) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Medication")
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    FloatingActionButton(
+                        onClick = { 
+                            if (hasAudioPermission) {
+                                if (voiceState is VoiceState.Listening) onStopVoiceListening()
+                                else onStartVoiceListening()
+                            } else {
+                                audioLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        },
+                        containerColor = if (voiceState is VoiceState.Listening) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Icon(if (voiceState is VoiceState.Listening) Icons.Default.MicOff else Icons.Default.Mic, contentDescription = "Voice Log")
+                    }
+
+                    FloatingActionButton(onClick = { 
+                        prefilledName = ""
+                        prefilledDosage = ""
+                        prefilledFrequency = 1
+                        showAddDialog = true 
+                    }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Medication")
+                    }
                 }
             }
         }
@@ -161,7 +198,7 @@ fun MainDashboard(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text("Camera permission required for scanner")
-                            Button(onClick = { launcher.launch(Manifest.permission.CAMERA) }) {
+                            Button(onClick = { cameraLauncher.launch(Manifest.permission.CAMERA) }) {
                                 Text("Grant Permission")
                             }
                         }
@@ -193,6 +230,20 @@ fun MainDashboard(
                     JetLagSimulator()
                 }
             }
+
+            // Voice Feedback Overlay
+            AnimatedVisibility(
+                visible = voiceState !is VoiceState.Idle,
+                enter = fadeIn() + slideInVertically { it },
+                exit = fadeOut() + slideOutVertically { it }
+            ) {
+                VoiceOverlay(
+                    state = voiceState,
+                    extractedEntities = voiceExtractedEntities,
+                    onProcess = onProcessVoiceCommand,
+                    onDismiss = onClearVoiceResults
+                )
+            }
         }
     }
 
@@ -220,6 +271,66 @@ fun MainDashboard(
                 showAddDialog = false
             }
         )
+    }
+}
+
+@Composable
+fun VoiceOverlay(
+    state: VoiceState,
+    extractedEntities: ExtractedEntities?,
+    onProcess: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.6f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Card(
+            Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .clickable(enabled = false) {},
+            shape = MaterialTheme.shapes.extraLarge,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                when (state) {
+                    is VoiceState.Listening -> {
+                        Text("Listening...", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.height(16.dp))
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                    }
+                    is VoiceState.Success -> {
+                        Text("Extracting...", style = MaterialTheme.typography.bodyLarge)
+                        LaunchedEffect(state.text) { onProcess(state.text) }
+                    }
+                    is VoiceState.Error -> {
+                        Icon(Icons.Default.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(48.dp))
+                        Text(state.message, textAlign = TextAlign.Center)
+                        Button(onClick = onDismiss, Modifier.padding(top = 16.dp)) { Text("Dismiss") }
+                    }
+                    else -> {}
+                }
+
+                extractedEntities?.let { entities ->
+                    Text("Understood:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    
+                    if (entities.medications.isEmpty() && entities.symptoms.isEmpty() && entities.foods.isEmpty()) {
+                        Text("Nothing recognized. Try saying 'Took my lisinopril' or 'Feeling a headache'.")
+                    } else {
+                        entities.medications.forEach { Text("✅ Logged Dose: ${it.name}", color = Color.Green) }
+                        entities.symptoms.forEach { Text("✅ Logged Symptom: ${it.name}", color = Color.Cyan) }
+                        entities.foods.forEach { Text("✅ Logged Food: ${it.name}", color = Color.Yellow) }
+                    }
+                    
+                    Button(onClick = onDismiss, Modifier.padding(top = 16.dp)) { Text("Done") }
+                }
+            }
+        }
     }
 }
 

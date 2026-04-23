@@ -31,6 +31,9 @@ class MainActivity : ComponentActivity() {
             val postureRecommendation by viewModel.postureRecommendation.collectAsState()
             val prnAdvisory by viewModel.prnAdvisory.collectAsState()
             
+            val voiceState by viewModel.voiceManager.state.collectAsState()
+            val voiceExtractedEntities by viewModel.voiceExtractedEntities.collectAsState()
+            
             PhosTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize()
@@ -46,6 +49,8 @@ class MainActivity : ComponentActivity() {
                         napOverlaps = napOverlaps,
                         postureRecommendation = postureRecommendation,
                         prnAdvisory = prnAdvisory,
+                        voiceState = voiceState,
+                        voiceExtractedEntities = voiceExtractedEntities,
                         onAddMedication = { name, dosage, offset, frequency ->
                             viewModel.addMedication(name, dosage, offset, frequency)
                         },
@@ -75,6 +80,18 @@ class MainActivity : ComponentActivity() {
                         },
                         onClearPRNAdvisory = {
                             viewModel.clearPRNAdvisory()
+                        },
+                        onStartVoiceListening = {
+                            viewModel.voiceManager.startListening()
+                        },
+                        onStopVoiceListening = {
+                            viewModel.voiceManager.stopListening()
+                        },
+                        onProcessVoiceCommand = { text ->
+                            viewModel.processVoiceCommand(text)
+                        },
+                        onClearVoiceResults = {
+                            viewModel.clearVoiceResults()
                         }
                     )
                 }
