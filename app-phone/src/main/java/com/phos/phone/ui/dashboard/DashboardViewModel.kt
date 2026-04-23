@@ -168,11 +168,18 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _voiceExtractedEntities = MutableStateFlow<ExtractedEntities?>(null)
     val voiceExtractedEntities: StateFlow<ExtractedEntities?> = _voiceExtractedEntities.asStateFlow()
 
-    fun addMedication(name: String, dosage: String, offsetMillis: Long, frequency: Int = 1) {
+    fun addMedication(name: String, dosage: String, firstOffsetMillis: Long, frequency: Int = 1) {
         viewModelScope.launch {
+            // Strategy: Spread doses over a 15-hour active day
+            val totalActiveDayMillis = 15 * 3600000L
+            
             for (i in 0 until frequency) {
-                // Stagger doses by 4 hours if multiple
-                val actualOffset = offsetMillis + (i * 4 * 3600000L)
+                val actualOffset = when (frequency) {
+                    1 -> firstOffsetMillis
+                    2 -> if (i == 0) firstOffsetMillis else firstOffsetMillis + totalActiveDayMillis
+                    else -> firstOffsetMillis + (i * (totalActiveDayMillis / (frequency - 1)))
+                }
+                
                 medicationDao.insert(
                     MedicationRecord(
                         medicationId = "${name.lowercase().replace(" ", "_")}_${System.currentTimeMillis()}_$i",
@@ -265,6 +272,18 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun logAppetite(hunger: Int, difficulty: Int) {
         viewModelScope.launch {
             appetiteDao.insertAppetiteLog(AppetiteLog(hungerLevel = hunger, difficultyLevel = difficulty))
+        }
+    }
+
+    fun logFood(name: String, category: String) {
+        viewModelScope.launch {
+            interactionDao.insertFoodLog(
+                FoodLog(
+                    foodId = name.lowercase().replace(" ", "_"),
+                    name = name,
+                    timestamp = System.currentTimeMillis()
+                )
+            )
         }
     }
 

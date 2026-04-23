@@ -36,6 +36,7 @@ import com.phos.core.intelligence.ExtractedEntities
 import com.phos.core.intelligence.PosturalRecommendation
 import com.phos.phone.ui.scanner.PillScanResult
 import com.phos.phone.ui.scanner.PillScannerScreen
+import com.phos.phone.ui.scanner.FoodScanResult
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
@@ -74,7 +75,8 @@ fun MainDashboard(
     onAcceptTravelProposal: (TravelProposal) -> Unit,
     onDismissTravelProposal: () -> Unit,
     onDetectTravel: () -> Unit,
-    onLogAppetite: (Int, Int) -> Unit
+    onLogAppetite: (Int, Int) -> Unit,
+    onLogFood: (String, String) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -201,10 +203,34 @@ fun MainDashboard(
                     prnMedications = prnMedications,
                     onRequestAdvisory = onRequestPRNAdvisory
                 )
-                2 -> MealSyncDashboard(
-                    eatingWindows = eatingWindows,
-                    is24Hour = is24Hour
-                )
+                2 -> {
+                    if (hasCameraPermission) {
+                        PillScannerScreen(
+                            onPillScanned = { result ->
+                                prefilledName = result.detectedName ?: "${result.detectedColor} ${result.detectedShape} Pill"
+                                prefilledDosage = result.detectedDosage ?: ""
+                                prefilledFrequency = result.frequencyDosesPerDay
+                                showAddDialog = true
+                                selectedTab = 0 
+                            },
+                            onFoodScanned = { result ->
+                                onLogFood(result.detectedName ?: "Unknown", result.category ?: "General")
+                                selectedTab = 2 
+                            }
+                        )
+                    } else {
+                        Column(
+                            Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Camera permission required for scanner")
+                            Button(onClick = { cameraLauncher.launch(Manifest.permission.CAMERA) }) {
+                                Text("Grant Permission")
+                            }
+                        }
+                    }
+                }
                 3 -> Column(
                     modifier = Modifier
                         .fillMaxSize()

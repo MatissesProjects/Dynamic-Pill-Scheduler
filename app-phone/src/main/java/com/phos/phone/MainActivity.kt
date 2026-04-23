@@ -108,6 +108,9 @@ class MainActivity : ComponentActivity() {
                         },
                         onLogAppetite = { hunger, difficulty ->
                             viewModel.logAppetite(hunger, difficulty)
+                        },
+                        onLogFood = { name, category ->
+                            viewModel.logFood(name, category)
                         }
                     )
                 }
