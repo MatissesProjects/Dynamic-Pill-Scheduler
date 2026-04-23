@@ -1,76 +1,63 @@
 # Dynamic Pill Scheduler (PHOS)
 
-PHOS (Personalized Health Operating System) is a next-generation health orchestration system designed for the Google Pixel ecosystem (Pixel 9 Pro XL and Pixel Watch 3). It moves beyond static medication tracking into **Predictive Orchestration**, adjusting the user's health schedule based on real-time biological and environmental context.
+PHOS (Personalized Health Operating System) is a next-generation health orchestration system designed for the Google Pixel ecosystem (Pixel 9 Pro XL and Pixel Watch 3). It moves beyond static medication tracking into **Predictive Orchestration**, adjusting the user's health schedule based on real-time biological, behavioral, and environmental context.
 
 ## Core Innovation: Temporal Anchor Logic (T-Wake)
 Traditional health apps use static alarms (e.g., "Take Meds at 9:00 AM"). PHOS uses **Temporal Offsets** anchored to the user's actual physiological start of the day (`T-Wake`).
 
 *   **Logic:** `Schedule_Time = T-Wake + Offset_Hours`
 *   **Dynamic Recalibration:** If a user wakes up late (detected via Pixel Watch 3 sleep stages), the entire day's cascade shifts instantly.
+*   **Nap Detection:** Short sleep sessions (15-180 mins) are detected as naps. If a scheduled dose overlaps with a nap, the system automatically suggests a shift (e.g., "Shift dose to 15 mins after nap end").
 *   **Fuzzy Windows:** Medications are due within a window rather than at a single point in time. For example, if the system detects high heart rate (e.g., during a workout), it suppresses notifications until the heart rate returns to baseline.
 
-## The Collision Engine (Safety Layer)
-PHOS maintains a strict set of interaction rules to ensure user safety and medication efficacy (e.g., "The Sponge Effect").
+## The Collision Engine & Knowledge Base
+PHOS maintains a dynamic, persistent knowledge base of interaction and absorption rules.
 
-*   **Example:** Fiber supplements must be taken >2 hours away from Heart/BP medication to ensure absorption.
-*   **Conflict Resolution:** If a shifted `T-Wake` causes a collision, the system proactively suggests a schedule adjustment (e.g., "Shift Fiber to 5:00 PM to protect morning Metoprolol absorption").
+*   **Absorption Spacing:** Automatically monitors rules like "Take Sucralfate 2 hours away from other meds" or "Take Levothyroxine 60 mins before food."
+*   **Side Effect Monitoring:** Proactively alerts users to watch for specific side effects (e.g., "Dizziness" for Lisinopril) based on their current medication profile.
+*   **Food Interactions:** Detects collisions with logged dietary intake (e.g., Grapefruit/Statin interaction) and adjusts windows or triggers alerts.
+
+## Specialized Intelligence Layers
+### 1. PRN (As-Needed) Decision Intelligence
+A safety advisory layer for non-scheduled medications (e.g., NSAIDs, rescue inhalers).
+*   **Safety Checks:** Validates minimum gaps between doses and 24-hour maximum limits.
+*   **Biometric Awareness:** Triggers warnings if a user attempts to take a stimulant while their real-time heart rate is elevated.
+
+### 2. Context-Aware Voice Logging
+A hands-free, natural language interface powered by on-device Speech-to-Text and **Gemini Nano**.
+*   **Multi-Entity Extraction:** Parses complex sentences like *"Took my Lisinopril but I'm feeling a slight headache"* to simultaneously log doses and symptoms.
+*   **Conversational Feedback:** Provides immediate visual confirmation of understood entities with a one-tap dismissal.
+
+### 3. Advanced Travel & Jet Lag Automation
+Proactively prepares the user's circadian rhythm for upcoming timezone shifts.
+*   **Calendar Integration:** Automatically detects upcoming trips via flight/travel events.
+*   **Proactive Titration:** Proposes a multi-day titration plan (max 1.5h shift per day) *days before* departure, allowing the user to arrive already adjusted.
+
+### 4. Post-Prandial Posture Guidance
+Monitors food intake to provide "Stay Upright" recommendations (30-60 mins) to optimize digestion and prevent acid reflux (GERD) based on clinical guidelines.
 
 ## Data Architecture: The Three Streams
-All data is stored in a **Local-Only SQLite Temporal Database** to ensure privacy.
+All data is stored in a **Local-Only SQLite Temporal Database** to ensure absolute privacy.
 
 1.  **Stream A (Passive):** Continuous HR, SpO2, HRV, and Sleep data from Health Connect.
-2.  **Stream B (Active):** User-logged symptoms (1-10 scale), water intake, and medication confirmation.
-3.  **Stream C (Environmental):** Barometric pressure and weather via external APIs (used to predict symptom flare-ups).
-
-## Intelligence Layer: On-Device Edge AI
-To ensure absolute privacy, PHOS utilizes **Gemini Nano (AICore)** on the Pixel 9 Pro XL.
-
-*   **Correlation Engine:** Analyzes potential correlations between environmental factors (like barometric pressure drops) and user symptoms.
-*   **Natural Language Parsing:** Processes natural language logs like "Log 8oz of water and a slight headache."
-*   **Predictive Modeling:** Forecasts biometric spikes based on sleep debt and medication timing.
-
-## Multi-Device UX Principles
-*   **Pixel Watch 3:**
-    *   **Haptic Vocabulary:** Unique vibration patterns for "Dose Due" (double-pulse) vs. "Collision Warning" (low rumble).
-    *   **Zero-Tap Logging:** Watch face complications for instant status updates.
-*   **Pixel 9 Pro XL:**
-    *   **Material You:** Fluid, wallpaper-aware UI.
-    *   **The Vertical Timeline:** A unified visual stream of medications, symptoms, and biometric trends.
+2.  **Stream B (Active):** User-logged symptoms, voice logs, and "Scan-to-Onboard" pill identification (CameraX + ML Kit).
+3.  **Stream C (Environmental):** Barometric pressure and weather context used to correlate with user-logged symptoms.
 
 ## Project Structure
-The project is built as a multi-module Android application to support parallel development:
+*   `app-phone`: Primary UI (Vertical Timeline, Jet Lag Simulator, Voice Overlay, Pill Scanner).
+*   `app-wear`: Wear OS 5 integration (Haptic Vocabulary, Zero-Tap Complications, Gesture Detection).
+*   `core-data`: Persistence, Health Connect sync, and engines (`AnchorManager`, `CollisionResolver`, `NapManager`, `PRNAdvisor`).
+*   `core-intelligence`: Edge AI logic (`SymptomCorrelationEngine`, `VoiceLogCoordinator`, `PostureIntelligence`).
 
-*   `app-phone`: The primary user interface for the phone.
-    *   `ui`: Contains `DashboardViewModel`, `JetLagSimulator`, and `VerticalTimeline` for managing user state and schedule visualization.
-    *   `widget`: Implements the `BiometricDashboardWidget` for home screen status updates.
-*   `app-wear`: Dedicated UI and service layer for Wear OS.
-    *   `complications`: Provides the `MedicationStatusComplicationService` for watch face integration.
-    *   `haptics`: Defines the `HapticVocabulary` for standardized tactile feedback.
-*   `core-data`: The persistence and data management layer.
-    *   `db` and `dao`: Core SQLite/Room database implementation.
-    *   `model`: Shared data structures and entities.
-    *   `engine`: Core repository logic and management (e.g., `AnchorManager`, `CollisionResolver`).
-    *   `sync`: Manages cross-device and Health Connect synchronization.
-*   `core-intelligence`: The business logic and complex processing layer.
-    *   `intelligence`: Contains the `SymptomCorrelationEngine` for advanced health analysis and `IntelligenceWorker` for background processing.
-
-## Getting Started
-To get started with development, ensure you have the following tools installed:
-
-*   Android Studio
-*   Java Development Kit (JDK)
-*   GitHub CLI (`gh`) for PR management
-
-### Build Instructions
-The project uses Gradle for its build system. Currently, a local Gradle wrapper generation might be required upon first clone.
+## Current Status (Completed Tracks)
+*   ✅ **T1-T10:** Core Engine, Health Sync, Ambient UI, Edge AI (Gemini Nano), Dynamic Titration, Bio-Interactions, Geo-Context, Reporting, Wearable Gestures, and Automated Dose Detection.
+*   ✅ **T11-T13:** Biometric Digital Twin, Predictive Inventory, and Visual Medication Onboarding (CV).
+*   ✅ **T14-T15:** Manual Data Entry UI and Interaction/Side Effect Intelligence.
+*   ✅ **T16:** Advanced Travel & Jet Lag Automation.
+*   ✅ **T17:** PRN (As-Needed) Decision Intelligence.
+*   ✅ **T18:** Context-Aware Voice Logging.
 
 ## Development Mandates
 1.  **Privacy-First:** Never send biometric or medication data to a cloud.
-2.  **Testing-First:** Logic changes in `T-Wake` or `Collision Engine` require exhaustive unit tests.
-3.  **Surgical Edits:** Only modify files related to your assigned track.
-
-## Current Status
-*   **Track 1 (Core Engine):** Implemented Temporal Anchor logic and Collision Engine.
-*   **Track 2 (Health Sync):** Integrated Health Connect, T-Wake anchoring, and cross-device sync.
-*   **Track 3 (Ambient UI):** Added watch haptics, complications, and phone dashboard.
-*   **Track 4 (Edge AI):** Pending integration of Gemini Nano for symptom correlation.
+2.  **Testing-First:** All logic changes require unit tests (verified via `./gradlew test`).
+3.  **Surgical Edits:** Maintain module boundaries and follow established naming conventions.
