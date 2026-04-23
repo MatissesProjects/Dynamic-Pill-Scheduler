@@ -23,11 +23,13 @@ class MainActivity : ComponentActivity() {
         
         setContent {
             val medications by viewModel.medications.collectAsState()
+            val prnMedications by viewModel.prnMedications.collectAsState()
             val phosState by viewModel.phosState.collectAsState(initial = PhosState.getDefaultInstance())
             val healthInsights by viewModel.healthInsights.collectAsState()
             val sideEffectAlerts by viewModel.sideEffectAlerts.collectAsState()
             val napOverlaps by viewModel.napOverlaps.collectAsState()
             val postureRecommendation by viewModel.postureRecommendation.collectAsState()
+            val prnAdvisory by viewModel.prnAdvisory.collectAsState()
             
             PhosTheme {
                 Surface(
@@ -35,6 +37,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     MainDashboard(
                         medications = medications,
+                        prnMedications = prnMedications,
                         tWakeEpoch = phosState.tWakeEpoch,
                         lastAiInsight = phosState.lastAiInsight,
                         is24Hour = phosState.is24Hour,
@@ -42,6 +45,7 @@ class MainActivity : ComponentActivity() {
                         sideEffectAlerts = sideEffectAlerts,
                         napOverlaps = napOverlaps,
                         postureRecommendation = postureRecommendation,
+                        prnAdvisory = prnAdvisory,
                         onAddMedication = { name, dosage, offset, frequency ->
                             viewModel.addMedication(name, dosage, offset, frequency)
                         },
@@ -62,6 +66,15 @@ class MainActivity : ComponentActivity() {
                         },
                         onDismissInsight = { id ->
                             viewModel.dismissInsight(id)
+                        },
+                        onRequestPRNAdvisory = { med ->
+                            viewModel.requestPRNAdvisory(med)
+                        },
+                        onLogPRNDose = { med ->
+                            viewModel.logPRNDose(med)
+                        },
+                        onClearPRNAdvisory = {
+                            viewModel.clearPRNAdvisory()
                         }
                     )
                 }

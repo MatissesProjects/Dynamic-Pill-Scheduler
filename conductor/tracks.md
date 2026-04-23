@@ -17,7 +17,7 @@
 | T14 | Manual Data Entry UI | **Input UX:** Full dynamic logging UI and system settings. | conductor/tracks/data-entry-ui/ | Completed |
 | T15 | Interaction & Side Effect Intel | **Intelligence:** AI spacing suggestions and side effect tracking. | conductor/tracks/interaction-intel/ | Completed |
 | T16 | Advanced Travel Automation | **Titration:** Proactive jet lag schedule proposals via calendar. | conductor/tracks/travel-automation/ | Planned |
-| T17 | PRN Decision Intelligence | **Safety:** Advisory layer for as-needed medication efficacy. | conductor/tracks/prn-intelligence/ | Planned |
+| T17 | PRN Decision Intelligence | **Safety:** Advisory layer for as-needed medication efficacy. | conductor/tracks/prn-intelligence/ | Completed |
 | T18 | Context-Aware Voice Logging | **Input UX:** Hands-free logging via on-device Speech-to-Text & Nano. | conductor/tracks/voice-logging/ | Planned |
 
 ### Track Milestones
@@ -108,9 +108,9 @@
 - [ ] Create "Travel Alert" approval UI in dashboard.
 
 #### T17: PRN Decision Intelligence
-- [ ] Define `PRNRecord` and `PRNHistory` entities.
-- [ ] Build `PRNAdvisor` engine with HR-aware safety checks.
-- [ ] Implement "PRN Request" UI flow with AI alternatives.
+- [x] Define `PRNRecord` and `PRNHistory` entities.
+- [x] Build `PRNAdvisor` engine with HR-aware safety checks.
+- [x] Implement "PRN Request" UI flow with AI alternatives.
 
 #### T18: Context-Aware Voice Logging
 - [ ] Integrate on-device `SpeechRecognizer`.

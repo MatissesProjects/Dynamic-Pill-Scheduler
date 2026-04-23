@@ -44,8 +44,9 @@ class InventoryManagerTest {
         val depletionDate = manager.predictDepletionDate(medId, dosesPerDay = 2)
         
         assertNotNull(depletionDate)
-        val daysDiff = ChronoUnit.DAYS.between(Instant.now(), depletionDate)
-        assertEquals(5, daysDiff)
+        val expected = Instant.now().plus(5, ChronoUnit.DAYS)
+        val diffSeconds = Math.abs(ChronoUnit.SECONDS.between(expected, depletionDate))
+        assertTrue("Depletion date should be within 10 seconds of expected", diffSeconds < 10)
     }
 
     @Test

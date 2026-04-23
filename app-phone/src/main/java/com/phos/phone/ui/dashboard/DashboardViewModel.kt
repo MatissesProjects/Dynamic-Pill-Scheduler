@@ -12,6 +12,8 @@ import com.phos.core.data.proto.PhosState
 import com.phos.core.data.engine.CollisionResolver
 import com.phos.core.data.engine.NapManager
 import com.phos.core.data.engine.NapOverlap
+import com.phos.core.data.engine.PRNAdvisor
+import com.phos.core.data.engine.PRNAdvisory
 import com.phos.core.data.sync.HealthSyncManager
 import com.phos.core.intelligence.PostureIntelligence
 import com.phos.core.intelligence.PosturalRecommendation
@@ -29,6 +31,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val temporalAnchorDao = db.temporalAnchorDao()
     private val interactionDao = db.interactionDao()
     private val dismissedInsightDao = db.dismissedInsightDao()
+    private val prnDao = db.prnDao()
+    private val doseLogDao = db.doseLogDao()
+    private val biometricDao = db.biometricDao()
 
     private val dataLayerRepository = DataLayerRepository(application, application.phosDataStore)
     private val healthSyncManager = HealthSyncManager(application)
@@ -41,6 +46,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         interactionDao.getAllSideEffectRules()
     ) { interaction, absorption, sideEffects ->
         CollisionResolver(interaction, absorption, sideEffects)
+    }
+
+    private val prnAdvisorFlow = collisionResolverFlow.map { 
+        PRNAdvisor(doseLogDao, biometricDao, it)
     }
 
     init {
@@ -68,11 +77,21 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 InteractionRule(sourceId = "grapefruit", targetId = "statin", gapMillis = 24 * 3600000L, reason = "Grapefruit inhibits metabolism of Statins, increasing toxicity risk.", severity = InteractionSeverity.CRITICAL)
             )
             interactionRules.forEach { interactionDao.insertRule(it) }
+
+            // Seed PRN Medications
+            val prnMedications = listOf(
+                PRNMedication(medicationId = "ibuprofen_prn", name = "Ibuprofen", dosage = "400mg", maxDosesPer24h = 4, minGapMinutes = 240, reasonForUse = "Pain/Inflammation", validFrom = System.currentTimeMillis()),
+                PRNMedication(medicationId = "albuterol_prn", name = "Albuterol Inhaler", dosage = "2 puffs", maxDosesPer24h = 8, minGapMinutes = 15, reasonForUse = "Shortness of Breath", validFrom = System.currentTimeMillis())
+            )
+            prnMedications.forEach { prnDao.insert(it) }
         }
     }
 
     private val dismissedIds = dismissedInsightDao.getAllDismissedIds()
     val medications: StateFlow<List<MedicationRecord>> = medicationDao.getAllActiveMedicationsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val prnMedications: StateFlow<List<PRNMedication>> = prnDao.getAllActivePRNMedicationsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val phosState: StateFlow<PhosState> = dataLayerRepository.phosStateFlow
@@ -164,6 +183,38 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             getApplication<Application>().phosDataStore.updateData { state ->
                 state.toBuilder().setIs24Hour(is24Hour).build()
             }
+        }
+    }
+
+    private val _prnAdvisory = MutableStateFlow<PRNAdvisory?>(null)
+    val prnAdvisory: StateFlow<PRNAdvisory?> = _prnAdvisory.asStateFlow()
+
+    fun requestPRNAdvisory(prnMed: PRNMedication) {
+        viewModelScope.launch {
+            val advisor = prnAdvisorFlow.first()
+            val activeMeds = medications.first()
+            val recentFood = interactionDao.getRecentFoodLogs(System.currentTimeMillis() - 2 * 3600000L)
+            
+            _prnAdvisory.value = advisor.evaluateRequest(prnMed, activeMeds, recentFood)
+        }
+    }
+
+    fun clearPRNAdvisory() {
+        _prnAdvisory.value = null
+    }
+
+    fun logPRNDose(prnMed: PRNMedication) {
+        viewModelScope.launch {
+            doseLogDao.insertLog(
+                DoseLog(
+                    medicationId = prnMed.medicationId,
+                    scheduledTime = System.currentTimeMillis(),
+                    actualTime = System.currentTimeMillis(),
+                    status = "TAKEN",
+                    notes = "PRN Dose for ${prnMed.reasonForUse}"
+                )
+            )
+            clearPRNAdvisory()
         }
     }
 }
