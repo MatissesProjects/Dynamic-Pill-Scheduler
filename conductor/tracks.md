@@ -16,6 +16,9 @@
 | T13 | Visual Medication Onboarding | **Computer Vision:** On-device pill identification via CameraX. | conductor/tracks/visual-onboarding/ | Completed |
 | T14 | Manual Data Entry UI | **Input UX:** Full dynamic logging UI and system settings. | conductor/tracks/data-entry-ui/ | Completed |
 | T15 | Interaction & Side Effect Intel | **Intelligence:** AI spacing suggestions and side effect tracking. | conductor/tracks/interaction-intel/ | Completed |
+| T16 | Advanced Travel Automation | **Titration:** Proactive jet lag schedule proposals via calendar. | conductor/tracks/travel-automation/ | Planned |
+| T17 | PRN Decision Intelligence | **Safety:** Advisory layer for as-needed medication efficacy. | conductor/tracks/prn-intelligence/ | Planned |
+| T18 | Context-Aware Voice Logging | **Input UX:** Hands-free logging via on-device Speech-to-Text & Nano. | conductor/tracks/voice-logging/ | Planned |
 
 ### Track Milestones
 
@@ -98,4 +101,19 @@
 - [x] Display proactive health alerts in Vertical Timeline.
 - [x] Implement Nap Detection and dose shift suggestions.
 - [x] Implement Post-Prandial Posture (Stay Upright) guidance.
+
+#### T16: Advanced Travel Automation
+- [ ] Implement `TravelDetectionWorker` for future trip detection.
+- [ ] Build `proposeAdvanceTitration` logic in `JetLagManager`.
+- [ ] Create "Travel Alert" approval UI in dashboard.
+
+#### T17: PRN Decision Intelligence
+- [ ] Define `PRNRecord` and `PRNHistory` entities.
+- [ ] Build `PRNAdvisor` engine with HR-aware safety checks.
+- [ ] Implement "PRN Request" UI flow with AI alternatives.
+
+#### T18: Context-Aware Voice Logging
+- [ ] Integrate on-device `SpeechRecognizer`.
+- [ ] Develop multi-entity extraction prompt templates for Gemini Nano.
+- [ ] Implement `VoiceLogCoordinator` for automated data dispatch.
 
