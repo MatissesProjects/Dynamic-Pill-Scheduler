@@ -12,18 +12,10 @@ data class Collision(
 )
 
 class CollisionResolver(
-    private val rules: List<InteractionRule> = emptyList()
+    private val interactionRules: List<InteractionRule> = emptyList(),
+    private val absorptionRules: List<AbsorptionRule> = emptyList(),
+    private val sideEffectRules: List<SideEffectRule> = emptyList()
 ) {
-    
-    private val absorptionRules = listOf(
-        AbsorptionRule("sucralfate", 120, "Take Sucralfate on an empty stomach, at least 2 hours before other medications to protect gut absorption."),
-        AbsorptionRule("levothyroxine", 60, "Take Levothyroxine 60 minutes before other meds or food for optimal absorption.")
-    )
-    
-    private val sideEffectRules = listOf(
-        SideEffectRule("lisinopril", "Dizziness/Cough", "Monitor for a persistent dry cough or dizziness when standing up."),
-        SideEffectRule("metoprolol", "Low Heart Rate", "Watch for extreme fatigue or very low resting heart rate.")
-    )
 
     /**
      * Finds spacing suggestions for medications with specific absorption requirements.
@@ -108,7 +100,7 @@ class CollisionResolver(
     }
 
     private fun findRule(idA: String, idB: String): InteractionRule? {
-        return rules.find { 
+        return interactionRules.find { 
             (idA.lowercase().contains(it.sourceId) && idB.lowercase().contains(it.targetId)) || 
             (idB.lowercase().contains(it.sourceId) && idA.lowercase().contains(it.targetId)) 
         }

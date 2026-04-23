@@ -23,12 +23,46 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val medicationDao = db.medicationDao()
     private val interactionDao = db.interactionDao()
     private val dismissedInsightDao = db.dismissedInsightDao()
-    
+
     private val dataLayerRepository = DataLayerRepository(application, application.phosDataStore)
 
-    private val collisionResolverFlow = interactionDao.getAllRules().map { CollisionResolver(it) }
-    private val dismissedIds = dismissedInsightDao.getAllDismissedIds()
+    private val collisionResolverFlow = combine(
+        interactionDao.getAllRules(),
+        interactionDao.getAllAbsorptionRules(),
+        interactionDao.getAllSideEffectRules()
+    ) { interaction, absorption, sideEffects ->
+        CollisionResolver(interaction, absorption, sideEffects)
+    }
 
+    init {
+        seedKnowledgeBase()
+    }
+
+    private fun seedKnowledgeBase() {
+        viewModelScope.launch {
+            // Seed Absorption Rules
+            val absorptionRules = listOf(
+                AbsorptionRule(medicationId = "sucralfate", requiredGapMinutes = 120, reason = "Take Sucralfate on an empty stomach, at least 2 hours before other medications to protect gut absorption."),
+                AbsorptionRule(medicationId = "levothyroxine", requiredGapMinutes = 60, reason = "Take Levothyroxine 60 minutes before other meds or food for optimal absorption.")
+            )
+            absorptionRules.forEach { interactionDao.insertAbsorptionRule(it) }
+
+            // Seed Side Effect Rules
+            val sideEffectRules = listOf(
+                SideEffectRule(medicationId = "lisinopril", sideEffect = "Dizziness/Cough", advice = "Monitor for a persistent dry cough or dizziness when standing up."),
+                SideEffectRule(medicationId = "metoprolol", sideEffect = "Low Heart Rate", advice = "Watch for extreme fatigue or very low resting heart rate.")
+            )
+            sideEffectRules.forEach { interactionDao.insertSideEffectRule(it) }
+
+            // Seed Interaction Rules
+            val interactionRules = listOf(
+                InteractionRule(sourceId = "grapefruit", targetId = "statin", gapMillis = 24 * 3600000L, reason = "Grapefruit inhibits metabolism of Statins, increasing toxicity risk.", severity = InteractionSeverity.CRITICAL)
+            )
+            interactionRules.forEach { interactionDao.insertRule(it) }
+        }
+    }
+
+    private val dismissedIds = dismissedInsightDao.getAllDismissedIds()
     val medications: StateFlow<List<MedicationRecord>> = medicationDao.getAllActiveMedicationsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

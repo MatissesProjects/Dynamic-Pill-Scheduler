@@ -25,7 +25,9 @@ enum class InteractionSeverity {
 /**
  * Specifically for rules about when to take a med relative to others for optimal gut health/absorption.
  */
+@Entity(tableName = "absorption_rules")
 data class AbsorptionRule(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val medicationId: String,
     val requiredGapMinutes: Int,
     val reason: String,
@@ -35,7 +37,9 @@ data class AbsorptionRule(
 /**
  * For general side effects to watch out for when taking specific meds.
  */
+@Entity(tableName = "side_effect_rules")
 data class SideEffectRule(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val medicationId: String,
     val sideEffect: String,
     val advice: String
