@@ -30,6 +30,7 @@ import com.phos.core.data.engine.PRNAdvisory
 import com.phos.core.data.model.MedicationRecord
 import com.phos.core.data.model.PRNMedication
 import com.phos.core.data.model.SideEffectRule
+import com.phos.core.data.model.TravelProposal
 import com.phos.core.intelligence.ExtractedEntities
 import com.phos.core.intelligence.PosturalRecommendation
 import com.phos.phone.ui.scanner.PillScanResult
@@ -51,6 +52,7 @@ fun MainDashboard(
     napOverlaps: List<NapOverlap>,
     postureRecommendation: PosturalRecommendation?,
     prnAdvisory: PRNAdvisory?,
+    travelProposal: TravelProposal?,
     voiceState: VoiceState,
     voiceExtractedEntities: ExtractedEntities?,
     onAddMedication: (String, String, Long, Int) -> Unit,
@@ -66,7 +68,10 @@ fun MainDashboard(
     onStartVoiceListening: () -> Unit,
     onStopVoiceListening: () -> Unit,
     onProcessVoiceCommand: (String) -> Unit,
-    onClearVoiceResults: () -> Unit
+    onClearVoiceResults: () -> Unit,
+    onAcceptTravelProposal: (TravelProposal) -> Unit,
+    onDismissTravelProposal: () -> Unit,
+    onDetectTravel: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -172,11 +177,14 @@ fun MainDashboard(
                     sideEffectAlerts = sideEffectAlerts,
                     napOverlaps = napOverlaps,
                     postureRecommendation = postureRecommendation,
+                    travelProposal = travelProposal,
                     onUpdateMedication = onUpdateMedication,
                     onDeleteMedication = onDeleteMedication,
                     onDuplicateMedication = onDuplicateMedication,
                     onUpdateWakeTime = onUpdateWakeTime,
-                    onDismissInsight = onDismissInsight
+                    onDismissInsight = onDismissInsight,
+                    onAcceptTravelProposal = onAcceptTravelProposal,
+                    onDismissTravelProposal = onDismissTravelProposal
                 )
                 1 -> PRNList(
                     prnMedications = prnMedications,
@@ -228,6 +236,16 @@ fun MainDashboard(
                     
                     Divider()
                     JetLagSimulator()
+
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = onDetectTravel,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Flight, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Simulate Travel Detection")
+                    }
                 }
             }
 
@@ -408,11 +426,14 @@ fun VerticalTimeline(
     sideEffectAlerts: List<SideEffectRule>,
     napOverlaps: List<NapOverlap>,
     postureRecommendation: PosturalRecommendation?,
+    travelProposal: TravelProposal?,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
     onDuplicateMedication: (MedicationRecord) -> Unit,
     onUpdateWakeTime: (Long) -> Unit,
-    onDismissInsight: (String) -> Unit
+    onDismissInsight: (String) -> Unit,
+    onAcceptTravelProposal: (TravelProposal) -> Unit,
+    onDismissTravelProposal: () -> Unit
 ) {
     val pattern = if (is24Hour) "HH:mm" else "hh:mm a"
     val timeFormatter = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
@@ -433,6 +454,28 @@ fun VerticalTimeline(
 
         if (lastAiInsight.isNotEmpty()) {
             item { InsightCard(title = "AI Baseline Insight", insight = lastAiInsight, icon = Icons.Default.AutoAwesome, onDismiss = { onDismissInsight("baseline") }) }
+        }
+        
+        travelProposal?.let { proposal ->
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.FlightTakeoff, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Travel Detected: ${proposal.destination}", fontWeight = FontWeight.Bold)
+                        }
+                        Text(proposal.explanation ?: "", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
+                        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                            TextButton(onClick = onDismissTravelProposal) { Text("Dismiss") }
+                            Button(onClick = { onAcceptTravelProposal(proposal) }) { Text("Accept Plan") }
+                        }
+                    }
+                }
+            }
         }
         
         postureRecommendation?.let { rec ->

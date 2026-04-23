@@ -14,6 +14,7 @@ import com.phos.core.data.sync.HealthSyncManager
 import com.phos.core.intelligence.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -35,6 +36,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val healthSyncManager = HealthSyncManager(application)
     private val napManager = NapManager(healthSyncManager)
     private val postureIntelligence = PostureIntelligence()
+    private val jetLagManager = JetLagManager()
     
     private val voiceParser = GeminiVoiceParser()
     private val voiceLogCoordinator = VoiceLogCoordinator(
@@ -126,6 +128,32 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             kotlinx.coroutines.delay(60000) // Refresh every minute
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private val _travelProposal = MutableStateFlow<TravelProposal?>(null)
+    val travelProposal: StateFlow<TravelProposal?> = _travelProposal.asStateFlow()
+
+    fun detectUpcomingTravel() {
+        viewModelScope.launch {
+            _travelProposal.value = jetLagManager.proposeAdvanceTitration(
+                destination = "Tokyo",
+                targetZoneId = "Asia/Tokyo",
+                travelDate = Instant.now().plus(5, java.time.temporal.ChronoUnit.DAYS)
+            )
+        }
+    }
+
+    fun acceptTravelProposal(proposal: TravelProposal) {
+        viewModelScope.launch {
+            proposal.titrationSteps.firstOrNull()?.let { step ->
+                dataLayerRepository.updateTWake(step.targetWakeTime)
+            }
+            _travelProposal.value = null
+        }
+    }
+
+    fun dismissTravelProposal() {
+        _travelProposal.value = null
+    }
 
     private val _voiceExtractedEntities = MutableStateFlow<ExtractedEntities?>(null)
     val voiceExtractedEntities: StateFlow<ExtractedEntities?> = _voiceExtractedEntities.asStateFlow()

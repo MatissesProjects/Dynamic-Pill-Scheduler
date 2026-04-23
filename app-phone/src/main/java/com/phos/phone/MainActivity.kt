@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
             val napOverlaps by viewModel.napOverlaps.collectAsState()
             val postureRecommendation by viewModel.postureRecommendation.collectAsState()
             val prnAdvisory by viewModel.prnAdvisory.collectAsState()
+            val travelProposal by viewModel.travelProposal.collectAsState()
             
             val voiceState by viewModel.voiceManager.state.collectAsState()
             val voiceExtractedEntities by viewModel.voiceExtractedEntities.collectAsState()
@@ -49,6 +50,7 @@ class MainActivity : ComponentActivity() {
                         napOverlaps = napOverlaps,
                         postureRecommendation = postureRecommendation,
                         prnAdvisory = prnAdvisory,
+                        travelProposal = travelProposal,
                         voiceState = voiceState,
                         voiceExtractedEntities = voiceExtractedEntities,
                         onAddMedication = { name, dosage, offset, frequency ->
@@ -92,6 +94,15 @@ class MainActivity : ComponentActivity() {
                         },
                         onClearVoiceResults = {
                             viewModel.clearVoiceResults()
+                        },
+                        onAcceptTravelProposal = { proposal ->
+                            viewModel.acceptTravelProposal(proposal)
+                        },
+                        onDismissTravelProposal = {
+                            viewModel.dismissTravelProposal()
+                        },
+                        onDetectTravel = {
+                            viewModel.detectUpcomingTravel()
                         }
                     )
                 }

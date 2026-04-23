@@ -6,9 +6,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.phos.core.data.engine.JetLagManager
-import com.phos.core.data.engine.TitrationStep
+import com.phos.core.data.model.TitrationStep
 import java.time.Instant
 import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun JetLagSimulator(
@@ -40,7 +42,8 @@ fun JetLagSimulator(
                     val targetWake = jetLagManager.getTargetWakeInTimeZone(now, zone)
                     titrationSteps = jetLagManager.calculateTitrationSchedule(
                         now.toEpochMilli(),
-                        targetWake.toEpochMilli()
+                        targetWake.toEpochMilli(),
+                        ZonedDateTime.now()
                     )
                 } catch (e: Exception) {
                     // Handle invalid ZoneId
@@ -53,10 +56,11 @@ fun JetLagSimulator(
         
         if (titrationSteps.isNotEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "Suggested 3-Day Shift:", style = MaterialTheme.typography.labelMedium)
-            titrationSteps.take(3).forEach { step ->
+            Text(text = "Titration Plan:", style = MaterialTheme.typography.labelMedium)
+            titrationSteps.forEach { step ->
+                val timeStr = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(step.targetWakeTime))
                 Text(
-                    text = "Day ${step.dayNumber}: Shift T-Wake to ${step.wakeTimeShiftMillis}",
+                    text = "${step.date}: Shift T-Wake to $timeStr",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
