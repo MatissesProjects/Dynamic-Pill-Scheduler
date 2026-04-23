@@ -18,7 +18,7 @@
 | T15 | Interaction & Side Effect Intel | **Intelligence:** AI spacing suggestions and side effect tracking. | conductor/tracks/interaction-intel/ | Completed |
 | T16 | Advanced Travel Automation | **Titration:** Proactive jet lag schedule proposals via calendar. | conductor/tracks/travel-automation/ | Planned |
 | T17 | PRN Decision Intelligence | **Safety:** Advisory layer for as-needed medication efficacy. | conductor/tracks/prn-intelligence/ | Completed |
-| T18 | Context-Aware Voice Logging | **Input UX:** Hands-free logging via on-device Speech-to-Text & Nano. | conductor/tracks/voice-logging/ | Planned |
+| T18 | Context-Aware Voice Logging | **Input UX:** Hands-free logging via on-device Speech-to-Text & Nano. | conductor/tracks/voice-logging/ | Completed |
 
 ### Track Milestones
 
@@ -113,7 +113,7 @@
 - [x] Implement "PRN Request" UI flow with AI alternatives.
 
 #### T18: Context-Aware Voice Logging
-- [ ] Integrate on-device `SpeechRecognizer`.
-- [ ] Develop multi-entity extraction prompt templates for Gemini Nano.
-- [ ] Implement `VoiceLogCoordinator` for automated data dispatch.
+- [x] Integrate on-device `SpeechRecognizer`.
+- [x] Develop multi-entity extraction prompt templates for Gemini Nano.
+- [x] Implement `VoiceLogCoordinator` for automated data dispatch.
 
