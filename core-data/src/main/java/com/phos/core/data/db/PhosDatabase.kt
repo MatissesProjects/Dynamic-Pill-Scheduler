@@ -20,9 +20,11 @@ import com.phos.core.data.model.*
         BiometricLog::class,
         BiometricBaseline::class,
         InventoryRecord::class,
-        DismissedInsight::class
+        DismissedInsight::class,
+        AbsorptionRule::class,
+        SideEffectRule::class
     ],
-    version = 7
+    version = 8
 )
 @TypeConverters(Converters::class)
 abstract class PhosDatabase : RoomDatabase() {
