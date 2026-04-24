@@ -21,7 +21,7 @@
 | T18 | Context-Aware Voice Logging | **Input UX:** Hands-free logging via on-device Speech-to-Text & Nano. | conductor/tracks/voice-logging/ | Completed |
 | T19 | On-Device Food Recognition | **CV:** Identifying dietary intake via camera and TFLite. | conductor/tracks/food-vision/ | Planned |
 | T20 | Nutrient & Allergen Intelligence | **Intelligence:** Nutrition Label OCR, macro estimation, and allergen flagging. | conductor/tracks/macro-intelligence/ | Completed |
-| T21 | Adaptive Meal & Hunger Orchestration | **Orchestration:** Optimal hunger-window reservation and dietary-med sync. | conductor/tracks/adaptive-meal-scheduling/ | Planned |
+| T21 | Adaptive Meal & Hunger Orchestration | **Orchestration:** Optimal hunger-window reservation and dietary-med sync. | conductor/tracks/adaptive-meal-scheduling/ | Completed |
 
 ### Track Milestones
 
@@ -131,8 +131,10 @@
 - [x] Develop "Nutrition Label OCR" parser to extract macros and ingredients.
 - [x] Create "Nutrition Guide" UI for food suggestions and sourcing.
 
-#### T21: Adaptive Meal Scheduling
-- [ ] Develop `MealScheduler` eating window logic.
-- [ ] Integrate medication food requirements (Empty vs. Full stomach).
-- [ ] Build "Meal Sync" dashboard visualization.
+#### T21: Adaptive Meal & Hunger Orchestration
+- [x] Implement `AppetiteLog` and hunger-tracking dashboard logic.
+- [x] Create `MealScheduler` logic to suggest "Optimal Eating Windows" based on `T-Wake` and medication offsets.
+- [x] Integrate "Sacred Eating Window" reservation for high-difficulty days.
+- [x] Implement nutrition-aware scheduling (e.g., "Best time for this yogurt: 2:00 PM").
+- [x] Develop "Meal Sync" dashboard view showing medication windows overlaid with suggested meal times.
 
