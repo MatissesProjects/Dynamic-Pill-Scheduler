@@ -20,8 +20,8 @@
 | T17 | PRN Decision Intelligence | **Safety:** Advisory layer for as-needed medication efficacy. | conductor/tracks/prn-intelligence/ | Completed |
 | T18 | Context-Aware Voice Logging | **Input UX:** Hands-free logging via on-device Speech-to-Text & Nano. | conductor/tracks/voice-logging/ | Completed |
 | T19 | On-Device Food Recognition | **CV:** Identifying dietary intake via camera and TFLite. | conductor/tracks/food-vision/ | Planned |
-| T20 | Nutrient Intelligence & Sourcing | **Intelligence:** Macro/micro estimation and food suggestions. | conductor/tracks/macro-intelligence/ | Planned |
-| T21 | Adaptive Meal Scheduling | **Orchestration:** Optimal eating window proposals based on meds. | conductor/tracks/adaptive-meal-scheduling/ | Planned |
+| T20 | Nutrient & Allergen Intelligence | **Intelligence:** Nutrition Label OCR, macro estimation, and allergen flagging. | conductor/tracks/macro-intelligence/ | Completed |
+| T21 | Adaptive Meal & Hunger Orchestration | **Orchestration:** Optimal hunger-window reservation and dietary-med sync. | conductor/tracks/adaptive-meal-scheduling/ | Planned |
 
 ### Track Milestones
 
@@ -125,10 +125,11 @@
 - [ ] Create `FoodScannerEngine` for dietary identification.
 - [ ] Implement "Dietary Scan" UI mode.
 
-#### T20: Nutrient Intelligence & Sourcing
-- [ ] Build `NutrientReference` local database.
-- [ ] Implement `NutrientAdvisoryEngine` for interference detection.
-- [ ] Create "Nutrition Guide" UI for food suggestions and sourcing.
+#### T20: Nutrient & Allergen Intelligence
+- [x] Build `NutrientReference` local database and `AllergenProfile` schema.
+- [x] Implement `NutrientAdvisoryEngine` for interference detection.
+- [x] Develop "Nutrition Label OCR" parser to extract macros and ingredients.
+- [x] Create "Nutrition Guide" UI for food suggestions and sourcing.
 
 #### T21: Adaptive Meal Scheduling
 - [ ] Develop `MealScheduler` eating window logic.

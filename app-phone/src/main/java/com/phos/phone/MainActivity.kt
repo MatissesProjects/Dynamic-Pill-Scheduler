@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
             val prnAdvisory by viewModel.prnAdvisory.collectAsState()
             val travelProposal by viewModel.travelProposal.collectAsState()
             val eatingWindows by viewModel.eatingWindows.collectAsState()
+            val nutrientAdvisory by viewModel.nutrientAdvisory.collectAsState()
             
             val voiceState by viewModel.voiceManager.state.collectAsState()
             val voiceExtractedEntities by viewModel.voiceExtractedEntities.collectAsState()
@@ -53,6 +54,7 @@ class MainActivity : ComponentActivity() {
                         prnAdvisory = prnAdvisory,
                         travelProposal = travelProposal,
                         eatingWindows = eatingWindows,
+                        nutrientAdvisory = nutrientAdvisory,
                         voiceState = voiceState,
                         voiceExtractedEntities = voiceExtractedEntities,
                         onAddMedication = { name, dosage, offset, frequency ->
@@ -109,8 +111,14 @@ class MainActivity : ComponentActivity() {
                         onLogAppetite = { hunger, difficulty ->
                             viewModel.logAppetite(hunger, difficulty)
                         },
-                        onLogFood = { name, category ->
-                            viewModel.logFood(name, category)
+                        onLogFood = { name, category, nutrients ->
+                            viewModel.logFood(name, category, nutrients)
+                        },
+                        onRequestNutrientAdvisory = { name, nutrients ->
+                            viewModel.requestNutrientAdvisory(name, nutrients)
+                        },
+                        onClearNutrientAdvisory = {
+                            viewModel.clearNutrientAdvisory()
                         }
                     )
                 }

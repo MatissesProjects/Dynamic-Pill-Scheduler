@@ -9,6 +9,7 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Restaurant
@@ -24,7 +25,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.launch
 
-enum class ScanMode { PILL, BOTTLE, FOOD }
+enum class ScanMode { PILL, BOTTLE, FOOD, LABEL }
 
 @Composable
 fun PillScannerScreen(
@@ -80,7 +81,7 @@ fun PillScannerScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 16.dp)
-                .width(280.dp),
+                .width(320.dp),
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
             shape = MaterialTheme.shapes.medium
         ) {
@@ -89,24 +90,10 @@ fun PillScannerScreen(
                 containerColor = Color.Transparent,
                 divider = {}
             ) {
-                Tab(
-                    selected = scanMode == ScanMode.PILL, 
-                    onClick = { scanMode = ScanMode.PILL }
-                ) {
-                    Text("Pill", Modifier.padding(12.dp), style = MaterialTheme.typography.labelSmall)
-                }
-                Tab(
-                    selected = scanMode == ScanMode.BOTTLE, 
-                    onClick = { scanMode = ScanMode.BOTTLE }
-                ) {
-                    Text("Bottle", Modifier.padding(12.dp), style = MaterialTheme.typography.labelSmall)
-                }
-                Tab(
-                    selected = scanMode == ScanMode.FOOD, 
-                    onClick = { scanMode = ScanMode.FOOD }
-                ) {
-                    Text("Food", Modifier.padding(12.dp), style = MaterialTheme.typography.labelSmall)
-                }
+                Tab(selected = scanMode == ScanMode.PILL, onClick = { scanMode = ScanMode.PILL }) { Text("Pill", Modifier.padding(12.dp), style = MaterialTheme.typography.labelSmall) }
+                Tab(selected = scanMode == ScanMode.BOTTLE, onClick = { scanMode = ScanMode.BOTTLE }) { Text("Bottle", Modifier.padding(12.dp), style = MaterialTheme.typography.labelSmall) }
+                Tab(selected = scanMode == ScanMode.FOOD, onClick = { scanMode = ScanMode.FOOD }) { Text("Food", Modifier.padding(12.dp), style = MaterialTheme.typography.labelSmall) }
+                Tab(selected = scanMode == ScanMode.LABEL, onClick = { scanMode = ScanMode.LABEL }) { Text("Label", Modifier.padding(12.dp), style = MaterialTheme.typography.labelSmall) }
             }
         }
 
@@ -121,6 +108,7 @@ fun PillScannerScreen(
                     ScanMode.PILL -> "Center the pill"
                     ScanMode.BOTTLE -> "Center the bottle label"
                     ScanMode.FOOD -> "Center the food item"
+                    ScanMode.LABEL -> "Center the nutrition facts"
                 },
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White,
@@ -137,18 +125,10 @@ fun PillScannerScreen(
                                 val bitmap = image.toBitmapLocal()
                                 scope.launch {
                                     when (scanMode) {
-                                        ScanMode.BOTTLE -> {
-                                            val result = scannerEngine.recognizeBottleText(bitmap)
-                                            onPillScanned(result)
-                                        }
-                                        ScanMode.PILL -> {
-                                            val result = scannerEngine.analyzePill(bitmap)
-                                            onPillScanned(result)
-                                        }
-                                        ScanMode.FOOD -> {
-                                            val result = foodEngine.identifyFood(bitmap)
-                                            onFoodScanned(result)
-                                        }
+                                        ScanMode.BOTTLE -> onPillScanned(scannerEngine.recognizeBottleText(bitmap))
+                                        ScanMode.PILL -> onPillScanned(scannerEngine.analyzePill(bitmap))
+                                        ScanMode.FOOD -> onFoodScanned(foodEngine.identifyFood(bitmap))
+                                        ScanMode.LABEL -> onFoodScanned(foodEngine.scanNutritionLabel(bitmap))
                                     }
                                 }
                                 image.close()
@@ -164,6 +144,7 @@ fun PillScannerScreen(
                         ScanMode.PILL -> Icons.Default.Medication
                         ScanMode.BOTTLE -> Icons.Default.QrCodeScanner
                         ScanMode.FOOD -> Icons.Default.Restaurant
+                        ScanMode.LABEL -> Icons.Default.Description
                     },
                     contentDescription = "Scan",
                     modifier = Modifier.size(32.dp)
