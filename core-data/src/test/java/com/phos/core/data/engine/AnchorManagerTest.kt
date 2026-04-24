@@ -29,19 +29,22 @@ class AnchorManagerTest {
     @Test
     fun `test syncTWakeFromHealthConnect success`() = runBlocking {
         val now = Instant.now()
-        whenever(healthSyncManager.fetchLatestTWake()).thenReturn(now)
+        whenever(healthSyncManager.fetchLatestTWake()).thenReturn(Pair(now, true))
 
         val result = anchorManager.syncTWakeFromHealthConnect()
 
         assertTrue(result)
-        verify(temporalAnchorDao).insertAnchor(any())
-        verify(dataLayerRepository).updateTWake(eq(now.toEpochMilli()))
+        verify(temporalAnchorDao).insertAnchor(check {
+            assertTrue(it.wasInterrupted)
+            assertEquals(now.toEpochMilli(), it.wakeTime)
+        })
+        verify(dataLayerRepository).updateTWake(eq(now.toEpochMilli()), eq(true))
     }
 
     @Test
     fun `test syncTWakeFromHealthConnect ignores stale data`() = runBlocking {
         val stale = Instant.now().minus(13, ChronoUnit.HOURS)
-        whenever(healthSyncManager.fetchLatestTWake()).thenReturn(stale)
+        whenever(healthSyncManager.fetchLatestTWake()).thenReturn(Pair(stale, false))
 
         val result = anchorManager.syncTWakeFromHealthConnect()
 

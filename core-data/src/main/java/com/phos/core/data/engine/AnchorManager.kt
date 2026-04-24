@@ -23,7 +23,9 @@ class AnchorManager(
      * Synchronizes the T-Wake anchor with the latest data from Health Connect.
      */
     suspend fun syncTWakeFromHealthConnect(): Boolean = syncMutex.withLock {
-        val latestWakeInstant = healthSyncManager.fetchLatestTWake() ?: return false
+        val result = healthSyncManager.fetchLatestTWake() ?: return false
+        val latestWakeInstant = result.first
+        val wasInterrupted = result.second
         
         // Staleness Check: Ignore data older than 12 hours
         if (latestWakeInstant.isBefore(Instant.now().minus(12, ChronoUnit.HOURS))) {
@@ -36,14 +38,15 @@ class AnchorManager(
         val anchor = TemporalAnchor(
             date = date,
             wakeTime = epochMillis,
-            source = "HealthConnect"
+            source = "HealthConnect",
+            wasInterrupted = wasInterrupted
         )
         
         // 1. Persist locally in Room
         temporalAnchorDao.insertAnchor(anchor)
 
         // 2. Sync to Wear OS via DataLayer
-        dataLayerRepository.updateTWake(epochMillis)
+        dataLayerRepository.updateTWake(epochMillis, wasInterrupted)
         
         return true
     }
