@@ -36,6 +36,11 @@ Proactively prepares the user's circadian rhythm for upcoming timezone shifts.
 ### 4. Post-Prandial Posture Guidance
 Monitors food intake to provide "Stay Upright" recommendations (30-60 mins) to optimize digestion and prevent acid reflux (GERD) based on clinical guidelines.
 
+### 5. Goal-Oriented Scheduling & Meal Preferences
+Users can define specific health goals (e.g., "Prevent stomach pain at 4 AM") and set preferred meal windows.
+*   **Goal Optimization Engine:** Analyzes current schedules and proposes actionable shifts (e.g., "Move evening medications earlier to prevent late-night irritation").
+*   **Meal Schedular Boost:** Highlights optimal eating windows that safely align with the user's customized meal preferences (Breakfast, Lunch, Dinner).
+
 ## Data Architecture: The Three Streams
 All data is stored in a **Local-Only SQLite Temporal Database** to ensure absolute privacy.
 
@@ -46,8 +51,8 @@ All data is stored in a **Local-Only SQLite Temporal Database** to ensure absolu
 ## Project Structure
 *   `app-phone`: Primary UI (Vertical Timeline, Jet Lag Simulator, Voice Overlay, Pill Scanner).
 *   `app-wear`: Wear OS 5 integration (Haptic Vocabulary, Zero-Tap Complications, Gesture Detection).
-*   `core-data`: Persistence, Health Connect sync, and engines (`AnchorManager`, `CollisionResolver`, `NapManager`, `PRNAdvisor`).
-*   `core-intelligence`: Edge AI logic (`SymptomCorrelationEngine`, `VoiceLogCoordinator`, `PostureIntelligence`).
+*   `core-data`: Persistence, Health Connect sync, and engines (`AnchorManager`, `CollisionResolver`, `NapManager`, `PRNAdvisor`, `MealScheduler`).
+*   `core-intelligence`: Edge AI logic (`SymptomCorrelationEngine`, `VoiceLogCoordinator`, `PostureIntelligence`, `GoalOptimizationEngine`).
 
 ## Current Status (Completed Tracks)
 *   ✅ **T1-T10:** Core Engine, Health Sync, Ambient UI, Edge AI (Gemini Nano), Dynamic Titration, Bio-Interactions, Geo-Context, Reporting, Wearable Gestures, and Automated Dose Detection.
@@ -56,6 +61,10 @@ All data is stored in a **Local-Only SQLite Temporal Database** to ensure absolu
 *   ✅ **T16:** Advanced Travel & Jet Lag Automation.
 *   ✅ **T17:** PRN (As-Needed) Decision Intelligence.
 *   ✅ **T18:** Context-Aware Voice Logging.
+*   ✅ **T20:** Nutrient & Allergen Intelligence.
+*   ✅ **T21:** Adaptive Meal & Hunger Orchestration.
+*   ✅ **T22:** Sleep Continuity & Interruption Logic.
+*   ✅ **T23:** Goal-Oriented Scheduling & Meal Preferences.
 
 ## Development Mandates
 1.  **Privacy-First:** Never send biometric or medication data to a cloud.

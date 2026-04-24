@@ -30,8 +30,10 @@ import com.phos.core.data.engine.OptimalEatingWindow
 import com.phos.core.data.engine.PRNAdvisory
 import com.phos.core.data.engine.NutrientAdvisory
 import com.phos.core.data.model.*
+import com.phos.core.data.proto.PhosState
 import com.phos.core.intelligence.ExtractedEntities
 import com.phos.core.intelligence.PosturalRecommendation
+import com.phos.core.intelligence.OptimizationSuggestion
 import com.phos.phone.ui.scanner.PillScanResult
 import com.phos.phone.ui.scanner.PillScannerScreen
 import com.phos.phone.ui.scanner.FoodScanResult
@@ -45,10 +47,7 @@ import java.time.format.DateTimeFormatter
 fun MainDashboard(
     medications: List<MedicationRecord>,
     prnMedications: List<PRNMedication>,
-    tWakeEpoch: Long,
-    wasInterrupted: Boolean,
-    lastAiInsight: String,
-    is24Hour: Boolean,
+    phosState: PhosState,
     healthInsights: List<String>,
     sideEffectAlerts: List<SideEffectRule>,
     napOverlaps: List<NapOverlap>,
@@ -59,6 +58,8 @@ fun MainDashboard(
     nutrientAdvisory: NutrientAdvisory?,
     medicationDepletions: List<String>,
     nutrientReferences: List<NutrientReference>,
+    healthGoals: List<HealthGoal>,
+    optimizationSuggestions: List<OptimizationSuggestion>,
     voiceState: VoiceState,
     voiceExtractedEntities: ExtractedEntities?,
     onAddMedication: (String, String, Long, Int, String) -> Unit,
@@ -81,7 +82,9 @@ fun MainDashboard(
     onLogAppetite: (Int, Int) -> Unit,
     onLogFood: (String, String, NutrientFacts?) -> Unit,
     onRequestNutrientAdvisory: (String, NutrientFacts) -> Unit,
-    onClearNutrientAdvisory: () -> Unit
+    onClearNutrientAdvisory: () -> Unit,
+    onAddHealthGoal: (String, String, Long?) -> Unit,
+    onUpdateMealPreferences: (Long, Long, Long, Long, Long, Long) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -89,6 +92,7 @@ fun MainDashboard(
     var prefilledName by remember { mutableStateOf("") }
     var prefilledDosage by remember { mutableStateOf("") }
     var prefilledFrequency by remember { mutableStateOf(1) }
+    var showGoalDialog by remember { mutableStateOf(false) }
     
     var lastScannedFoodResult by remember { mutableStateOf<FoodScanResult?>(null) }
 
@@ -190,15 +194,16 @@ fun MainDashboard(
             when (selectedTab) {
                 0 -> VerticalTimeline(
                     medications = medications,
-                    tWakeEpoch = tWakeEpoch,
-                    wasInterrupted = wasInterrupted,
-                    lastAiInsight = lastAiInsight,
-                    is24Hour = is24Hour,
+                    tWakeEpoch = phosState.tWakeEpoch,
+                    wasInterrupted = phosState.wasInterrupted,
+                    lastAiInsight = phosState.lastAiInsight,
+                    is24Hour = phosState.is24Hour,
                     healthInsights = healthInsights,
                     sideEffectAlerts = sideEffectAlerts,
                     napOverlaps = napOverlaps,
                     postureRecommendation = postureRecommendation,
                     travelProposal = travelProposal,
+                    optimizationSuggestions = optimizationSuggestions,
                     onUpdateMedication = onUpdateMedication,
                     onDeleteMedication = onDeleteMedication,
                     onDuplicateMedication = onDuplicateMedication,
@@ -213,7 +218,7 @@ fun MainDashboard(
                 )
                 2 -> MealSyncDashboard(
                     eatingWindows = eatingWindows,
-                    is24Hour = is24Hour,
+                    is24Hour = phosState.is24Hour,
                     depletionWarnings = medicationDepletions,
                     foodReferences = nutrientReferences
                 )
@@ -224,7 +229,7 @@ fun MainDashboard(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "System Settings",
+                        text = "System Settings & Goals",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -233,7 +238,7 @@ fun MainDashboard(
                         headlineContent = { Text("24-Hour Time Format") },
                         trailingContent = {
                             Switch(
-                                checked = is24Hour,
+                                checked = phosState.is24Hour,
                                 onCheckedChange = onToggleTimeFormat
                             )
                         }
@@ -250,6 +255,54 @@ fun MainDashboard(
                         Icon(Icons.Default.Flight, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text("Simulate Travel Detection")
+                    }
+
+                    Divider()
+                    Text("Health Goals", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    healthGoals.forEach { goal ->
+                        Text("• ${goal.description}", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Button(
+                        onClick = { showGoalDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.AddTask, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Add Health Goal")
+                    }
+
+                    Divider()
+                    Text("Meal Preferences (Offset from T-Wake)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    
+                    // Simple input for Meal Preferences (For full UI, these would be TimePickers or Sliders)
+                    var bStart by remember { mutableStateOf((phosState.mealPreferences?.breakfastStartOffset ?: 0L).toString()) }
+                    var bEnd by remember { mutableStateOf((phosState.mealPreferences?.breakfastEndOffset ?: 3600000L).toString()) }
+                    var lStart by remember { mutableStateOf((phosState.mealPreferences?.lunchStartOffset ?: 14400000L).toString()) }
+                    var lEnd by remember { mutableStateOf((phosState.mealPreferences?.lunchEndOffset ?: 18000000L).toString()) }
+                    var dStart by remember { mutableStateOf((phosState.mealPreferences?.dinnerStartOffset ?: 36000000L).toString()) }
+                    var dEnd by remember { mutableStateOf((phosState.mealPreferences?.dinnerEndOffset ?: 39600000L).toString()) }
+
+                    Column {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            OutlinedTextField(value = bStart, onValueChange = {bStart = it}, label = {Text("Bfast Start (ms)")}, modifier = Modifier.weight(1f))
+                            Spacer(Modifier.width(8.dp))
+                            OutlinedTextField(value = bEnd, onValueChange = {bEnd = it}, label = {Text("Bfast End (ms)")}, modifier = Modifier.weight(1f))
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            OutlinedTextField(value = lStart, onValueChange = {lStart = it}, label = {Text("Lunch Start (ms)")}, modifier = Modifier.weight(1f))
+                            Spacer(Modifier.width(8.dp))
+                            OutlinedTextField(value = lEnd, onValueChange = {lEnd = it}, label = {Text("Lunch End (ms)")}, modifier = Modifier.weight(1f))
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            OutlinedTextField(value = dStart, onValueChange = {dStart = it}, label = {Text("Dinner Start (ms)")}, modifier = Modifier.weight(1f))
+                            Spacer(Modifier.width(8.dp))
+                            OutlinedTextField(value = dEnd, onValueChange = {dEnd = it}, label = {Text("Dinner End (ms)")}, modifier = Modifier.weight(1f))
+                        }
+                        Button(onClick = {
+                            onUpdateMealPreferences(bStart.toLong(), bEnd.toLong(), lStart.toLong(), lEnd.toLong(), dStart.toLong(), dEnd.toLong())
+                        }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                            Text("Save Meal Preferences")
+                        }
                     }
                 }
             }
@@ -276,6 +329,16 @@ fun MainDashboard(
             onConfirm = { hunger, difficulty ->
                 onLogAppetite(hunger, difficulty)
                 showAppetiteDialog = false
+            }
+        )
+    }
+
+    if (showGoalDialog) {
+        AddGoalDialog(
+            onDismiss = { showGoalDialog = false },
+            onConfirm = { desc, symp, off ->
+                onAddHealthGoal(desc, symp, off)
+                showGoalDialog = false
             }
         )
     }
@@ -320,6 +383,29 @@ fun MainDashboard(
             }
         )
     }
+}
+
+@Composable
+fun AddGoalDialog(onDismiss: () -> Unit, onConfirm: (String, String, Long?) -> Unit) {
+    var desc by remember { mutableStateOf("") }
+    var symp by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Health Goal") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Goal (e.g. Prevent stomach pain at 4am)") })
+                OutlinedTextField(value = symp, onValueChange = { symp = it }, label = { Text("Target Symptom (e.g. Stomach pain)") })
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(desc, symp, null) }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
@@ -611,6 +697,7 @@ fun VerticalTimeline(
     napOverlaps: List<NapOverlap>,
     postureRecommendation: PosturalRecommendation?,
     travelProposal: TravelProposal?,
+    optimizationSuggestions: List<OptimizationSuggestion>,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
     onDuplicateMedication: (MedicationRecord) -> Unit,
@@ -644,6 +731,18 @@ fun VerticalTimeline(
                     icon = Icons.Default.History,
                     color = MaterialTheme.colorScheme.primaryContainer,
                     onDismiss = { /* In T22 we can implement persistent dismissal */ }
+                )
+            }
+        }
+        
+        optimizationSuggestions.forEach { opt ->
+            item {
+                InsightCard(
+                    title = "Goal Optimization",
+                    insight = opt.description + (opt.suggestedMealShifts?.let { "\n💡 $it" } ?: ""),
+                    icon = Icons.Default.ModelTraining,
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    onDismiss = { }
                 )
             }
         }
@@ -769,7 +868,8 @@ fun WakeTimeHeader(tWakeEpoch: Long, timeFormatter: DateTimeFormatter, onEdit: (
         Row(
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Column {
                 Text(text = "T-Wake Anchor", style = MaterialTheme.typography.labelMedium)
                 Text(

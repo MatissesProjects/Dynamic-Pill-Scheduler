@@ -37,6 +37,9 @@ class MainActivity : ComponentActivity() {
             val medicationDepletions by viewModel.medicationDepletions.collectAsState()
             val nutrientReferences by viewModel.nutrientReferences.collectAsState()
             
+            val healthGoals by viewModel.healthGoals.collectAsState()
+            val optimizationSuggestions by viewModel.optimizationSuggestions.collectAsState()
+            
             val voiceState by viewModel.voiceManager.state.collectAsState()
             val voiceExtractedEntities by viewModel.voiceExtractedEntities.collectAsState()
             
@@ -47,10 +50,7 @@ class MainActivity : ComponentActivity() {
                     MainDashboard(
                         medications = medications,
                         prnMedications = prnMedications,
-                        tWakeEpoch = phosState.tWakeEpoch,
-                        wasInterrupted = phosState.wasInterrupted,
-                        lastAiInsight = phosState.lastAiInsight,
-                        is24Hour = phosState.is24Hour,
+                        phosState = phosState,
                         healthInsights = healthInsights,
                         sideEffectAlerts = sideEffectAlerts,
                         napOverlaps = napOverlaps,
@@ -61,6 +61,8 @@ class MainActivity : ComponentActivity() {
                         nutrientAdvisory = nutrientAdvisory,
                         medicationDepletions = medicationDepletions,
                         nutrientReferences = nutrientReferences,
+                        healthGoals = healthGoals,
+                        optimizationSuggestions = optimizationSuggestions,
                         voiceState = voiceState,
                         voiceExtractedEntities = voiceExtractedEntities,
                         onAddMedication = { name, dosage, offset, frequency, foodRequirement ->
@@ -125,6 +127,12 @@ class MainActivity : ComponentActivity() {
                         },
                         onClearNutrientAdvisory = {
                             viewModel.clearNutrientAdvisory()
+                        },
+                        onAddHealthGoal = { desc, symp, off ->
+                            viewModel.addHealthGoal(desc, symp, off)
+                        },
+                        onUpdateMealPreferences = { bStart, bEnd, lStart, lEnd, dStart, dEnd ->
+                            viewModel.updateMealPreferences(bStart, bEnd, lStart, lEnd, dStart, dEnd)
                         }
                     )
                 }

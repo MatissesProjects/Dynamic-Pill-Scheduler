@@ -3,8 +3,11 @@ package com.phos.core.data.engine
 import com.phos.core.data.model.AppetiteLog
 import com.phos.core.data.model.MedicationRecord
 import com.phos.core.data.model.TemporalAnchor
+import com.phos.core.data.proto.MealPreferences
 import java.time.Instant
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 data class OptimalEatingWindow(
     val startTime: Long, // Epoch millis
@@ -23,7 +26,8 @@ class MealScheduler {
     fun findOptimalEatingWindows(
         medications: List<MedicationRecord>,
         anchor: TemporalAnchor,
-        appetiteHistory: List<AppetiteLog>
+        appetiteHistory: List<AppetiteLog>,
+        mealPreferences: MealPreferences? = null
     ): List<OptimalEatingWindow> {
         val scheduledMeds = medications.map { 
             it to (anchor.wakeTime + it.frequencyOffset) 
@@ -32,6 +36,33 @@ class MealScheduler {
         val windows = mutableListOf<OptimalEatingWindow>()
         val recentDifficulty = appetiteHistory.maxByOrNull { it.timestamp }?.difficultyLevel ?: 1
         val isHighDifficulty = recentDifficulty > 7
+
+        // Helper to check overlap with preferences
+        fun calculatePreferenceBoost(start: Long, end: Long): Int {
+            if (mealPreferences == null) return 0
+            var boost = 0
+            val tWake = anchor.wakeTime
+            
+            // Check Breakfast
+            if (mealPreferences.hasBreakfastStartOffset() && mealPreferences.hasBreakfastEndOffset()) {
+                val bStart = tWake + mealPreferences.breakfastStartOffset
+                val bEnd = tWake + mealPreferences.breakfastEndOffset
+                if (start <= bEnd && end >= bStart) boost = max(boost, 2)
+            }
+            // Check Lunch
+            if (mealPreferences.hasLunchStartOffset() && mealPreferences.hasLunchEndOffset()) {
+                val lStart = tWake + mealPreferences.lunchStartOffset
+                val lEnd = tWake + mealPreferences.lunchEndOffset
+                if (start <= lEnd && end >= lStart) boost = max(boost, 2)
+            }
+            // Check Dinner
+            if (mealPreferences.hasDinnerStartOffset() && mealPreferences.hasDinnerEndOffset()) {
+                val dStart = tWake + mealPreferences.dinnerStartOffset
+                val dEnd = tWake + mealPreferences.dinnerEndOffset
+                if (start <= dEnd && end >= dStart) boost = max(boost, 2)
+            }
+            return boost
+        }
 
         // 1. Check gaps between medications
         for (i in 0 until scheduledMeds.size - 1) {
@@ -46,11 +77,13 @@ class MealScheduler {
             
             if (currentMed.foodRequirement == "WITH_FOOD") {
                 // This is actually a great time to eat!
+                val wStart = currentTime - (15 * 60 * 1000L)
+                val wEnd = currentTime + (45 * 60 * 1000L)
                 windows.add(OptimalEatingWindow(
-                    startTime = currentTime - (15 * 60 * 1000L),
-                    endTime = currentTime + (45 * 60 * 1000L),
+                    startTime = wStart,
+                    endTime = wEnd,
                     reason = "Optimal window to take ${currentMed.name} with food.",
-                    score = 10
+                    score = min(10, 10 + calculatePreferenceBoost(wStart, wEnd))
                 ))
             }
             
@@ -60,13 +93,15 @@ class MealScheduler {
 
             val gapDurationMins = (gapEnd - gapStart) / (60 * 1000)
             if (gapDurationMins >= 60) {
-                val score = if (gapDurationMins > 120) 10 else 7
+                var score = if (gapDurationMins > 120) 10 else 7
+                if (isHighDifficulty) score += 2
+                score += calculatePreferenceBoost(gapStart, gapEnd)
                 
                 windows.add(OptimalEatingWindow(
                     startTime = gapStart,
                     endTime = gapEnd,
                     reason = if (isHighDifficulty) "Sacred Eating Window: Reserved for digestion recovery." else "Uninterrupted gap for comfortable eating.",
-                    score = if (isHighDifficulty) score + 2 else score,
+                    score = min(10, score),
                     isSacred = isHighDifficulty
                 ))
             }
@@ -74,22 +109,26 @@ class MealScheduler {
         
         // 2. Window after the last medication
         scheduledMeds.lastOrNull()?.let { (lastMed, lastMedTime) ->
+            val wStart = lastMedTime + (60 * 60 * 1000L)
+            val wEnd = lastMedTime + (240 * 60 * 1000L)
             windows.add(OptimalEatingWindow(
-                startTime = lastMedTime + (60 * 60 * 1000L),
-                endTime = lastMedTime + (240 * 60 * 1000L),
+                startTime = wStart,
+                endTime = wEnd,
                 reason = "Evening nutrition window.",
-                score = 8
+                score = min(10, 8 + calculatePreferenceBoost(wStart, wEnd))
             ))
         }
 
         // 3. Early morning window (before first med if possible)
         scheduledMeds.firstOrNull()?.let { (firstMed, firstMedTime) ->
             if (firstMedTime - anchor.wakeTime > 60 * 60 * 1000L) {
+                val wStart = anchor.wakeTime
+                val wEnd = firstMedTime - (30 * 60 * 1000L)
                 windows.add(OptimalEatingWindow(
-                    startTime = anchor.wakeTime,
-                    endTime = firstMedTime - (30 * 60 * 1000L),
+                    startTime = wStart,
+                    endTime = wEnd,
                     reason = "Pre-medication breakfast window.",
-                    score = 9
+                    score = min(10, 9 + calculatePreferenceBoost(wStart, wEnd))
                 ))
             }
         }

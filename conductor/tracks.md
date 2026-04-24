@@ -143,3 +143,10 @@
 - [x] Implement `healSleepSessions` logic to merge sessions with < 30min gaps.
 - [x] Update `fetchLatestTWake` to use stitched session data.
 - [x] Add "Sleep Interruption" indicator in Vertical Timeline.
+
+#### T23: Goal-Oriented Scheduling & Meal Preferences
+- [x] Define `MealPreferences` in `phos_state.proto` to hold preferred meal times.
+- [x] Implement `HealthGoal` entity in Room to track user-defined health targets.
+- [x] Create `GoalOptimizationEngine` that suggests medication offsets based on active goals.
+- [x] Update `MealScheduler` to combine "Optimal Eating Windows" with user-defined `MealPreferences`.
+- [x] Build UI in the Dashboard (Settings & Meals tab) to input meal preferences and log health goals.

@@ -9,6 +9,7 @@ message PhosState {
   string last_ai_insight = 3;
   bool is_24_hour = 4;
   bool was_interrupted = 5;
+  MealPreferences meal_preferences = 6;
 }
 
 message Medication {
@@ -16,4 +17,13 @@ message Medication {
   string name = 2;
   int64 scheduled_time = 3;
   string status = 4;
+}
+
+message MealPreferences {
+  optional int64 breakfast_start_offset = 1;
+  optional int64 breakfast_end_offset = 2;
+  optional int64 lunch_start_offset = 3;
+  optional int64 lunch_end_offset = 4;
+  optional int64 dinner_start_offset = 5;
+  optional int64 dinner_end_offset = 6;
 }
