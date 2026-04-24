@@ -33,6 +33,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val intelligenceDao = db.intelligenceDao()
     private val appetiteDao = db.appetiteDao()
     private val allergenDao = db.allergenDao()
+    private val nutrientDao = db.nutrientDao()
 
     private val dataLayerRepository = DataLayerRepository(application, application.phosDataStore)
     private val healthSyncManager = HealthSyncManager(application)
@@ -103,6 +104,20 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 AllergenProfile("gluten", "Gluten", "MODERATE")
             )
             initialAllergens.forEach { allergenDao.insertAllergen(it) }
+
+            // Seed Nutrient References
+            val foodRefs = listOf(
+                NutrientReference("yogurt", "Greek Yogurt", NutrientFacts(calories = 150, proteinG = 15.0, calciumMg = 200.0, ingredients = listOf("Milk", "Live Cultures")), "Found in: Dairy Aisle"),
+                NutrientReference("spinach", "Spinach", NutrientFacts(calories = 20, calciumMg = 100.0, ironMg = 2.0, ingredients = listOf("Spinach")), "Found in: Produce")
+            )
+            foodRefs.forEach { nutrientDao.insertReference(it) }
+
+            // Seed Depletions
+            val depletions = listOf(
+                MedicationInducedDepletion(medicationNamePattern = "statin", depletedNutrient = "CoQ10", advice = "Statins inhibit the natural production of Coenzyme Q10.", foodSuggestions = listOf("Fatty Fish", "Organ Meats")),
+                MedicationInducedDepletion(medicationNamePattern = "metformin", depletedNutrient = "Vitamin B12", advice = "Long-term Metformin use can reduce B12 absorption.", foodSuggestions = listOf("Eggs", "Dairy", "Fortified Cereals"))
+            )
+            depletions.forEach { nutrientDao.insertDepletion(it) }
         }
     }
 
@@ -152,6 +167,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allergenProfile: StateFlow<List<AllergenProfile>> = allergenDao.getAllergensFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val medicationDepletions: StateFlow<List<String>> = combine(medications, nutrientDao.getAllDepletions()) { meds, rules ->
+        val engine = NutrientAdvisoryEngine(CollisionResolver()) // Transient for utility
+        engine.findDepletionWarnings(meds, rules)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val nutrientReferences: StateFlow<List<NutrientReference>> = nutrientDao.getAllReferences()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _travelProposal = MutableStateFlow<TravelProposal?>(null)

@@ -17,6 +17,24 @@ class NutrientAdvisoryEngine(
 ) {
 
     /**
+     * Checks if current medications are known to deplete specific nutrients.
+     */
+    fun findDepletionWarnings(
+        scheduledMeds: List<MedicationRecord>,
+        depletionRules: List<MedicationInducedDepletion>
+    ): List<String> {
+        val warnings = mutableListOf<String>()
+        scheduledMeds.forEach { med ->
+            depletionRules.forEach { rule ->
+                if (med.name.contains(rule.medicationNamePattern, ignoreCase = true)) {
+                    warnings.add("DEPLETION: ${med.name} may deplete ${rule.depletedNutrient}. ${rule.advice}")
+                }
+            }
+        }
+        return warnings
+    }
+
+    /**
      * Evaluates if eating a specific food (with extracted nutrients) is a good idea right now.
      */
     fun evaluateFood(

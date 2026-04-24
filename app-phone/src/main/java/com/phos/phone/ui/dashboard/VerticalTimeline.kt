@@ -1,4 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
 package com.phos.phone.ui.dashboard
 
 import android.Manifest
@@ -47,6 +46,7 @@ fun MainDashboard(
     medications: List<MedicationRecord>,
     prnMedications: List<PRNMedication>,
     tWakeEpoch: Long,
+    wasInterrupted: Boolean,
     lastAiInsight: String,
     is24Hour: Boolean,
     healthInsights: List<String>,
@@ -57,6 +57,8 @@ fun MainDashboard(
     travelProposal: TravelProposal?,
     eatingWindows: List<OptimalEatingWindow>,
     nutrientAdvisory: NutrientAdvisory?,
+    medicationDepletions: List<String>,
+    nutrientReferences: List<NutrientReference>,
     voiceState: VoiceState,
     voiceExtractedEntities: ExtractedEntities?,
     onAddMedication: (String, String, Long, Int, String) -> Unit,
@@ -189,6 +191,7 @@ fun MainDashboard(
                 0 -> VerticalTimeline(
                     medications = medications,
                     tWakeEpoch = tWakeEpoch,
+                    wasInterrupted = wasInterrupted,
                     lastAiInsight = lastAiInsight,
                     is24Hour = is24Hour,
                     healthInsights = healthInsights,
@@ -208,39 +211,12 @@ fun MainDashboard(
                     prnMedications = prnMedications,
                     onRequestAdvisory = onRequestPRNAdvisory
                 )
-                2 -> {
-                    if (hasCameraPermission) {
-                        PillScannerScreen(
-                            onPillScanned = { result ->
-                                prefilledName = result.detectedName ?: "${result.detectedColor} ${result.detectedShape} Pill"
-                                prefilledDosage = result.detectedDosage ?: ""
-                                prefilledFrequency = result.frequencyDosesPerDay
-                                showAddDialog = true
-                                selectedTab = 0 
-                            },
-                            onFoodScanned = { result ->
-                                lastScannedFoodResult = result
-                                if (result.nutrients != null) {
-                                    onRequestNutrientAdvisory(result.detectedName ?: "Food Item", result.nutrients!!)
-                                } else {
-                                    onLogFood(result.detectedName ?: "Unknown", result.category ?: "General", null)
-                                    selectedTab = 2
-                                }
-                            }
-                        )
-                    } else {
-                        Column(
-                            Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("Camera permission required for scanner")
-                            Button(onClick = { cameraLauncher.launch(Manifest.permission.CAMERA) }) {
-                                Text("Grant Permission")
-                            }
-                        }
-                    }
-                }
+                2 -> MealSyncDashboard(
+                    eatingWindows = eatingWindows,
+                    is24Hour = is24Hour,
+                    depletionWarnings = medicationDepletions,
+                    foodReferences = nutrientReferences
+                )
                 3 -> Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -371,7 +347,7 @@ fun NutrientAdvisoryDialog(
             Button(onClick = onConfirm) { Text("Log Anyway") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(if (advisory.isGoodIdea) "Cancel" else "Dismiss") }
         }
     )
 }
@@ -401,8 +377,14 @@ fun AppetiteLogDialog(onDismiss: () -> Unit, onConfirm: (Int, Int) -> Unit) {
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MealSyncDashboard(eatingWindows: List<OptimalEatingWindow>, is24Hour: Boolean) {
+fun MealSyncDashboard(
+    eatingWindows: List<OptimalEatingWindow>, 
+    is24Hour: Boolean,
+    depletionWarnings: List<String> = emptyList(),
+    foodReferences: List<NutrientReference> = emptyList()
+) {
     val timeFormatter = DateTimeFormatter.ofPattern(if (is24Hour) "HH:mm" else "hh:mm a").withZone(ZoneId.systemDefault())
     
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -410,6 +392,23 @@ fun MealSyncDashboard(eatingWindows: List<OptimalEatingWindow>, is24Hour: Boolea
             Text("Adaptive Nutrition Orchestration", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Text("Dynamically calculated windows based on your schedule and hunger logs.", style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(8.dp))
+        }
+
+        if (depletionWarnings.isNotEmpty()) {
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Nutrient Watch", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                        }
+                        depletionWarnings.forEach { warning ->
+                            Text("• $warning", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+                        }
+                    }
+                }
+            }
         }
         
         items(eatingWindows) { window ->
@@ -444,6 +443,24 @@ fun MealSyncDashboard(eatingWindows: List<OptimalEatingWindow>, is24Hour: Boolea
                         modifier = Modifier.fillMaxWidth().padding(top = 12.dp).height(4.dp),
                         color = if (window.isSacred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
                     )
+                }
+            }
+        }
+
+        if (foodReferences.isNotEmpty()) {
+            item {
+                Text("Healthy Sourcing", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+            }
+            items(foodReferences) { ref ->
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(ref.name, fontWeight = FontWeight.Bold)
+                            Text("${ref.nutrients.proteinG}g Protein | ${ref.nutrients.calories} kcal", style = MaterialTheme.typography.labelSmall)
+                            ref.bestSources?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+                        }
+                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
+                    }
                 }
             }
         }
@@ -586,6 +603,7 @@ fun PRNAdvisoryDialog(
 fun VerticalTimeline(
     medications: List<MedicationRecord>,
     tWakeEpoch: Long,
+    wasInterrupted: Boolean = false,
     lastAiInsight: String,
     is24Hour: Boolean,
     healthInsights: List<String>,
@@ -616,6 +634,18 @@ fun VerticalTimeline(
         item {
             Spacer(modifier = Modifier.height(8.dp))
             WakeTimeHeader(tWakeEpoch, timeFormatter) { showTimePicker = true }
+        }
+
+        if (wasInterrupted) {
+            item {
+                InsightCard(
+                    title = "Sleep Session Bridged",
+                    insight = "Detected and bridged short wake gaps (bathroom breaks) to ensure T-Wake accuracy.",
+                    icon = Icons.Default.History,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    onDismiss = { /* In T22 we can implement persistent dismissal */ }
+                )
+            }
         }
 
         if (lastAiInsight.isNotEmpty()) {
@@ -739,8 +769,7 @@ fun WakeTimeHeader(tWakeEpoch: Long, timeFormatter: DateTimeFormatter, onEdit: (
         Row(
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+            verticalAlignment = Alignment.CenterVertically) {
             Column {
                 Text(text = "T-Wake Anchor", style = MaterialTheme.typography.labelMedium)
                 Text(

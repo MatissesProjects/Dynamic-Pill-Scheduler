@@ -22,7 +22,7 @@
 | T19 | On-Device Food Recognition | **CV:** Identifying dietary intake via camera and TFLite. | conductor/tracks/food-vision/ | Planned |
 | T20 | Nutrient & Allergen Intelligence | **Intelligence:** Nutrition Label OCR, macro estimation, and allergen flagging. | conductor/tracks/macro-intelligence/ | Completed |
 | T21 | Adaptive Meal & Hunger Orchestration | **Orchestration:** Optimal hunger-window reservation and dietary-med sync. | conductor/tracks/adaptive-meal-scheduling/ | Completed |
-| T22 | Sleep Continuity & Interruption Logic | **Temporal Safety:** Bridge short wake gaps (bathroom breaks) for accurate T-Wake. | conductor/tracks/sleep-continuity/ | Planned |
+| T22 | Sleep Continuity & Interruption Logic | **Temporal Safety:** Bridge short wake gaps (bathroom breaks) for accurate T-Wake. | conductor/tracks/sleep-continuity/ | Completed |
 
 ### Track Milestones
 
@@ -140,6 +140,6 @@
 - [x] Develop "Meal Sync" dashboard view showing medication windows overlaid with suggested meal times.
 
 #### T22: Sleep Continuity & Interruption Logic
-- [ ] Implement `healSleepSessions` logic to merge sessions with < 30min gaps.
-- [ ] Update `fetchLatestTWake` to use stitched session data.
-- [ ] Add "Sleep Interruption" indicator in Vertical Timeline.
+- [x] Implement `healSleepSessions` logic to merge sessions with < 30min gaps.
+- [x] Update `fetchLatestTWake` to use stitched session data.
+- [x] Add "Sleep Interruption" indicator in Vertical Timeline.
