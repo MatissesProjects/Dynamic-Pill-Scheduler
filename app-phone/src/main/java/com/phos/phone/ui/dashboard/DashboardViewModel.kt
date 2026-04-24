@@ -12,6 +12,7 @@ import com.phos.core.data.proto.PhosState
 import com.phos.core.data.engine.*
 import com.phos.core.data.sync.HealthSyncManager
 import com.phos.core.intelligence.*
+import com.phos.core.data.proto.MealPreferences
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -34,6 +35,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val appetiteDao = db.appetiteDao()
     private val allergenDao = db.allergenDao()
     private val nutrientDao = db.nutrientDao()
+    private val goalDao = db.goalDao()
 
     private val dataLayerRepository = DataLayerRepository(application, application.phosDataStore)
     private val healthSyncManager = HealthSyncManager(application)
@@ -41,6 +43,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val postureIntelligence = PostureIntelligence()
     private val jetLagManager = JetLagManager()
     private val mealScheduler = MealScheduler()
+    private val goalOptimizationEngine = GoalOptimizationEngine()
     
     private val voiceParser = GeminiVoiceParser()
     private val voiceLogCoordinator = VoiceLogCoordinator(
@@ -161,13 +164,21 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     val appetiteLogs: StateFlow<List<AppetiteLog>> = appetiteDao.getAppetiteLogsSince(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val eatingWindows: StateFlow<List<OptimalEatingWindow>> = combine(medications, temporalAnchorFlow, appetiteLogs) { meds, anchor, appetite ->
+    val eatingWindows: StateFlow<List<OptimalEatingWindow>> = combine(medications, temporalAnchorFlow, appetiteLogs, phosState) { meds, anchor, appetite, state ->
         if (anchor == null) emptyList()
-        else mealScheduler.findOptimalEatingWindows(meds, anchor, appetite)
+        else mealScheduler.findOptimalEatingWindows(meds, anchor, appetite, if(state.hasMealPreferences()) state.mealPreferences else null)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allergenProfile: StateFlow<List<AllergenProfile>> = allergenDao.getAllergensFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val healthGoals: StateFlow<List<HealthGoal>> = goalDao.getActiveGoalsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val optimizationSuggestions: StateFlow<List<OptimizationSuggestion>> = combine(healthGoals, medications, phosState, temporalAnchorFlow) { goals, meds, state, anchor ->
+        if (anchor == null) emptyList()
+        else goalOptimizationEngine.evaluateGoals(goals, meds, if(state.hasMealPreferences()) state.mealPreferences else MealPreferences.getDefaultInstance(), anchor.wakeTime)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val medicationDepletions: StateFlow<List<String>> = combine(medications, nutrientDao.getAllDepletions()) { meds, rules ->
         val engine = NutrientAdvisoryEngine(CollisionResolver()) // Transient for utility
@@ -292,6 +303,18 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             getApplication<Application>().phosDataStore.updateData { state ->
                 state.toBuilder().setIs24Hour(is24Hour).build()
             }
+        }
+    }
+
+    fun updateMealPreferences(breakfastStart: Long, breakfastEnd: Long, lunchStart: Long, lunchEnd: Long, dinnerStart: Long, dinnerEnd: Long) {
+        viewModelScope.launch {
+            dataLayerRepository.updateMealPreferences(breakfastStart, breakfastEnd, lunchStart, lunchEnd, dinnerStart, dinnerEnd)
+        }
+    }
+
+    fun addHealthGoal(description: String, targetSymptom: String, targetTimeOffset: Long?) {
+        viewModelScope.launch {
+            goalDao.insertGoal(HealthGoal(description = description, targetSymptom = targetSymptom, targetTimeOffset = targetTimeOffset, targetTimeOfDay = null))
         }
     }
 

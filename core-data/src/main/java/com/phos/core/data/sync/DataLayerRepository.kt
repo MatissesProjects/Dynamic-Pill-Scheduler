@@ -64,4 +64,25 @@ class DataLayerRepository(
                 .build()
         }
     }
+
+    suspend fun updateMealPreferences(
+        breakfastStart: Long, breakfastEnd: Long,
+        lunchStart: Long, lunchEnd: Long,
+        dinnerStart: Long, dinnerEnd: Long
+    ) {
+        dataStore.updateData { currentState ->
+            val newPrefs = com.phos.core.data.proto.MealPreferences.newBuilder()
+                .setBreakfastStartOffset(breakfastStart)
+                .setBreakfastEndOffset(breakfastEnd)
+                .setLunchStartOffset(lunchStart)
+                .setLunchEndOffset(lunchEnd)
+                .setDinnerStartOffset(dinnerStart)
+                .setDinnerEndOffset(dinnerEnd)
+                .build()
+
+            currentState.toBuilder()
+                .setMealPreferences(newPrefs)
+                .build()
+        }
+    }
 }
