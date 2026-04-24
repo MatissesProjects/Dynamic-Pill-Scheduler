@@ -24,9 +24,10 @@ import com.phos.core.data.model.*
         AbsorptionRule::class,
         SideEffectRule::class,
         PRNMedication::class,
-        AppetiteLog::class
+        AppetiteLog::class,
+        AllergenProfile::class
     ],
-    version = 10
+    version = 11
 )
 @TypeConverters(Converters::class)
 abstract class PhosDatabase : RoomDatabase() {
@@ -42,4 +43,5 @@ abstract class PhosDatabase : RoomDatabase() {
     abstract fun doseLogDao(): DoseLogDao
     abstract fun prnDao(): PRNDao
     abstract fun appetiteDao(): AppetiteDao
+    abstract fun allergenDao(): AllergenDao
 }

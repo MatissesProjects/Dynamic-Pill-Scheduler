@@ -32,6 +32,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val biometricDao = db.biometricDao()
     private val intelligenceDao = db.intelligenceDao()
     private val appetiteDao = db.appetiteDao()
+    private val allergenDao = db.allergenDao()
 
     private val dataLayerRepository = DataLayerRepository(application, application.phosDataStore)
     private val healthSyncManager = HealthSyncManager(application)
@@ -57,6 +58,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val prnAdvisorFlow = collisionResolverFlow.map { 
         PRNAdvisor(doseLogDao, biometricDao, it)
+    }
+
+    private val nutrientAdvisoryEngineFlow = collisionResolverFlow.map {
+        NutrientAdvisoryEngine(it)
     }
 
     init {
@@ -91,6 +96,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 PRNMedication(medicationId = "albuterol_prn", name = "Albuterol Inhaler", dosage = "2 puffs", maxDosesPer24h = 8, minGapMinutes = 15, reasonForUse = "Shortness of Breath", validFrom = System.currentTimeMillis())
             )
             prnMedications.forEach { prnDao.insert(it) }
+            
+            // Seed Allergens
+            val initialAllergens = listOf(
+                AllergenProfile("dairy", "Dairy", "MODERATE"),
+                AllergenProfile("gluten", "Gluten", "MODERATE")
+            )
+            initialAllergens.forEach { allergenDao.insertAllergen(it) }
         }
     }
 
@@ -139,8 +151,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         else mealScheduler.findOptimalEatingWindows(meds, anchor, appetite)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val allergenProfile: StateFlow<List<AllergenProfile>> = allergenDao.getAllergensFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private val _travelProposal = MutableStateFlow<TravelProposal?>(null)
     val travelProposal: StateFlow<TravelProposal?> = _travelProposal.asStateFlow()
+
+    private val _nutrientAdvisory = MutableStateFlow<NutrientAdvisory?>(null)
+    val nutrientAdvisory: StateFlow<NutrientAdvisory?> = _nutrientAdvisory.asStateFlow()
 
     fun detectUpcomingTravel() {
         viewModelScope.launch {
@@ -163,6 +181,21 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun dismissTravelProposal() {
         _travelProposal.value = null
+    }
+
+    fun requestNutrientAdvisory(foodName: String, nutrients: NutrientFacts) {
+        viewModelScope.launch {
+            val engine = nutrientAdvisoryEngineFlow.first()
+            val meds = medications.first()
+            val allergens = allergenProfile.first()
+            val anchor = temporalAnchorFlow.first() ?: return@launch
+            
+            _nutrientAdvisory.value = engine.evaluateFood(foodName, nutrients, allergens, meds, anchor.wakeTime)
+        }
+    }
+
+    fun clearNutrientAdvisory() {
+        _nutrientAdvisory.value = null
     }
 
     private val _voiceExtractedEntities = MutableStateFlow<ExtractedEntities?>(null)
@@ -275,13 +308,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun logFood(name: String, category: String) {
+    fun logFood(name: String, category: String, nutrients: NutrientFacts? = null) {
         viewModelScope.launch {
             interactionDao.insertFoodLog(
                 FoodLog(
                     foodId = name.lowercase().replace(" ", "_"),
                     name = name,
-                    timestamp = System.currentTimeMillis()
+                    timestamp = System.currentTimeMillis(),
+                    nutrients = nutrients
                 )
             )
         }

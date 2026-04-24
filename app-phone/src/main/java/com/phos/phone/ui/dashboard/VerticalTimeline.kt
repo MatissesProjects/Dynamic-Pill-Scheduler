@@ -28,10 +28,8 @@ import androidx.core.content.ContextCompat
 import com.phos.core.data.engine.NapOverlap
 import com.phos.core.data.engine.OptimalEatingWindow
 import com.phos.core.data.engine.PRNAdvisory
-import com.phos.core.data.model.MedicationRecord
-import com.phos.core.data.model.PRNMedication
-import com.phos.core.data.model.SideEffectRule
-import com.phos.core.data.model.TravelProposal
+import com.phos.core.data.engine.NutrientAdvisory
+import com.phos.core.data.model.*
 import com.phos.core.intelligence.ExtractedEntities
 import com.phos.core.intelligence.PosturalRecommendation
 import com.phos.phone.ui.scanner.PillScanResult
@@ -56,6 +54,7 @@ fun MainDashboard(
     prnAdvisory: PRNAdvisory?,
     travelProposal: TravelProposal?,
     eatingWindows: List<OptimalEatingWindow>,
+    nutrientAdvisory: NutrientAdvisory?,
     voiceState: VoiceState,
     voiceExtractedEntities: ExtractedEntities?,
     onAddMedication: (String, String, Long, Int) -> Unit,
@@ -76,7 +75,9 @@ fun MainDashboard(
     onDismissTravelProposal: () -> Unit,
     onDetectTravel: () -> Unit,
     onLogAppetite: (Int, Int) -> Unit,
-    onLogFood: (String, String) -> Unit
+    onLogFood: (String, String, NutrientFacts?) -> Unit,
+    onRequestNutrientAdvisory: (String, NutrientFacts) -> Unit,
+    onClearNutrientAdvisory: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -85,6 +86,8 @@ fun MainDashboard(
     var prefilledDosage by remember { mutableStateOf("") }
     var prefilledFrequency by remember { mutableStateOf(1) }
     
+    var lastScannedFoodResult by remember { mutableStateOf<FoodScanResult?>(null) }
+
     val context = LocalContext.current
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -214,8 +217,13 @@ fun MainDashboard(
                                 selectedTab = 0 
                             },
                             onFoodScanned = { result ->
-                                onLogFood(result.detectedName ?: "Unknown", result.category ?: "General")
-                                selectedTab = 2 
+                                lastScannedFoodResult = result
+                                if (result.nutrients != null) {
+                                    onRequestNutrientAdvisory(result.detectedName ?: "Food Item", result.nutrients!!)
+                                } else {
+                                    onLogFood(result.detectedName ?: "Unknown", result.category ?: "General", null)
+                                    selectedTab = 2
+                                }
                             }
                         )
                     } else {
@@ -299,10 +307,24 @@ fun MainDashboard(
             advisory = advisory,
             onDismiss = onClearPRNAdvisory,
             onConfirm = {
-                // Find the med that triggered this
                 prnMedications.find { advisory.reason.contains(it.name) || it.name.contains(advisory.reason.split(" ").last().replace(".","")) }?.let {
                     onLogPRNDose(it)
                 } ?: onClearPRNAdvisory()
+            }
+        )
+    }
+
+    nutrientAdvisory?.let { advisory ->
+        NutrientAdvisoryDialog(
+            advisory = advisory,
+            onDismiss = onClearNutrientAdvisory,
+            onConfirm = {
+                val result = lastScannedFoodResult
+                if (result != null) {
+                    onLogFood(result.detectedName ?: "Food Item", result.category ?: "General", result.nutrients)
+                }
+                onClearNutrientAdvisory()
+                selectedTab = 2
             }
         )
     }
@@ -319,6 +341,36 @@ fun MainDashboard(
             }
         )
     }
+}
+
+@Composable
+fun NutrientAdvisoryDialog(
+    advisory: NutrientAdvisory,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(if (advisory.isGoodIdea) Icons.Default.CheckCircle else Icons.Default.Warning, contentDescription = null, tint = if (advisory.isGoodIdea) Color.Green else MaterialTheme.colorScheme.error) },
+        title = { Text(if (advisory.isGoodIdea) "Nutrient Check Passed" else "Dietary Warning") },
+        text = {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.heightIn(max = 300.dp)) {
+                item { Text(advisory.summary, fontWeight = FontWeight.Bold) }
+                items(advisory.warnings) { warning ->
+                    Text("• $warning", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                items(advisory.suggestions) { suggestion ->
+                    Text("💡 $suggestion", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) { Text("Log Anyway") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
