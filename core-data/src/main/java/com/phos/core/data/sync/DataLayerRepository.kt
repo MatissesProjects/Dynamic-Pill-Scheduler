@@ -41,10 +41,11 @@ class DataLayerRepository(
             }
         }
 
-    suspend fun updateTWake(tWakeEpoch: Long) {
+    suspend fun updateTWake(tWakeEpoch: Long, wasInterrupted: Boolean = false) {
         dataStore.updateData { currentState ->
             currentState.toBuilder()
                 .setTWakeEpoch(tWakeEpoch)
+                .setWasInterrupted(wasInterrupted)
                 .build()
         }
     }

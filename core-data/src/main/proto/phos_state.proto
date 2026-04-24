@@ -8,6 +8,7 @@ message PhosState {
   repeated Medication medications = 2;
   string last_ai_insight = 3;
   bool is_24_hour = 4;
+  bool was_interrupted = 5;
 }
 
 message Medication {

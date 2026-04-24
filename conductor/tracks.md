@@ -16,12 +16,13 @@
 | T13 | Visual Medication Onboarding | **Computer Vision:** On-device pill identification via CameraX. | conductor/tracks/visual-onboarding/ | Completed |
 | T14 | Manual Data Entry UI | **Input UX:** Full dynamic logging UI and system settings. | conductor/tracks/data-entry-ui/ | Completed |
 | T15 | Interaction & Side Effect Intel | **Intelligence:** AI spacing suggestions and side effect tracking. | conductor/tracks/interaction-intel/ | Completed |
-| T16 | Advanced Travel Automation | **Titration:** Proactive jet lag schedule proposals via calendar. | conductor/tracks/travel-automation/ | Planned |
+| T16 | Advanced Travel Automation | **Titration:** Proactive jet lag schedule proposals via calendar. | conductor/tracks/travel-automation/ | Completed |
 | T17 | PRN Decision Intelligence | **Safety:** Advisory layer for as-needed medication efficacy. | conductor/tracks/prn-intelligence/ | Completed |
 | T18 | Context-Aware Voice Logging | **Input UX:** Hands-free logging via on-device Speech-to-Text & Nano. | conductor/tracks/voice-logging/ | Completed |
 | T19 | On-Device Food Recognition | **CV:** Identifying dietary intake via camera and TFLite. | conductor/tracks/food-vision/ | Planned |
 | T20 | Nutrient & Allergen Intelligence | **Intelligence:** Nutrition Label OCR, macro estimation, and allergen flagging. | conductor/tracks/macro-intelligence/ | Completed |
 | T21 | Adaptive Meal & Hunger Orchestration | **Orchestration:** Optimal hunger-window reservation and dietary-med sync. | conductor/tracks/adaptive-meal-scheduling/ | Completed |
+| T22 | Sleep Continuity & Interruption Logic | **Temporal Safety:** Bridge short wake gaps (bathroom breaks) for accurate T-Wake. | conductor/tracks/sleep-continuity/ | Planned |
 
 ### Track Milestones
 
@@ -138,3 +139,7 @@
 - [x] Implement nutrition-aware scheduling (e.g., "Best time for this yogurt: 2:00 PM").
 - [x] Develop "Meal Sync" dashboard view showing medication windows overlaid with suggested meal times.
 
+#### T22: Sleep Continuity & Interruption Logic
+- [ ] Implement `healSleepSessions` logic to merge sessions with < 30min gaps.
+- [ ] Update `fetchLatestTWake` to use stitched session data.
+- [ ] Add "Sleep Interruption" indicator in Vertical Timeline.
