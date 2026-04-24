@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 
 enum class ScanMode { PILL, BOTTLE, FOOD, LABEL }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PillScannerScreen(
     onPillScanned: (PillScanResult) -> Unit,

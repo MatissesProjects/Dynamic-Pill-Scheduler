@@ -57,8 +57,8 @@ class MainActivity : ComponentActivity() {
                         nutrientAdvisory = nutrientAdvisory,
                         voiceState = voiceState,
                         voiceExtractedEntities = voiceExtractedEntities,
-                        onAddMedication = { name, dosage, offset, frequency ->
-                            viewModel.addMedication(name, dosage, offset, frequency)
+                        onAddMedication = { name, dosage, offset, frequency, foodRequirement ->
+                            viewModel.addMedication(name, dosage, offset, frequency, foodRequirement)
                         },
                         onUpdateMedication = { record ->
                             viewModel.updateMedication(record)

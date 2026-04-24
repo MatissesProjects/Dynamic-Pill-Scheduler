@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.phos.phone.ui.dashboard
 
 import android.Manifest
@@ -40,6 +41,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainDashboard(
     medications: List<MedicationRecord>,
@@ -57,7 +59,7 @@ fun MainDashboard(
     nutrientAdvisory: NutrientAdvisory?,
     voiceState: VoiceState,
     voiceExtractedEntities: ExtractedEntities?,
-    onAddMedication: (String, String, Long, Int) -> Unit,
+    onAddMedication: (String, String, Long, Int, String) -> Unit,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
     onDuplicateMedication: (MedicationRecord) -> Unit,
@@ -307,6 +309,7 @@ fun MainDashboard(
             advisory = advisory,
             onDismiss = onClearPRNAdvisory,
             onConfirm = {
+                // Find the med that triggered this
                 prnMedications.find { advisory.reason.contains(it.name) || it.name.contains(advisory.reason.split(" ").last().replace(".","")) }?.let {
                     onLogPRNDose(it)
                 } ?: onClearPRNAdvisory()
@@ -335,8 +338,8 @@ fun MainDashboard(
             initialDosage = prefilledDosage,
             initialFrequency = prefilledFrequency,
             onDismiss = { showAddDialog = false },
-            onConfirm = { name, dosage, offset, frequency ->
-                onAddMedication(name, dosage, offset, frequency)
+            onConfirm = { name, dosage, offset, frequency, foodReq ->
+                onAddMedication(name, dosage, offset, frequency, foodReq)
                 showAddDialog = false
             }
         )
@@ -404,25 +407,53 @@ fun MealSyncDashboard(eatingWindows: List<OptimalEatingWindow>, is24Hour: Boolea
     
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
-            Text("Optimal Eating Windows", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Suggested medication-free zones for easier eating and digestion.", style = MaterialTheme.typography.bodySmall)
+            Text("Adaptive Nutrition Orchestration", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("Dynamically calculated windows based on your schedule and hunger logs.", style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(8.dp))
         }
         
         items(eatingWindows) { window ->
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (window.isSacred) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                ),
+                border = if (window.isSacred) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+            ) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Restaurant, contentDescription = null)
+                        Icon(
+                            imageVector = if (window.isSacred) Icons.Default.HealthAndSafety else Icons.Default.Restaurant,
+                            contentDescription = null,
+                            tint = if (window.isSacred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondaryContainer
+                        )
                         Spacer(Modifier.width(8.dp))
-                        Text("${timeFormatter.format(Instant.ofEpochMilli(window.startTime))} - ${timeFormatter.format(Instant.ofEpochMilli(window.endTime))}", fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "${timeFormatter.format(Instant.ofEpochMilli(window.startTime))} - ${timeFormatter.format(Instant.ofEpochMilli(window.endTime))}",
+                            fontWeight = FontWeight.ExtraBold,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        if (window.isSacred) {
+                            Spacer(Modifier.weight(1f))
+                            Badge(containerColor = MaterialTheme.colorScheme.primary) { Text("SACRED WINDOW", color = Color.White) }
+                        }
                     }
-                    Text(window.reason, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
+                    Text(window.reason, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp))
+                    
+                    LinearProgressIndicator(
+                        progress = window.score / 10f,
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp).height(4.dp),
+                        color = if (window.isSacred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                    )
                 }
             }
         }
         
         if (eatingWindows.isEmpty()) {
-            item { Text("No clear windows detected. Consider adjusting medication offsets if eating becomes too difficult.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center) }
+            item { 
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No clear windows detected. Try adjusting medication offsets.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center) 
+                }
+            }
         }
     }
 }
@@ -666,9 +697,10 @@ fun VerticalTimeline(
             initialName = med.name,
             initialDosage = med.dosage,
             initialOffsetHours = (med.frequencyOffset / 3600000.0).toString(),
+            initialFoodRequirement = med.foodRequirement,
             onDismiss = { editingMedication = null },
-            onConfirm = { name, dosage, offset, _ ->
-                onUpdateMedication(med.copy(name = name, dosage = dosage, frequencyOffset = offset))
+            onConfirm = { name, dosage, offset, frequency, foodReq ->
+                onUpdateMedication(med.copy(name = name, dosage = dosage, frequencyOffset = offset, foodRequirement = foodReq))
                 editingMedication = null
             }
         )
@@ -773,6 +805,9 @@ fun TimelineItem(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = med.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(text = med.dosage, style = MaterialTheme.typography.bodySmall)
+                    if (med.foodRequirement != "NONE") {
+                        Text(text = "Food: ${med.foodRequirement}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    }
                 }
                 IconButton(onClick = onDuplicate) { Icon(Icons.Default.ContentCopy, contentDescription = "Duplicate", modifier = Modifier.size(18.dp)) }
                 IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(18.dp)) }
@@ -782,24 +817,28 @@ fun TimelineItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddMedicationDialog(
     initialName: String = "",
     initialDosage: String = "",
     initialOffsetHours: String = "1",
     initialFrequency: Int = 1,
+    initialFoodRequirement: String = "NONE",
     onDismiss: () -> Unit,
-    onConfirm: (String, String, Long, Int) -> Unit
+    onConfirm: (String, String, Long, Int, String) -> Unit
 ) {
     var name by remember { mutableStateOf(initialName) }
     var dosage by remember { mutableStateOf(initialDosage) }
     var offsetHours by remember { mutableStateOf(initialOffsetHours) }
     var frequency by remember { mutableStateOf(initialFrequency.toString()) }
+    var foodReq by remember { mutableStateOf(initialFoodRequirement) }
     
-    LaunchedEffect(initialName, initialDosage, initialFrequency) {
+    LaunchedEffect(initialName, initialDosage, initialFrequency, initialFoodRequirement) {
         name = initialName
         dosage = initialDosage
         frequency = initialFrequency.toString()
+        foodReq = initialFoodRequirement
     }
 
     AlertDialog(
@@ -811,13 +850,20 @@ fun AddMedicationDialog(
                 OutlinedTextField(value = dosage, onValueChange = { dosage = it }, label = { Text("Dosage") })
                 OutlinedTextField(value = offsetHours, onValueChange = { offsetHours = it }, label = { Text("First T-Wake Offset (Hours)") })
                 OutlinedTextField(value = frequency, onValueChange = { frequency = it }, label = { Text("Frequency (times/day)") })
+                
+                Text("Food Requirement:", style = MaterialTheme.typography.labelMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = foodReq == "NONE", onClick = { foodReq = "NONE" }, label = { Text("None") })
+                    FilterChip(selected = foodReq == "WITH_FOOD", onClick = { foodReq = "WITH_FOOD" }, label = { Text("With Food") })
+                    FilterChip(selected = foodReq == "EMPTY_STOMACH", onClick = { foodReq = "EMPTY_STOMACH" }, label = { Text("Empty Stomach") })
+                }
             }
         },
         confirmButton = {
             Button(onClick = { 
                 val offset = ((offsetHours.toDoubleOrNull() ?: 1.0) * 3600000L).toLong()
                 val freq = frequency.toIntOrNull() ?: 1
-                onConfirm(name, dosage, offset, freq) 
+                onConfirm(name, dosage, offset, freq, foodReq) 
             }) {
                 Text("Save")
             }

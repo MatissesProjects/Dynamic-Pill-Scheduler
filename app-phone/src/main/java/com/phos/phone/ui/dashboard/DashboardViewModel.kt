@@ -201,7 +201,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _voiceExtractedEntities = MutableStateFlow<ExtractedEntities?>(null)
     val voiceExtractedEntities: StateFlow<ExtractedEntities?> = _voiceExtractedEntities.asStateFlow()
 
-    fun addMedication(name: String, dosage: String, firstOffsetMillis: Long, frequency: Int = 1) {
+    fun addMedication(name: String, dosage: String, firstOffsetMillis: Long, frequency: Int = 1, foodRequirement: String = "NONE") {
         viewModelScope.launch {
             // Strategy: Spread doses over a 15-hour active day
             val totalActiveDayMillis = 15 * 3600000L
@@ -219,6 +219,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                         name = name,
                         dosage = dosage,
                         frequencyOffset = actualOffset,
+                        foodRequirement = foodRequirement,
                         validFrom = System.currentTimeMillis()
                     )
                 )
@@ -250,7 +251,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             medicationDao.insert(
                 record.copy(
                     id = 0,
-                    medicationId = "${record.name.lowercase().replace(" ", "_")}_${System.currentTimeMillis()}"
+                    medicationId = "${record.name.lowercase().replace(" ", "_")}_${System.currentTimeMillis()}",
+                    foodRequirement = record.foodRequirement
                 )
             )
         }
