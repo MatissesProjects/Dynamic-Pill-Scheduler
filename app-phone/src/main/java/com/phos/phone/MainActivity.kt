@@ -34,6 +34,9 @@ class MainActivity : ComponentActivity() {
             val eatingWindows by viewModel.eatingWindows.collectAsState()
             val nutrientAdvisory by viewModel.nutrientAdvisory.collectAsState()
             
+            val medicationDepletions by viewModel.medicationDepletions.collectAsState()
+            val nutrientReferences by viewModel.nutrientReferences.collectAsState()
+            
             val voiceState by viewModel.voiceManager.state.collectAsState()
             val voiceExtractedEntities by viewModel.voiceExtractedEntities.collectAsState()
             
@@ -45,6 +48,7 @@ class MainActivity : ComponentActivity() {
                         medications = medications,
                         prnMedications = prnMedications,
                         tWakeEpoch = phosState.tWakeEpoch,
+                        wasInterrupted = phosState.wasInterrupted,
                         lastAiInsight = phosState.lastAiInsight,
                         is24Hour = phosState.is24Hour,
                         healthInsights = healthInsights,
@@ -55,6 +59,8 @@ class MainActivity : ComponentActivity() {
                         travelProposal = travelProposal,
                         eatingWindows = eatingWindows,
                         nutrientAdvisory = nutrientAdvisory,
+                        medicationDepletions = medicationDepletions,
+                        nutrientReferences = nutrientReferences,
                         voiceState = voiceState,
                         voiceExtractedEntities = voiceExtractedEntities,
                         onAddMedication = { name, dosage, offset, frequency, foodRequirement ->
