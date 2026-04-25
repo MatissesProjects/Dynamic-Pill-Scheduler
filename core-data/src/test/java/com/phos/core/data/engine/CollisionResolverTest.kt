@@ -48,6 +48,39 @@ class CollisionResolverTest {
     }
 
     @Test
+    fun `test multi-pill conflict chain`() {
+        val rules = listOf(
+            InteractionRule(sourceId = "med_a", targetId = "med_b", gapMillis = 2 * 3600000L, reason = "Conflict A-B"),
+            InteractionRule(sourceId = "med_b", targetId = "med_c", gapMillis = 2 * 3600000L, reason = "Conflict B-C")
+        )
+        val resolver = CollisionResolver(rules)
+        
+        val medA = MedicationRecord(medicationId = "med_a", name = "A", dosage = "1", frequencyOffset = 0L, validFrom = 0L)
+        val medB = MedicationRecord(medicationId = "med_b", name = "B", dosage = "1", frequencyOffset = 1 * 3600000L, validFrom = 0L) // Conflicts with A
+        val medC = MedicationRecord(medicationId = "med_c", name = "C", dosage = "1", frequencyOffset = 2 * 3600000L, validFrom = 0L) // Conflicts with B
+        
+        val collisions = resolver.findMedicationCollisions(listOf(medA, medB, medC))
+        assertEquals(2, collisions.size)
+        assertTrue(collisions.any { it.reason == "Conflict A-B" })
+        assertTrue(collisions.any { it.reason == "Conflict B-C" })
+    }
+
+    @Test
+    fun `test partial ID matching and case insensitivity`() {
+        val rules = listOf(
+            InteractionRule(sourceId = "fiber", targetId = "lisinopril", gapMillis = 3600000L, reason = "Match")
+        )
+        val resolver = CollisionResolver(rules)
+        
+        val medA = MedicationRecord(medicationId = "High_Fiber_Supp", name = "Fiber", dosage = "1", frequencyOffset = 0L, validFrom = 0L)
+        val medB = MedicationRecord(medicationId = "LISINOPRIL_TAB", name = "Lisinopril", dosage = "1", frequencyOffset = 300000L, validFrom = 0L)
+        
+        val collisions = resolver.findMedicationCollisions(listOf(medA, medB))
+        assertEquals(1, collisions.size)
+        assertEquals("Match", collisions[0].reason)
+    }
+
+    @Test
     fun testFindFoodCollisions() {
         val twake = 1000000000000L
         val statin = MedicationRecord(

@@ -64,19 +64,11 @@ class MealScheduler {
             return boost
         }
 
-        // 1. Check gaps between medications
-        for (i in 0 until scheduledMeds.size - 1) {
-            val currentMed = scheduledMeds[i].first
-            val currentTime = scheduledMeds[i].second
-            val nextMed = scheduledMeds[i+1].first
-            val nextTime = scheduledMeds[i+1].second
-            
-            // Adjust gap start/end based on food requirements
-            var gapStart = currentTime + (30 * 60 * 1000L) // Default 30 mins recovery
-            var gapEnd = nextTime - (30 * 60 * 1000L) // Default 30 mins buffer
+        // 1. Check all medications for food requirements and gaps
+        for (i in scheduledMeds.indices) {
+            val (currentMed, currentTime) = scheduledMeds[i]
             
             if (currentMed.foodRequirement == "WITH_FOOD") {
-                // This is actually a great time to eat!
                 val wStart = currentTime - (15 * 60 * 1000L)
                 val wEnd = currentTime + (45 * 60 * 1000L)
                 windows.add(OptimalEatingWindow(
@@ -86,24 +78,32 @@ class MealScheduler {
                     score = min(10, 10 + calculatePreferenceBoost(wStart, wEnd))
                 ))
             }
-            
-            if (nextMed.foodRequirement == "EMPTY_STOMACH") {
-                gapEnd = nextTime - (60 * 60 * 1000L) // Need 1h empty before
-            }
 
-            val gapDurationMins = (gapEnd - gapStart) / (60 * 1000)
-            if (gapDurationMins >= 60) {
-                var score = if (gapDurationMins > 120) 10 else 7
-                if (isHighDifficulty) score += 2
-                score += calculatePreferenceBoost(gapStart, gapEnd)
+            if (i < scheduledMeds.size - 1) {
+                val nextMed = scheduledMeds[i+1].first
+                val nextTime = scheduledMeds[i+1].second
                 
-                windows.add(OptimalEatingWindow(
-                    startTime = gapStart,
-                    endTime = gapEnd,
-                    reason = if (isHighDifficulty) "Sacred Eating Window: Reserved for digestion recovery." else "Uninterrupted gap for comfortable eating.",
-                    score = min(10, score),
-                    isSacred = isHighDifficulty
-                ))
+                var gapStart = currentTime + (30 * 60 * 1000L)
+                var gapEnd = nextTime - (30 * 60 * 1000L)
+                
+                if (nextMed.foodRequirement == "EMPTY_STOMACH") {
+                    gapEnd = nextTime - (60 * 60 * 1000L)
+                }
+
+                val gapDurationMins = (gapEnd - gapStart) / (60 * 1000)
+                if (gapDurationMins >= 60) {
+                    var score = if (gapDurationMins > 120) 10 else 7
+                    if (isHighDifficulty) score += 2
+                    score += calculatePreferenceBoost(gapStart, gapEnd)
+                    
+                    windows.add(OptimalEatingWindow(
+                        startTime = gapStart,
+                        endTime = gapEnd,
+                        reason = if (isHighDifficulty) "Sacred Eating Window: Reserved for digestion recovery." else "Uninterrupted gap for comfortable eating.",
+                        score = min(10, score),
+                        isSacred = isHighDifficulty
+                    ))
+                }
             }
         }
         
