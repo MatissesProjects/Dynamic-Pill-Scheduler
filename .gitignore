@@ -38,3 +38,8 @@ local.properties
 
 # Log files
 *.log
+
+# AI Exploration Artifacts (Local Probe)
+*-extracted/
+*-classes/
+*.zip

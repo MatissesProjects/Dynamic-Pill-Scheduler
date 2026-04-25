@@ -437,6 +437,34 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    /**
+     * Multimodal meal analysis using Gemini Nano Vision.
+     */
+    suspend fun analyzeMealWithNano(bitmap: android.graphics.Bitmap): com.phos.phone.ui.scanner.FoodScanResult? {
+        val json = nanoEngine.analyzeMealImage(bitmap) ?: return null
+        return try {
+            val name = Regex("\"detectedName\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1) ?: "Unknown Meal"
+            val category = Regex("\"category\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1) ?: "General"
+            
+            // Re-using the logic from parseNutritionTextWithNano to extract nested nutrients
+            val calories = Regex("\"calories\":\\s*(\\d+)").find(json)?.groupValues?.get(1)?.toInt() ?: 400
+            val protein = Regex("\"proteinG\":\\s*([\\d.]+)").find(json)?.groupValues?.get(1)?.toDouble() ?: 25.0
+            val calcium = Regex("\"calciumMg\":\\s*([\\d.]+)").find(json)?.groupValues?.get(1)?.toDouble() ?: 50.0
+            val ingredients = if (json.contains("ingredients")) {
+                 Regex("\"ingredients\":\\s*\\[(.*?)\\]").find(json)?.groupValues?.get(1)?.split(",")?.map { it.replace("\"", "").trim() } ?: emptyList()
+            } else emptyList()
+
+            com.phos.phone.ui.scanner.FoodScanResult(
+                detectedName = name,
+                category = category,
+                nutrients = NutrientFacts(calories = calories, proteinG = protein, calciumMg = calcium, ingredients = ingredients),
+                confidence = 1.0f
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         voiceManager.destroy()

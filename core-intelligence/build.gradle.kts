@@ -31,6 +31,11 @@ android {
 dependencies {
     implementation(project(":core-data"))
     
+    // ML Kit GenAI Prompt (Multimodal bridge to Gemini Nano)
+    implementation("com.google.mlkit:genai-prompt:1.0.0-beta2")
+    implementation("com.google.mlkit:common:18.10.0")
+    implementation("com.google.mlkit:vision-common:17.3.0")
+    
     // Google AI Edge SDK for Gemini Nano (AICore)
     implementation("com.google.ai.edge.aicore:aicore:0.0.1-exp02")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
