@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.phos.phone.ui.dashboard.MainDashboard
 import com.phos.phone.ui.dashboard.DashboardViewModel
 import com.phos.core.data.proto.PhosState
 import com.phos.phone.ui.theme.PhosTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     
@@ -22,6 +24,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         setContent {
+            val scope = rememberCoroutineScope()
             val medications by viewModel.medications.collectAsState()
             val prnMedications by viewModel.prnMedications.collectAsState()
             val phosState by viewModel.phosState.collectAsState(initial = PhosState.getDefaultInstance())
@@ -144,6 +147,9 @@ class MainActivity : ComponentActivity() {
                         },
                         aiTextParser = { text ->
                             viewModel.parseNutritionTextWithNano(text)
+                        },
+                        aiVisionParser = { bitmap ->
+                            viewModel.analyzeMealWithNano(bitmap)
                         }
                     )
                 }

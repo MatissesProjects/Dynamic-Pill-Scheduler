@@ -2,6 +2,7 @@ package com.phos.phone.ui.dashboard
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -89,7 +90,8 @@ fun MainDashboard(
     onAddHealthGoal: (String, String, Long?) -> Unit,
     onUpdateMealPreferences: (Long, Long, Long, Long, Long, Long) -> Unit,
     onLogSleepSubjective: (Int, Int, String) -> Unit,
-    aiTextParser: (suspend (String) -> NutrientFacts?)? = null
+    aiTextParser: (suspend (String) -> NutrientFacts?)? = null,
+    aiVisionParser: (suspend (Bitmap) -> FoodScanResult?)? = null
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -256,7 +258,8 @@ fun MainDashboard(
                                     selectedTab = 3
                                 }
                             },
-                            aiTextParser = aiTextParser
+                            aiTextParser = aiTextParser,
+                            aiVisionParser = aiVisionParser
                         )
                     } else {
                         Column(

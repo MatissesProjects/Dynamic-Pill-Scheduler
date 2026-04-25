@@ -33,7 +33,8 @@ enum class ScanMode { PILL, BOTTLE, FOOD, LABEL }
 fun PillScannerScreen(
     onPillScanned: (PillScanResult) -> Unit,
     onFoodScanned: (FoodScanResult) -> Unit = {},
-    aiTextParser: (suspend (String) -> NutrientFacts?)? = null
+    aiTextParser: (suspend (String) -> NutrientFacts?)? = null,
+    aiVisionParser: (suspend (Bitmap) -> FoodScanResult?)? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -130,7 +131,7 @@ fun PillScannerScreen(
                                     when (scanMode) {
                                         ScanMode.BOTTLE -> onPillScanned(scannerEngine.recognizeBottleText(bitmap))
                                         ScanMode.PILL -> onPillScanned(scannerEngine.analyzePill(bitmap))
-                                        ScanMode.FOOD -> onFoodScanned(foodEngine.identifyFood(bitmap))
+                                        ScanMode.FOOD -> onFoodScanned(foodEngine.identifyFood(bitmap, aiVisionParser))
                                         ScanMode.LABEL -> onFoodScanned(foodEngine.scanNutritionLabel(bitmap, aiTextParser))
                                     }
                                 }

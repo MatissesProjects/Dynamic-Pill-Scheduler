@@ -29,25 +29,24 @@ class FoodScannerEngine {
      */
     fun initTflite(context: android.content.Context) {
         try {
-            // In a real app, food_model.tflite would be in the assets folder.
-            // We use the boilerplate here to confirm Track 19 integration milestones.
-            // val model = FileUtil.loadMappedFile(context, "food_model.tflite")
-            // tflite = Interpreter(model)
+            // Placeholder for TFLite
         } catch (e: Exception) {
             Log.e("FoodScanner", "TFLite model load failed", e)
         }
     }
 
     /**
-     * Identifies food using on-device CV (Color-profile heuristic fallback if TFLite missing).
+     * Identifies food using on-device CV (Vision AI with Heuristic fallback).
      */
-    fun identifyFood(bitmap: Bitmap): FoodScanResult {
-        // TFLite logic would go here:
-        // val input = convertBitmapToByteBuffer(bitmap)
-        // val output = Array(1) { FloatArray(CATEGORIES_COUNT) }
-        // tflite?.run(input, output)
+    suspend fun identifyFood(bitmap: Bitmap, aiVisionAnalyzer: (suspend (Bitmap) -> FoodScanResult?)? = null): FoodScanResult {
         
-        // Current implementation uses Color-profile heuristics for simulation as per Plan.
+        // 1. Try real Vision AI (Gemini Nano)
+        val aiResult = aiVisionAnalyzer?.invoke(bitmap)
+        if (aiResult != null && aiResult.confidence > 0.5f) {
+            return aiResult
+        }
+
+        // 2. Fallback to heuristic classification
         val centerX = bitmap.width / 2
         val centerY = bitmap.height / 2
         val pixel = bitmap.getPixel(centerX, centerY)
