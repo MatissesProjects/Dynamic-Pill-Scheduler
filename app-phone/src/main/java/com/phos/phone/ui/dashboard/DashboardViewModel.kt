@@ -17,12 +17,16 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.Instant
 
-class DashboardViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = Room.databaseBuilder(
+class DashboardViewModel(
+    application: Application,
+    private val db: PhosDatabase = Room.databaseBuilder(
         application,
         PhosDatabase::class.java, "phos-db"
-    ).fallbackToDestructiveMigration().build()
+    ).fallbackToDestructiveMigration().build(),
+    private val dataLayerRepository: DataLayerRepository = DataLayerRepository(application, application.phosDataStore),
+    injectedVoiceManager: VoiceManager? = null,
+    injectedNanoEngine: GeminiNanoEngine? = null
+) : AndroidViewModel(application) {
 
     private val medicationDao = db.medicationDao()
     private val temporalAnchorDao = db.temporalAnchorDao()
@@ -39,7 +43,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val nocturiaDao = db.nocturiaDao()
     private val sleepSubjectiveDao = db.sleepSubjectiveDao()
 
-    private val dataLayerRepository = DataLayerRepository(application, application.phosDataStore)
     private val healthSyncManager = HealthSyncManager(application)
     private val napManager = NapManager(healthSyncManager)
     private val postureIntelligence = PostureIntelligence()
@@ -48,15 +51,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val goalOptimizationEngine = GoalOptimizationEngine()
     private val sleepCalibrationEngine = SleepCalibrationEngine()
     
-    // Real On-Device AI Engine (Gemini Nano via AICore)
-    private val nanoEngine = GeminiNanoEngine(application)
+    private val nanoEngine = injectedNanoEngine ?: GeminiNanoEngine(application)
     
     private val voiceParser = GeminiVoiceParser(nanoEngine)
     private val voiceLogCoordinator = VoiceLogCoordinator(
         doseLogDao, interactionDao, medicationDao, intelligenceDao, voiceParser
     )
     
-    val voiceManager = VoiceManager(application)
+    val voiceManager: VoiceManager = injectedVoiceManager ?: VoiceManager(application)
 
     private val collisionResolverFlow = combine(
         interactionDao.getAllRules(),

@@ -66,14 +66,20 @@ class BiometricDashboardWidget : GlanceAppWidget() {
 
             Spacer(modifier = GlanceModifier.height(8.dp))
 
-            val nextMed = state.medicationsList.firstOrNull { it.status == "PENDING" }
             Text(
-                text = if (nextMed != null) "Next: ${nextMed.name}" else "All caught up!",
+                text = getNextMedicationText(state),
                 style = TextStyle(
                     color = GlanceTheme.colors.onSurfaceVariant,
                     fontSize = 10.sp
                 )
             )
+        }
+    }
+
+    companion object {
+        fun getNextMedicationText(state: PhosState): String {
+            val nextMed = state.medicationsList.firstOrNull { it.status == "PENDING" }
+            return if (nextMed != null) "Next: ${nextMed.name}" else "All caught up!"
         }
     }
 
