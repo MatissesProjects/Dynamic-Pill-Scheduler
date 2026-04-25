@@ -9,12 +9,25 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
+import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.BloodPressureRecord
+
 class HealthSyncManager(private val context: Context) {
 
     private val healthConnectClient by lazy { HealthConnectClient.getOrCreate(context) }
 
     val permissions = setOf(
-        HealthPermission.getReadPermission(SleepSessionRecord::class)
+        HealthPermission.getReadPermission(SleepSessionRecord::class),
+        HealthPermission.getReadPermission(HeartRateRecord::class),
+        HealthPermission.getReadPermission(StepsRecord::class),
+        HealthPermission.getReadPermission(OxygenSaturationRecord::class),
+        HealthPermission.getReadPermission(BodyTemperatureRecord::class),
+        HealthPermission.getReadPermission(RestingHeartRateRecord::class),
+        HealthPermission.getReadPermission(BloodPressureRecord::class)
     )
 
     suspend fun hasPermissions(): Boolean {
@@ -137,5 +150,39 @@ class HealthSyncManager(private val context: Context) {
         } catch (e: Exception) {
             return null
         }
+    }
+
+    suspend fun fetchLatestHeartRate(): List<HeartRateRecord.Sample>? {
+        try {
+            if (!hasPermissions()) return null
+            val request = ReadRecordsRequest(
+                recordType = HeartRateRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(Instant.now().minus(24, ChronoUnit.HOURS), Instant.now())
+            )
+            return healthConnectClient.readRecords(request).records.flatMap { it.samples }
+        } catch (e: Exception) { return null }
+    }
+
+    suspend fun fetchTotalStepsToday(): Long? {
+        try {
+            if (!hasPermissions()) return null
+            val startOfDay = Instant.now().truncatedTo(ChronoUnit.DAYS)
+            val request = ReadRecordsRequest(
+                recordType = StepsRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(startOfDay, Instant.now())
+            )
+            return healthConnectClient.readRecords(request).records.sumOf { it.count }
+        } catch (e: Exception) { return null }
+    }
+
+    suspend fun fetchLatestBodyTemperature(): Double? {
+        try {
+            if (!hasPermissions()) return null
+            val request = ReadRecordsRequest(
+                recordType = BodyTemperatureRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(Instant.now().minus(24, ChronoUnit.HOURS), Instant.now())
+            )
+            return healthConnectClient.readRecords(request).records.maxByOrNull { it.time }?.temperature?.inCelsius
+        } catch (e: Exception) { return null }
     }
 }

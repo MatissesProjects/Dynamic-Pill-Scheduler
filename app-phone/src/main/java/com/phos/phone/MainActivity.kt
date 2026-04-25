@@ -150,6 +150,9 @@ class MainActivity : ComponentActivity() {
                         },
                         aiVisionParser = { bitmap ->
                             viewModel.analyzeMealWithNano(bitmap)
+                        },
+                        aiPillVisionParser = { bitmap ->
+                            viewModel.analyzePillWithNano(bitmap)
                         }
                     )
                 }

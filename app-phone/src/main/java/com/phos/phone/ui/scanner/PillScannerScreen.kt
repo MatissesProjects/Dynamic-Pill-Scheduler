@@ -34,7 +34,8 @@ fun PillScannerScreen(
     onPillScanned: (PillScanResult) -> Unit,
     onFoodScanned: (FoodScanResult) -> Unit = {},
     aiTextParser: (suspend (String) -> NutrientFacts?)? = null,
-    aiVisionParser: (suspend (Bitmap) -> FoodScanResult?)? = null
+    aiVisionParser: (suspend (Bitmap) -> FoodScanResult?)? = null,
+    aiPillVisionParser: (suspend (Bitmap) -> PillScanResult?)? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -129,8 +130,8 @@ fun PillScannerScreen(
                                 val bitmap = image.toBitmapLocal()
                                 scope.launch {
                                     when (scanMode) {
-                                        ScanMode.BOTTLE -> onPillScanned(scannerEngine.recognizeBottleText(bitmap))
-                                        ScanMode.PILL -> onPillScanned(scannerEngine.analyzePill(bitmap))
+                                        ScanMode.BOTTLE -> onPillScanned(scannerEngine.recognizeBottleText(bitmap, aiPillVisionParser))
+                                        ScanMode.PILL -> onPillScanned(scannerEngine.analyzePill(bitmap, aiPillVisionParser))
                                         ScanMode.FOOD -> onFoodScanned(foodEngine.identifyFood(bitmap, aiVisionParser))
                                         ScanMode.LABEL -> onFoodScanned(foodEngine.scanNutritionLabel(bitmap, aiTextParser))
                                     }

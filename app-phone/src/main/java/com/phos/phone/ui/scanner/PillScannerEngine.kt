@@ -24,9 +24,16 @@ class PillScannerEngine {
     private val userName = "Devin Finkel"
 
     /**
-     * Extracts medication info from a bottle label using OCR.
+     * Extracts medication info from a bottle label using OCR or AI vision.
      */
-    suspend fun recognizeBottleText(bitmap: Bitmap): PillScanResult {
+    suspend fun recognizeBottleText(bitmap: Bitmap, aiVisionAnalyzer: (suspend (Bitmap) -> PillScanResult?)? = null): PillScanResult {
+        // 1. Try real Vision AI (Gemini Nano)
+        val aiResult = aiVisionAnalyzer?.invoke(bitmap)
+        if (aiResult != null && aiResult.confidence > 0.5f) {
+            return aiResult
+        }
+
+        // 2. Fallback to heuristic OCR extraction
         val image = InputImage.fromBitmap(bitmap, 0)
         return try {
             val result = recognizer.process(image).await()
@@ -84,9 +91,16 @@ class PillScannerEngine {
     }
 
     /**
-     * Heuristic-based analysis of a single pill.
+     * Heuristic-based analysis of a single pill with optional AI vision processing.
      */
-    fun analyzePill(bitmap: Bitmap): PillScanResult {
+    suspend fun analyzePill(bitmap: Bitmap, aiVisionAnalyzer: (suspend (Bitmap) -> PillScanResult?)? = null): PillScanResult {
+        // 1. Try real Vision AI (Gemini Nano)
+        val aiResult = aiVisionAnalyzer?.invoke(bitmap)
+        if (aiResult != null && aiResult.confidence > 0.5f) {
+            return aiResult
+        }
+
+        // 2. Fallback to heuristic classification
         val centerX = bitmap.width / 2
         val centerY = bitmap.height / 2
         

@@ -465,6 +465,32 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    /**
+     * Multimodal pill/bottle analysis using Gemini Nano Vision.
+     */
+    suspend fun analyzePillWithNano(bitmap: android.graphics.Bitmap): com.phos.phone.ui.scanner.PillScanResult? {
+        val json = nanoEngine.analyzePillImage(bitmap) ?: return null
+        return try {
+            val name = Regex("\"detectedName\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1)
+            val dosage = Regex("\"detectedDosage\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1)
+            val color = Regex("\"detectedColor\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1)
+            val shape = Regex("\"detectedShape\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1)
+            val freqStr = Regex("\"frequencyDosesPerDay\":\\s*(\\d+)").find(json)?.groupValues?.get(1)
+            val freq = freqStr?.toIntOrNull() ?: 1
+
+            com.phos.phone.ui.scanner.PillScanResult(
+                detectedName = name,
+                detectedDosage = dosage,
+                detectedColor = color,
+                detectedShape = shape,
+                frequencyDosesPerDay = freq,
+                confidence = 1.0f
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         voiceManager.destroy()

@@ -91,7 +91,8 @@ fun MainDashboard(
     onUpdateMealPreferences: (Long, Long, Long, Long, Long, Long) -> Unit,
     onLogSleepSubjective: (Int, Int, String) -> Unit,
     aiTextParser: (suspend (String) -> NutrientFacts?)? = null,
-    aiVisionParser: (suspend (Bitmap) -> FoodScanResult?)? = null
+    aiVisionParser: (suspend (Bitmap) -> FoodScanResult?)? = null,
+    aiPillVisionParser: (suspend (Bitmap) -> PillScanResult?)? = null
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -259,7 +260,8 @@ fun MainDashboard(
                                 }
                             },
                             aiTextParser = aiTextParser,
-                            aiVisionParser = aiVisionParser
+                            aiVisionParser = aiVisionParser,
+                            aiPillVisionParser = aiPillVisionParser
                         )
                     } else {
                         Column(

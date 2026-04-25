@@ -18,7 +18,7 @@ class GeminiNanoEngine(private val context: Context) {
     suspend fun initialize() {
         try {
             val modelConfig = ModelConfig.Builder().apply {
-                preference = ModelPreference.FAST
+                preference = ModelPreference.FULL // Use the best available Gemma 4 model
             }.build()
                 
             val generationConfig = GenerationConfig.Builder().apply {
@@ -26,9 +26,42 @@ class GeminiNanoEngine(private val context: Context) {
             }.build()
 
             generativeModel = Generation.getClient(generationConfig)
-            android.util.Log.i("GeminiNanoEngine", "ML Kit Gemini Nano bridge initialized.")
+            android.util.Log.i("GeminiNanoEngine", "ML Kit Gemini Nano bridge initialized with FULL preference.")
         } catch (e: Exception) {
             android.util.Log.e("GeminiNanoEngine", "Bridge init failed", e)
+        }
+    }
+
+    /**
+     * REAL multimodal inference for pill/bottle analysis using ML Kit bridge.
+     */
+    suspend fun analyzePillImage(inputImage: Bitmap): String? {
+        val model = generativeModel ?: return null
+
+        val prompt = """
+            Analyze this pill or medication bottle photo. 
+            Identify the medication details and return strict JSON format:
+            {
+                "detectedName": "string",
+                "detectedDosage": "string",
+                "detectedColor": "string",
+                "detectedShape": "string",
+                "frequencyDosesPerDay": 1
+            }
+            Return ONLY the JSON.
+        """.trimIndent()
+
+        return try {
+            val request = GenerateContentRequest.Builder(
+                ImagePart(inputImage),
+                TextPart(prompt)
+            ).build()
+
+            val response = model.generateContent(request)
+            response.candidates.firstOrNull()?.text
+        } catch (e: Exception) {
+            android.util.Log.e("GeminiNanoEngine", "Vision failed", e)
+            null
         }
     }
 
