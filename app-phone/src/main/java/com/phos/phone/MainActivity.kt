@@ -141,6 +141,9 @@ class MainActivity : ComponentActivity() {
                         },
                         onLogSleepSubjective = { qual, rest, mood ->
                             viewModel.logSleepSubjective(qual, rest, mood)
+                        },
+                        aiTextParser = { text ->
+                            viewModel.parseNutritionTextWithNano(text)
                         }
                     )
                 }
