@@ -26,7 +26,7 @@
 | T23 | Goal-Oriented Scheduling | **Customization:** Health goals & custom user meal preferences syncing. | conductor/tracks/goal-oriented-scheduling/ | Completed |
 | T24 | Nocturia Optimization | **Circadian Safety:** Track and minimize nighttime bathroom breaks. | conductor/tracks/nocturia-optimization/ | Completed |
 | T25 | Sleep Quality Calibration | **Calibration:** Morning feedback loop to align Fitbit data with feeling. | conductor/tracks/sleep-calibration/ | Completed |
-| T26 | High-Integrity Validation | **Reliability:** Expand test coverage to >80% for AI, Temporal, and UI layers. | conductor/tracks/high-integrity-validation/ | In Progress |
+| T26 | High-Integrity Validation | **Reliability:** Expand test coverage to >80% for AI, Temporal, and UI layers. | conductor/tracks/high-integrity-validation/ | Completed |
 
 ### Track Milestones
 
@@ -160,9 +160,14 @@
 - [x] Enhance `GoalOptimizationEngine` with nocturnal urination reduction rules.
 - [x] Build "Sleep Quality" UI and break count visualization.
 
+#### T25: Sleep Quality Feedback & Calibration
+- [x] Define `SleepSubjectiveLog` and morning check-in UI.
+- [x] Create `SleepCalibrationEngine` for data-vs-feeling discrepancy detection.
+- [x] Update `GoalOptimizationEngine` to trigger shifts based on bad sleep reports.
+
 #### T26: High-Integrity Validation
-- [ ] Implement `GeminiNanoEngineTest` with ML Kit mocks.
-- [ ] Implement `MealSchedulerTest` for complex dietary-medication synchronization.
-- [ ] Build exhaustive tests for `GoalOptimizationEngine` and `VoiceEntityParser`.
-- [ ] Create `DashboardViewModelTest` and `WidgetStateMappingTest` for UI reliability.
-- [ ] Implement `DataLayerRepositoryTest` for cross-device sync integrity.
+- [x] Implement `GeminiNanoEngineTest` with ML Kit mocks.
+- [x] Implement `MealSchedulerTest` for complex dietary-medication synchronization.
+- [x] Build exhaustive tests for `GoalOptimizationEngine` and `VoiceEntityParser`.
+- [x] Create `DashboardViewModelTest` and `WidgetStateMappingTest` for UI reliability.
+- [x] Implement `DataLayerRepositoryTest` for cross-device sync integrity.

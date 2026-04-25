@@ -10,21 +10,21 @@ This track focuses on increasing the system's test coverage from ~10% to >80%, s
 4. **Sync Integrity:** Verify Protobuf serialization and Horologist DataStore sync logic to prevent data corruption between Phone and Watch.
 
 ## Milestones
-- [ ] **M1: Core Intelligence Tests**
-    - [ ] Implement `GeminiNanoEngineTest` (multimodal analysis & JSON extraction).
-    - [ ] Implement `VoiceEntityParserTest` (NLP entity extraction accuracy).
-    - [ ] Implement `GoalOptimizationEngineTest` (goal-to-offset logic).
-- [ ] **M2: Temporal & Safety Engine Expansion**
-    - [ ] Implement `MealSchedulerTest` (dietary-medication sync logic).
-    - [ ] Expand `CollisionResolverTest` with complex multi-pill conflict scenarios.
-    - [ ] Expand `PhysiologicalSuppressorTest` with real-world sensor data mocks.
-- [ ] **M3: Sync & Data Layer Validation**
-    - [ ] Implement `DataLayerRepositoryTest` (serialization/deserialization).
-    - [ ] Build `RoomTemporalVersioningTest` to verify `validFrom`/`validTo` logic.
-- [ ] **M4: UI State Mapping & Reliability**
-    - [ ] Implement `DashboardViewModelTest` (state flow and UI events).
-    - [ ] Create `WidgetStateMappingTest` for Jetpack Glance widget reliability.
-    - [ ] Implement `AmbientUXTest` for Wear OS haptic pattern triggers.
+- [x] **M1: Core Intelligence Tests**
+    - [x] Implement `GeminiNanoEngineTest` (multimodal analysis & JSON extraction).
+    - [x] Implement `VoiceEntityParserTest` (NLP entity extraction accuracy).
+    - [x] Implement `GoalOptimizationEngineTest` (goal-to-offset logic).
+- [x] **M2: Temporal & Safety Engine Expansion**
+    - [x] Implement `MealSchedulerTest` (dietary-medication sync logic).
+    - [x] Expand `CollisionResolverTest` with complex multi-pill conflict scenarios.
+    - [x] Expand `PhysiologicalSuppressorTest` with real-world sensor data mocks.
+- [x] **M3: Sync & Data Layer Validation**
+    - [x] Implement `DataLayerRepositoryTest` (serialization/deserialization).
+    - [x] Build `RoomTemporalVersioningTest` to verify `validFrom`/`validTo` logic.
+- [x] **M4: UI State Mapping & Reliability**
+    - [x] Implement `DashboardViewModelTest` (state flow and UI events).
+    - [x] Create `WidgetStateMappingTest` for Jetpack Glance widget reliability.
+    - [x] Implement `AmbientUXTest` for Wear OS haptic pattern triggers.
 
 ## Verification
 - Run `./gradlew test` to ensure all modules pass.
