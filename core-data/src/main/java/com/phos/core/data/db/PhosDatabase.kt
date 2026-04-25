@@ -28,9 +28,10 @@ import com.phos.core.data.model.*
         AllergenProfile::class,
         NutrientReference::class,
         MedicationInducedDepletion::class,
-        HealthGoal::class
+        HealthGoal::class,
+        NocturiaLog::class
     ],
-    version = 13
+    version = 14
 )
 @TypeConverters(Converters::class)
 abstract class PhosDatabase : RoomDatabase() {
@@ -49,4 +50,5 @@ abstract class PhosDatabase : RoomDatabase() {
     abstract fun allergenDao(): AllergenDao
     abstract fun nutrientDao(): NutrientDao
     abstract fun goalDao(): GoalDao
+    abstract fun nocturiaDao(): NocturiaDao
 }

@@ -36,6 +36,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val allergenDao = db.allergenDao()
     private val nutrientDao = db.nutrientDao()
     private val goalDao = db.goalDao()
+    private val nocturiaDao = db.nocturiaDao()
 
     private val dataLayerRepository = DataLayerRepository(application, application.phosDataStore)
     private val healthSyncManager = HealthSyncManager(application)
@@ -175,9 +176,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     val healthGoals: StateFlow<List<HealthGoal>> = goalDao.getActiveGoalsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val optimizationSuggestions: StateFlow<List<OptimizationSuggestion>> = combine(healthGoals, medications, phosState, temporalAnchorFlow) { goals, meds, state, anchor ->
+    val nocturiaLogs: StateFlow<List<NocturiaLog>> = nocturiaDao.getNocturiaLogsSince(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val optimizationSuggestions: StateFlow<List<OptimizationSuggestion>> = combine(healthGoals, medications, phosState, temporalAnchorFlow, nocturiaLogs) { goals, meds, state, anchor, nocturia ->
         if (anchor == null) emptyList()
-        else goalOptimizationEngine.evaluateGoals(goals, meds, if(state.hasMealPreferences()) state.mealPreferences else MealPreferences.getDefaultInstance(), anchor.wakeTime)
+        else goalOptimizationEngine.evaluateGoals(goals, meds, if(state.hasMealPreferences()) state.mealPreferences else MealPreferences.getDefaultInstance(), anchor.wakeTime, nocturia.size)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val medicationDepletions: StateFlow<List<String>> = combine(medications, nutrientDao.getAllDepletions()) { meds, rules ->

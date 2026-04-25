@@ -23,6 +23,8 @@
 | T20 | Nutrient & Allergen Intelligence | **Intelligence:** Nutrition Label OCR, macro estimation, and allergen flagging. | conductor/tracks/macro-intelligence/ | Completed |
 | T21 | Adaptive Meal & Hunger Orchestration | **Orchestration:** Optimal hunger-window reservation and dietary-med sync. | conductor/tracks/adaptive-meal-scheduling/ | Completed |
 | T22 | Sleep Continuity & Interruption Logic | **Temporal Safety:** Bridge short wake gaps (bathroom breaks) for accurate T-Wake. | conductor/tracks/sleep-continuity/ | Completed |
+| T23 | Goal-Oriented Scheduling | **Customization:** Health goals & custom user meal preferences syncing. | conductor/tracks/goal-oriented-scheduling/ | Completed |
+| T24 | Nocturia Optimization | **Circadian Safety:** Track and minimize nighttime bathroom breaks. | conductor/tracks/nocturia-optimization/ | Planned |
 
 ### Track Milestones
 
@@ -150,3 +152,8 @@
 - [x] Create `GoalOptimizationEngine` that suggests medication offsets based on active goals.
 - [x] Update `MealScheduler` to combine "Optimal Eating Windows" with user-defined `MealPreferences`.
 - [x] Build UI in the Dashboard (Settings & Meals tab) to input meal preferences and log health goals.
+
+#### T24: Nocturia Optimization & Break Tracking
+- [ ] Define `NocturiaLog` entity and automate detection from bridged sessions.
+- [ ] Enhance `GoalOptimizationEngine` with nocturnal urination reduction rules.
+- [ ] Build "Sleep Quality" UI and break count visualization.
