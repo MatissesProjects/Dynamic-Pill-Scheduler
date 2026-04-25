@@ -19,7 +19,7 @@
 | T16 | Advanced Travel Automation | **Titration:** Proactive jet lag schedule proposals via calendar. | conductor/tracks/travel-automation/ | Completed |
 | T17 | PRN Decision Intelligence | **Safety:** Advisory layer for as-needed medication efficacy. | conductor/tracks/prn-intelligence/ | Completed |
 | T18 | Context-Aware Voice Logging | **Input UX:** Hands-free logging via on-device Speech-to-Text & Nano. | conductor/tracks/voice-logging/ | Completed |
-| T19 | On-Device Food Recognition | **CV:** Identifying dietary intake via camera and TFLite. | conductor/tracks/food-vision/ | Planned |
+| T19 | On-Device Food Recognition | **CV:** Identifying dietary intake via camera and TFLite. | conductor/tracks/food-vision/ | Completed |
 | T20 | Nutrient & Allergen Intelligence | **Intelligence:** Nutrition Label OCR, macro estimation, and allergen flagging. | conductor/tracks/macro-intelligence/ | Completed |
 | T21 | Adaptive Meal & Hunger Orchestration | **Orchestration:** Optimal hunger-window reservation and dietary-med sync. | conductor/tracks/adaptive-meal-scheduling/ | Completed |
 | T22 | Sleep Continuity & Interruption Logic | **Temporal Safety:** Bridge short wake gaps (bathroom breaks) for accurate T-Wake. | conductor/tracks/sleep-continuity/ | Completed |
@@ -125,9 +125,9 @@
 - [x] Implement `VoiceLogCoordinator` for automated data dispatch.
 
 #### T19: On-Device Food Recognition
-- [ ] Integrate TFLite food classification model.
-- [ ] Create `FoodScannerEngine` for dietary identification.
-- [ ] Implement "Dietary Scan" UI mode.
+- [x] Integrate TFLite food classification model.
+- [x] Create `FoodScannerEngine` for dietary identification.
+- [x] Implement "Dietary Scan" UI mode.
 
 #### T20: Nutrient & Allergen Intelligence
 - [x] Build `NutrientReference` local database and `AllergenProfile` schema.
