@@ -24,10 +24,35 @@ class GoalOptimizationEngine {
         goals: List<HealthGoal>,
         medications: List<MedicationRecord>,
         mealPreferences: MealPreferences,
-        tWakeEpoch: Long
+        tWakeEpoch: Long,
+        nocturiaCount: Int = 0
     ): List<OptimizationSuggestion> {
         val suggestions = mutableListOf<OptimizationSuggestion>()
         
+        // 1. Automatic Nocturia Check (Independent of explicit goals if count is high)
+        if (nocturiaCount > 1) {
+            val fluidMeds = medications.filter { med ->
+                val name = med.name.lowercase()
+                name.contains("furosemide") || name.contains("hydrochlorothiazide") || 
+                name.contains("spironolactone") || name.contains("diuretic") ||
+                name.contains("lithium") || name.contains("dapagliflozin")
+            }
+            
+            val lateFluidMeds = fluidMeds.filter { it.frequencyOffset > 8 * 3600000L }
+            if (lateFluidMeds.isNotEmpty()) {
+                val shiftMap = mutableMapOf<String, Long>()
+                lateFluidMeds.forEach { med ->
+                    // Shift to 4 hours after wake
+                    shiftMap[med.medicationId] = 4 * 3600000L
+                }
+                suggestions.add(OptimizationSuggestion(
+                    goalId = -1, // System-generated goal
+                    description = "Frequent nighttime bathroom breaks detected ($nocturiaCount last night). Suggesting earlier timing for ${lateFluidMeds.joinToString { it.name }} to minimize sleep disruption.",
+                    suggestedMedicationShifts = shiftMap
+                ))
+            }
+        }
+
         for (goal in goals) {
             val lowerSymptom = goal.targetSymptom.lowercase()
             

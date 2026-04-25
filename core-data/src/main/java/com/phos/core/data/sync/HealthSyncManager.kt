@@ -30,9 +30,9 @@ class HealthSyncManager(private val context: Context) {
     /**
      * Fetches the latest sleep session end time to use as T-Wake.
      * Strategy: Bridge short interruptions (bathroom breaks < 30 mins) to prevent premature T-Wake anchoring.
-     * @return Pair<Instant, Boolean>? The end time and a flag indicating if interruptions were bridged.
+     * @return Triple<Instant, Boolean, List<Pair<Instant, Instant>>>? The end time, interruption flag, and list of bridged intervals.
      */
-    suspend fun fetchLatestTWake(): Pair<Instant, Boolean>? {
+    suspend fun fetchLatestTWakeFull(): Triple<Instant, Boolean, List<Pair<Instant, Instant>>>? {
         try {
             if (!hasPermissions()) return null
 
@@ -50,29 +50,33 @@ class HealthSyncManager(private val context: Context) {
             // 1. Sort records by start time
             val sortedRecords = response.records.sortedBy { it.startTime }
 
-            // 2. Heal/Bridge sessions with < 30 min gaps
-            val consolidatedSessions = healSleepSessions(sortedRecords)
-            val wereInterruptions = sortedRecords.size > consolidatedSessions.size
+            // 2. Heal/Bridge sessions and get the bridged intervals (the gaps)
+            val result = healSleepSessionsWithGaps(sortedRecords)
+            val consolidatedSessions = result.first
+            val bridgedGaps = result.second
+            
+            val wereInterruptions = bridgedGaps.isNotEmpty()
 
             // 3. Filtering for valid sessions (at least 3 hours consolidated)
             val bestSession = consolidatedSessions
                 .filter { ChronoUnit.MINUTES.between(it.first, it.second) > 180 }
                 .maxByOrNull { it.second } ?: return null
                 
-            return Pair(bestSession.second, wereInterruptions)
+            return Triple(bestSession.second, wereInterruptions, bridgedGaps)
         } catch (e: Exception) {
             return null
         }
     }
 
     /**
-     * Consolidates multiple sleep sessions into single blocks if the gap between them is < 30 mins.
-     * @return List<Pair<Instant, Instant>> A list of start/end time pairs representing bridged sleep blocks.
+     * Consolidates multiple sleep sessions and returns both merged blocks AND the bridged gaps.
      */
-    internal fun healSleepSessions(records: List<SleepSessionRecord>): List<Pair<Instant, Instant>> {
-        if (records.isEmpty()) return emptyList()
+    internal fun healSleepSessionsWithGaps(records: List<SleepSessionRecord>): Pair<List<Pair<Instant, Instant>>, List<Pair<Instant, Instant>>> {
+        if (records.isEmpty()) return Pair(emptyList(), emptyList())
         
         val merged = mutableListOf<Pair<Instant, Instant>>()
+        val gaps = mutableListOf<Pair<Instant, Instant>>()
+        
         var currentStart = records[0].startTime
         var currentEnd = records[0].endTime
 
@@ -83,17 +87,29 @@ class HealthSyncManager(private val context: Context) {
             val gapMinutes = ChronoUnit.MINUTES.between(currentEnd, nextStart)
             
             if (gapMinutes < 30) {
-                // Bridge the gap - extend current session
+                // Bridge the gap
+                gaps.add(Pair(currentEnd, nextStart))
                 currentEnd = nextEnd
             } else {
-                // Gap too large - close current session and start new one
                 merged.add(Pair(currentStart, currentEnd))
                 currentStart = nextStart
                 currentEnd = nextEnd
             }
         }
         merged.add(Pair(currentStart, currentEnd))
-        return merged
+        return Pair(merged, gaps)
+    }
+
+    /**
+     * Legacy support for backward compatibility during refactor.
+     */
+    suspend fun fetchLatestTWake(): Pair<Instant, Boolean>? {
+        val res = fetchLatestTWakeFull() ?: return null
+        return Pair(res.first, res.second)
+    }
+
+    internal fun healSleepSessions(records: List<SleepSessionRecord>): List<Pair<Instant, Instant>> {
+        return healSleepSessionsWithGaps(records).first
     }
 
     /**
