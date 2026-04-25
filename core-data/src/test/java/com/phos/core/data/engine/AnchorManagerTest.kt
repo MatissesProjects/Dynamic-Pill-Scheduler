@@ -16,6 +16,7 @@ class AnchorManagerTest {
     private lateinit var healthSyncManager: HealthSyncManager
     private lateinit var temporalAnchorDao: TemporalAnchorDao
     private lateinit var dataLayerRepository: DataLayerRepository
+    private lateinit var nocturiaDao: com.phos.core.data.dao.NocturiaDao
     private lateinit var anchorManager: AnchorManager
 
     @Before
@@ -23,13 +24,15 @@ class AnchorManagerTest {
         healthSyncManager = mock()
         temporalAnchorDao = mock()
         dataLayerRepository = mock()
-        anchorManager = AnchorManager(healthSyncManager, temporalAnchorDao, dataLayerRepository)
+        nocturiaDao = mock()
+        anchorManager = AnchorManager(healthSyncManager, temporalAnchorDao, dataLayerRepository, nocturiaDao)
     }
 
     @Test
     fun `test syncTWakeFromHealthConnect success`() = runBlocking {
         val now = Instant.now()
-        whenever(healthSyncManager.fetchLatestTWake()).thenReturn(Pair(now, true))
+        // Correcting to fetchLatestTWakeFull() and Triple
+        whenever(healthSyncManager.fetchLatestTWakeFull()).thenReturn(Triple(now, true, emptyList()))
 
         val result = anchorManager.syncTWakeFromHealthConnect()
 
@@ -44,7 +47,7 @@ class AnchorManagerTest {
     @Test
     fun `test syncTWakeFromHealthConnect ignores stale data`() = runBlocking {
         val stale = Instant.now().minus(13, ChronoUnit.HOURS)
-        whenever(healthSyncManager.fetchLatestTWake()).thenReturn(Pair(stale, false))
+        whenever(healthSyncManager.fetchLatestTWakeFull()).thenReturn(Triple(stale, false, emptyList()))
 
         val result = anchorManager.syncTWakeFromHealthConnect()
 
@@ -55,7 +58,7 @@ class AnchorManagerTest {
 
     @Test
     fun `test syncTWakeFromHealthConnect handles null`() = runBlocking {
-        whenever(healthSyncManager.fetchLatestTWake()).thenReturn(null)
+        whenever(healthSyncManager.fetchLatestTWakeFull()).thenReturn(null)
 
         val result = anchorManager.syncTWakeFromHealthConnect()
 

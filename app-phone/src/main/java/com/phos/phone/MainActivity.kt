@@ -40,6 +40,9 @@ class MainActivity : ComponentActivity() {
             val healthGoals by viewModel.healthGoals.collectAsState()
             val optimizationSuggestions by viewModel.optimizationSuggestions.collectAsState()
             
+            val sleepCalibrationInsight by viewModel.sleepCalibrationInsight.collectAsState()
+            val sleepSubjectiveLogs by viewModel.sleepSubjectiveLogs.collectAsState()
+            
             val voiceState by viewModel.voiceManager.state.collectAsState()
             val voiceExtractedEntities by viewModel.voiceExtractedEntities.collectAsState()
             
@@ -63,6 +66,8 @@ class MainActivity : ComponentActivity() {
                         nutrientReferences = nutrientReferences,
                         healthGoals = healthGoals,
                         optimizationSuggestions = optimizationSuggestions,
+                        sleepCalibrationInsight = sleepCalibrationInsight,
+                        sleepSubjectiveLogs = sleepSubjectiveLogs,
                         voiceState = voiceState,
                         voiceExtractedEntities = voiceExtractedEntities,
                         onAddMedication = { name, dosage, offset, frequency, foodRequirement ->
@@ -133,6 +138,9 @@ class MainActivity : ComponentActivity() {
                         },
                         onUpdateMealPreferences = { bStart, bEnd, lStart, lEnd, dStart, dEnd ->
                             viewModel.updateMealPreferences(bStart, bEnd, lStart, lEnd, dStart, dEnd)
+                        },
+                        onLogSleepSubjective = { qual, rest, mood ->
+                            viewModel.logSleepSubjective(qual, rest, mood)
                         }
                     )
                 }

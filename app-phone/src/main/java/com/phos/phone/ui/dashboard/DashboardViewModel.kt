@@ -37,6 +37,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val nutrientDao = db.nutrientDao()
     private val goalDao = db.goalDao()
     private val nocturiaDao = db.nocturiaDao()
+    private val sleepSubjectiveDao = db.sleepSubjectiveDao()
 
     private val dataLayerRepository = DataLayerRepository(application, application.phosDataStore)
     private val healthSyncManager = HealthSyncManager(application)
@@ -45,6 +46,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val jetLagManager = JetLagManager()
     private val mealScheduler = MealScheduler()
     private val goalOptimizationEngine = GoalOptimizationEngine()
+    private val sleepCalibrationEngine = SleepCalibrationEngine()
     
     private val voiceParser = GeminiVoiceParser()
     private val voiceLogCoordinator = VoiceLogCoordinator(
@@ -184,6 +186,19 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         else goalOptimizationEngine.evaluateGoals(goals, meds, if(state.hasMealPreferences()) state.mealPreferences else MealPreferences.getDefaultInstance(), anchor.wakeTime, nocturia.size)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val sleepSubjectiveLogs: StateFlow<List<SleepSubjectiveLog>> = sleepSubjectiveDao.getAllLogsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val sleepCalibrationInsight: StateFlow<SleepCalibrationInsight?> = combine(sleepSubjectiveLogs, temporalAnchorFlow) { logs, anchor ->
+        if (anchor == null || logs.isEmpty()) null
+        else {
+            val latestSubjective = logs.first()
+            // Simulating objective duration since we don't store it in Anchor yet (it's in HealthConnect)
+            // In a real app we'd query HealthSyncManager for the matching night
+            sleepCalibrationEngine.calibrate(8 * 3600000L, latestSubjective)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val medicationDepletions: StateFlow<List<String>> = combine(medications, nutrientDao.getAllDepletions()) { meds, rules ->
         val engine = NutrientAdvisoryEngine(CollisionResolver()) // Transient for utility
         engine.findDepletionWarnings(meds, rules)
@@ -319,6 +334,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun addHealthGoal(description: String, targetSymptom: String, targetTimeOffset: Long?) {
         viewModelScope.launch {
             goalDao.insertGoal(HealthGoal(description = description, targetSymptom = targetSymptom, targetTimeOffset = targetTimeOffset, targetTimeOfDay = null))
+        }
+    }
+
+    fun logSleepSubjective(quality: Int, restfulness: Int, mood: String) {
+        viewModelScope.launch {
+            val date = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.withZone(java.time.ZoneId.systemDefault()).format(Instant.now())
+            sleepSubjectiveDao.insertSubjectiveLog(SleepSubjectiveLog(reportedQuality = quality, restfulnessRating = restfulness, morningMood = mood, date = date))
         }
     }
 
