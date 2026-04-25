@@ -29,9 +29,10 @@ import com.phos.core.data.model.*
         NutrientReference::class,
         MedicationInducedDepletion::class,
         HealthGoal::class,
-        NocturiaLog::class
+        NocturiaLog::class,
+        SleepSubjectiveLog::class
     ],
-    version = 14
+    version = 15
 )
 @TypeConverters(Converters::class)
 abstract class PhosDatabase : RoomDatabase() {
@@ -51,4 +52,5 @@ abstract class PhosDatabase : RoomDatabase() {
     abstract fun nutrientDao(): NutrientDao
     abstract fun goalDao(): GoalDao
     abstract fun nocturiaDao(): NocturiaDao
+    abstract fun sleepSubjectiveDao(): SleepSubjectiveDao
 }

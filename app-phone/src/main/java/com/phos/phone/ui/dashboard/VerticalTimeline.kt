@@ -34,6 +34,7 @@ import com.phos.core.data.proto.PhosState
 import com.phos.core.intelligence.ExtractedEntities
 import com.phos.core.intelligence.PosturalRecommendation
 import com.phos.core.intelligence.OptimizationSuggestion
+import com.phos.core.intelligence.SleepCalibrationInsight
 import com.phos.phone.ui.scanner.PillScanResult
 import com.phos.phone.ui.scanner.PillScannerScreen
 import com.phos.phone.ui.scanner.FoodScanResult
@@ -60,6 +61,8 @@ fun MainDashboard(
     nutrientReferences: List<NutrientReference>,
     healthGoals: List<HealthGoal>,
     optimizationSuggestions: List<OptimizationSuggestion>,
+    sleepCalibrationInsight: SleepCalibrationInsight?,
+    sleepSubjectiveLogs: List<SleepSubjectiveLog>,
     voiceState: VoiceState,
     voiceExtractedEntities: ExtractedEntities?,
     onAddMedication: (String, String, Long, Int, String) -> Unit,
@@ -84,7 +87,8 @@ fun MainDashboard(
     onRequestNutrientAdvisory: (String, NutrientFacts) -> Unit,
     onClearNutrientAdvisory: () -> Unit,
     onAddHealthGoal: (String, String, Long?) -> Unit,
-    onUpdateMealPreferences: (Long, Long, Long, Long, Long, Long) -> Unit
+    onUpdateMealPreferences: (Long, Long, Long, Long, Long, Long) -> Unit,
+    onLogSleepSubjective: (Int, Int, String) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -119,6 +123,15 @@ fun MainDashboard(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasAudioPermission = isGranted
+    }
+
+    // Morning Sleep Check-in Trigger
+    var showSleepCheckIn by remember { mutableStateOf(false) }
+    LaunchedEffect(sleepSubjectiveLogs) {
+        val today = DateTimeFormatter.ISO_LOCAL_DATE.withZone(ZoneId.systemDefault()).format(Instant.now())
+        if (sleepSubjectiveLogs.none { it.date == today }) {
+            showSleepCheckIn = true
+        }
     }
 
     Scaffold(
@@ -204,6 +217,7 @@ fun MainDashboard(
                     postureRecommendation = postureRecommendation,
                     travelProposal = travelProposal,
                     optimizationSuggestions = optimizationSuggestions,
+                    sleepCalibrationInsight = sleepCalibrationInsight,
                     onUpdateMedication = onUpdateMedication,
                     onDeleteMedication = onDeleteMedication,
                     onDuplicateMedication = onDuplicateMedication,
@@ -274,7 +288,6 @@ fun MainDashboard(
                     Divider()
                     Text("Meal Preferences (Offset from T-Wake)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     
-                    // Simple input for Meal Preferences (For full UI, these would be TimePickers or Sliders)
                     var bStart by remember { mutableStateOf((phosState.mealPreferences?.breakfastStartOffset ?: 0L).toString()) }
                     var bEnd by remember { mutableStateOf((phosState.mealPreferences?.breakfastEndOffset ?: 3600000L).toString()) }
                     var lStart by remember { mutableStateOf((phosState.mealPreferences?.lunchStartOffset ?: 14400000L).toString()) }
@@ -323,6 +336,16 @@ fun MainDashboard(
         }
     }
 
+    if (showSleepCheckIn) {
+        SleepCheckInDialog(
+            onDismiss = { showSleepCheckIn = false },
+            onConfirm = { quality, restfulness, mood ->
+                onLogSleepSubjective(quality, restfulness, mood)
+                showSleepCheckIn = false
+            }
+        )
+    }
+
     if (showAppetiteDialog) {
         AppetiteLogDialog(
             onDismiss = { showAppetiteDialog = false },
@@ -348,7 +371,6 @@ fun MainDashboard(
             advisory = advisory,
             onDismiss = onClearPRNAdvisory,
             onConfirm = {
-                // Find the med that triggered this
                 prnMedications.find { advisory.reason.contains(it.name) || it.name.contains(advisory.reason.split(" ").last().replace(".","")) }?.let {
                     onLogPRNDose(it)
                 } ?: onClearPRNAdvisory()
@@ -383,6 +405,40 @@ fun MainDashboard(
             }
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SleepCheckInDialog(onDismiss: () -> Unit, onConfirm: (Int, Int, String) -> Unit) {
+    var quality by remember { mutableStateOf(5f) }
+    var restfulness by remember { mutableStateOf(5f) }
+    var mood by remember { mutableStateOf("Tired") }
+    val moods = listOf("Tired", "Groggy", "Alert", "Neutral")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Morning Sleep Check-in") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("How would you rate your sleep quality? (1-10)")
+                Slider(value = quality, onValueChange = { quality = it }, valueRange = 1f..10f, steps = 8)
+                Text("How restful do you feel? (1-10)")
+                Slider(value = restfulness, onValueChange = { restfulness = it }, valueRange = 1f..10f, steps = 8)
+                Text("Current Mood:")
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    moods.forEach { m ->
+                        FilterChip(selected = mood == m, onClick = { mood = m }, label = { Text(m) })
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(quality.toInt(), restfulness.toInt(), mood) }) { Text("Log Feeling") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Later") }
+        }
+    )
 }
 
 @Composable
@@ -698,6 +754,7 @@ fun VerticalTimeline(
     postureRecommendation: PosturalRecommendation?,
     travelProposal: TravelProposal?,
     optimizationSuggestions: List<OptimizationSuggestion>,
+    sleepCalibrationInsight: SleepCalibrationInsight?,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
     onDuplicateMedication: (MedicationRecord) -> Unit,
@@ -731,6 +788,18 @@ fun VerticalTimeline(
                     icon = Icons.Default.History,
                     color = MaterialTheme.colorScheme.primaryContainer,
                     onDismiss = { /* In T22 we can implement persistent dismissal */ }
+                )
+            }
+        }
+        
+        sleepCalibrationInsight?.let { insight ->
+             item {
+                InsightCard(
+                    title = insight.title,
+                    insight = insight.description,
+                    icon = Icons.Default.Bedtime,
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    onDismiss = { }
                 )
             }
         }

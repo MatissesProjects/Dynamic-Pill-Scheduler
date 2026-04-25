@@ -9,7 +9,7 @@
 | T6 | Bio-Interaction Engine | **Safety Expansion:** Food interactions, Fuzzy Window stress optimization. | conductor/tracks/bio-interaction/ | Completed |
 | T7 | Geo-Contextual Awareness | **Context:** Proximity alerts, Location-Anchored Doses (Geofencing). | conductor/tracks/geo-context/ | Completed |
 | T8 | Data Sovereignty & Reporting | **Export:** On-device PDF generation, secure Intent sharing for doctors. | conductor/tracks/reporting/ | Completed |
-| T9 | Zero-Touch Wearable | **Ambient UI:** Smart wrist-flick actions, gesture-based logging on Wear OS. | conductor/tracks/wearable-gestures/ | Completed |
+| T9 | Zero-Touch Wearable Interaction | **Ambient UI:** Smart wrist-flick actions, gesture-based logging on Wear OS. | conductor/tracks/wearable-gestures/ | Completed |
 | T10 | Automated Dose Detection | **Sensor Fusion:** Detect hand-to-mouth gesture via Watch for auto-logging. | conductor/tracks/auto-detection/ | Completed |
 | T11 | Biometric Digital Twin | **Modeling:** Gemini Nano baseline vs. real-time physiological response. | conductor/tracks/digital-twin/ | Completed |
 | T12 | Predictive Inventory | **Supply Chain:** Adherence-aware pill tracking and auto-refill prediction. | conductor/tracks/inventory/ | Completed |
@@ -24,7 +24,8 @@
 | T21 | Adaptive Meal & Hunger Orchestration | **Orchestration:** Optimal hunger-window reservation and dietary-med sync. | conductor/tracks/adaptive-meal-scheduling/ | Completed |
 | T22 | Sleep Continuity & Interruption Logic | **Temporal Safety:** Bridge short wake gaps (bathroom breaks) for accurate T-Wake. | conductor/tracks/sleep-continuity/ | Completed |
 | T23 | Goal-Oriented Scheduling | **Customization:** Health goals & custom user meal preferences syncing. | conductor/tracks/goal-oriented-scheduling/ | Completed |
-| T24 | Nocturia Optimization | **Circadian Safety:** Track and minimize nighttime bathroom breaks. | conductor/tracks/nocturia-optimization/ | Planned |
+| T24 | Nocturia Optimization | **Circadian Safety:** Track and minimize nighttime bathroom breaks. | conductor/tracks/nocturia-optimization/ | Completed |
+| T25 | Sleep Quality Calibration | **Calibration:** Morning feedback loop to align Fitbit data with feeling. | conductor/tracks/sleep-calibration/ | Completed |
 
 ### Track Milestones
 
@@ -154,6 +155,11 @@
 - [x] Build UI in the Dashboard (Settings & Meals tab) to input meal preferences and log health goals.
 
 #### T24: Nocturia Optimization & Break Tracking
-- [ ] Define `NocturiaLog` entity and automate detection from bridged sessions.
-- [ ] Enhance `GoalOptimizationEngine` with nocturnal urination reduction rules.
-- [ ] Build "Sleep Quality" UI and break count visualization.
+- [x] Define `NocturiaLog` entity and automate detection from bridged sessions.
+- [x] Enhance `GoalOptimizationEngine` with nocturnal urination reduction rules.
+- [x] Build "Sleep Quality" UI and break count visualization.
+
+#### T25: Sleep Quality Feedback & Calibration
+- [x] Define `SleepSubjectiveLog` and morning check-in UI.
+- [x] Create `SleepCalibrationEngine` for data-vs-feeling discrepancy detection.
+- [x] Update `GoalOptimizationEngine` to trigger shifts based on bad sleep reports.
