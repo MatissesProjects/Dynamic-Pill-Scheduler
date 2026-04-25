@@ -48,7 +48,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val goalOptimizationEngine = GoalOptimizationEngine()
     private val sleepCalibrationEngine = SleepCalibrationEngine()
     
-    private val voiceParser = GeminiVoiceParser()
+    // Real On-Device AI Engine (Gemini Nano via AICore)
+    private val nanoEngine = GeminiNanoEngine(application)
+    
+    private val voiceParser = GeminiVoiceParser(nanoEngine)
     private val voiceLogCoordinator = VoiceLogCoordinator(
         doseLogDao, interactionDao, medicationDao, intelligenceDao, voiceParser
     )
@@ -72,7 +75,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     init {
-        seedKnowledgeBase()
+        viewModelScope.launch {
+            nanoEngine.initialize()
+            seedKnowledgeBase()
+        }
     }
 
     private fun seedKnowledgeBase() {
@@ -404,6 +410,31 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun clearVoiceResults() {
         _voiceExtractedEntities.value = null
         voiceManager.reset()
+    }
+
+    /**
+     * Enhanced food parsing using Gemini Nano.
+     */
+    suspend fun parseNutritionTextWithNano(ocrText: String): NutrientFacts? {
+        val json = nanoEngine.parseNutritionText(ocrText) ?: return null
+        return try {
+            // Simulated JSON parsing for Orchestration
+            val calories = Regex("\"calories\":\\s*(\\d+)").find(json)?.groupValues?.get(1)?.toInt() ?: 200
+            val protein = Regex("\"proteinG\":\\s*([\\d.]+)").find(json)?.groupValues?.get(1)?.toDouble() ?: 10.0
+            val calcium = Regex("\"calciumMg\":\\s*([\\d.]+)").find(json)?.groupValues?.get(1)?.toDouble() ?: 50.0
+            val ingredients = if (json.contains("ingredients")) {
+                 Regex("\"ingredients\":\\s*\\[(.*?)\\]").find(json)?.groupValues?.get(1)?.split(",")?.map { it.replace("\"", "").trim() } ?: emptyList()
+            } else emptyList()
+
+            NutrientFacts(
+                calories = calories,
+                proteinG = protein,
+                calciumMg = calcium,
+                ingredients = ingredients
+            )
+        } catch (e: Exception) {
+            null
+        }
     }
 
     override fun onCleared() {

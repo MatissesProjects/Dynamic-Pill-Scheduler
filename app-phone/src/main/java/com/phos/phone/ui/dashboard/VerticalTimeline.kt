@@ -88,7 +88,8 @@ fun MainDashboard(
     onClearNutrientAdvisory: () -> Unit,
     onAddHealthGoal: (String, String, Long?) -> Unit,
     onUpdateMealPreferences: (Long, Long, Long, Long, Long, Long) -> Unit,
-    onLogSleepSubjective: (Int, Int, String) -> Unit
+    onLogSleepSubjective: (Int, Int, String) -> Unit,
+    aiTextParser: (suspend (String) -> NutrientFacts?)? = null
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -152,12 +153,18 @@ fun MainDashboard(
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.Restaurant, contentDescription = "Nutrition") },
-                    label = { Text("Meals") }
+                    icon = { Icon(Icons.Default.CameraAlt, contentDescription = "Scanner") },
+                    label = { Text("Scanner") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
+                    icon = { Icon(Icons.Default.Restaurant, contentDescription = "Meals") },
+                    label = { Text("Meals") }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 4,
+                    onClick = { selectedTab = 4 },
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                     label = { Text("Settings") }
                 )
@@ -230,13 +237,47 @@ fun MainDashboard(
                     prnMedications = prnMedications,
                     onRequestAdvisory = onRequestPRNAdvisory
                 )
-                2 -> MealSyncDashboard(
+                2 -> {
+                    if (hasCameraPermission) {
+                        PillScannerScreen(
+                            onPillScanned = { result ->
+                                prefilledName = result.detectedName ?: "${result.detectedColor} ${result.detectedShape} Pill"
+                                prefilledDosage = result.detectedDosage ?: ""
+                                prefilledFrequency = result.frequencyDosesPerDay
+                                showAddDialog = true
+                                selectedTab = 0 
+                            },
+                            onFoodScanned = { result ->
+                                lastScannedFoodResult = result
+                                if (result.nutrients != null) {
+                                    onRequestNutrientAdvisory(result.detectedName ?: "Food Item", result.nutrients!!)
+                                } else {
+                                    onLogFood(result.detectedName ?: "Unknown", result.category ?: "General", null)
+                                    selectedTab = 3
+                                }
+                            },
+                            aiTextParser = aiTextParser
+                        )
+                    } else {
+                        Column(
+                            Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Camera permission required for scanner")
+                            Button(onClick = { cameraLauncher.launch(Manifest.permission.CAMERA) }) {
+                                Text("Grant Permission")
+                            }
+                        }
+                    }
+                }
+                3 -> MealSyncDashboard(
                     eatingWindows = eatingWindows,
                     is24Hour = phosState.is24Hour,
                     depletionWarnings = medicationDepletions,
                     foodReferences = nutrientReferences
                 )
-                3 -> Column(
+                4 -> Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp),
@@ -371,6 +412,7 @@ fun MainDashboard(
             advisory = advisory,
             onDismiss = onClearPRNAdvisory,
             onConfirm = {
+                // Find the med that triggered this
                 prnMedications.find { advisory.reason.contains(it.name) || it.name.contains(advisory.reason.split(" ").last().replace(".","")) }?.let {
                     onLogPRNDose(it)
                 } ?: onClearPRNAdvisory()
@@ -388,7 +430,7 @@ fun MainDashboard(
                     onLogFood(result.detectedName ?: "Food Item", result.category ?: "General", result.nutrients)
                 }
                 onClearNutrientAdvisory()
-                selectedTab = 2
+                selectedTab = 3
             }
         )
     }
@@ -441,6 +483,7 @@ fun SleepCheckInDialog(onDismiss: () -> Unit, onConfirm: (Int, Int, String) -> U
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddGoalDialog(onDismiss: () -> Unit, onConfirm: (String, String, Long?) -> Unit) {
     var desc by remember { mutableStateOf("") }

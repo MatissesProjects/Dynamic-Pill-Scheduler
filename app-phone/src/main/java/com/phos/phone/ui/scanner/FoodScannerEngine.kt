@@ -69,32 +69,42 @@ class FoodScannerEngine {
     }
 
     /**
-     * Parses a Nutrition Facts label using OCR.
+     * Parses a Nutrition Facts label using OCR, then refines with Gemini Nano if provided.
      */
-    suspend fun scanNutritionLabel(bitmap: Bitmap): FoodScanResult {
+    suspend fun scanNutritionLabel(bitmap: Bitmap, aiParser: (suspend (String) -> NutrientFacts?)? = null): FoodScanResult {
         val image = InputImage.fromBitmap(bitmap, 0)
         return try {
             val result = recognizer.process(image).await()
             val text = result.text.lowercase()
             
-            // Heuristic extraction for simulation
-            val calories = Regex("calories\\s+(\\d+)").find(text)?.groupValues?.get(1)?.toInt() ?: 200
-            val protein = Regex("protein\\s+(\\d+)").find(text)?.groupValues?.get(1)?.toDouble() ?: 10.0
-            val calcium = if (text.contains("calcium")) 250.0 else 0.0
-            val ingredients = if (text.contains("ingredients")) {
-                text.substringAfter("ingredients").substringBefore(".").split(",").map { it.trim() }
-            } else emptyList()
+            val refinedNutrients = aiParser?.invoke(text)
 
-            FoodScanResult(
-                detectedName = "Label Scan",
-                nutrients = NutrientFacts(
-                    calories = calories,
-                    proteinG = protein,
-                    calciumMg = calcium,
-                    ingredients = ingredients
-                ),
-                confidence = 0.9f
-            )
+            if (refinedNutrients != null) {
+                FoodScanResult(
+                    detectedName = "AI Label Scan",
+                    nutrients = refinedNutrients,
+                    confidence = 1.0f
+                )
+            } else {
+                // Heuristic extraction for simulation fallback
+                val calories = Regex("calories\\s+(\\d+)").find(text)?.groupValues?.get(1)?.toInt() ?: 200
+                val protein = Regex("protein\\s+(\\d+)").find(text)?.groupValues?.get(1)?.toDouble() ?: 10.0
+                val calcium = if (text.contains("calcium")) 250.0 else 0.0
+                val ingredients = if (text.contains("ingredients")) {
+                    text.substringAfter("ingredients").substringBefore(".").split(",").map { it.trim() }
+                } else emptyList()
+
+                FoodScanResult(
+                    detectedName = "Label Scan",
+                    nutrients = NutrientFacts(
+                        calories = calories,
+                        proteinG = protein,
+                        calciumMg = calcium,
+                        ingredients = ingredients
+                    ),
+                    confidence = 0.9f
+                )
+            }
         } catch (e: Exception) {
             FoodScanResult(confidence = 0f)
         }

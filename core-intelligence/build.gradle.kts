@@ -33,6 +33,7 @@ dependencies {
     
     // Google AI Edge SDK for Gemini Nano (AICore)
     implementation("com.google.ai.edge.aicore:aicore:0.0.1-exp02")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")

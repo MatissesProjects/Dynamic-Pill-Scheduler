@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.phos.core.data.model.NutrientFacts
 import kotlinx.coroutines.launch
 
 enum class ScanMode { PILL, BOTTLE, FOOD, LABEL }
@@ -31,7 +32,8 @@ enum class ScanMode { PILL, BOTTLE, FOOD, LABEL }
 @Composable
 fun PillScannerScreen(
     onPillScanned: (PillScanResult) -> Unit,
-    onFoodScanned: (FoodScanResult) -> Unit = {}
+    onFoodScanned: (FoodScanResult) -> Unit = {},
+    aiTextParser: (suspend (String) -> NutrientFacts?)? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -129,7 +131,7 @@ fun PillScannerScreen(
                                         ScanMode.BOTTLE -> onPillScanned(scannerEngine.recognizeBottleText(bitmap))
                                         ScanMode.PILL -> onPillScanned(scannerEngine.analyzePill(bitmap))
                                         ScanMode.FOOD -> onFoodScanned(foodEngine.identifyFood(bitmap))
-                                        ScanMode.LABEL -> onFoodScanned(foodEngine.scanNutritionLabel(bitmap))
+                                        ScanMode.LABEL -> onFoodScanned(foodEngine.scanNutritionLabel(bitmap, aiTextParser))
                                     }
                                 }
                                 image.close()
