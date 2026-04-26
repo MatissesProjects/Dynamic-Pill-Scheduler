@@ -30,8 +30,8 @@
 | T27 | Neuromotor Orchestration | **Safety:** Wear OS 5 gait analysis (Stride Length) for side-effect detection. | conductor/tracks/neuromotor-gait/ | Completed |
 | T28 | Chronotype Chronotherapy | **Circadian:** Tailor dose windows to biological clocks (Night Owl vs. Lark). | conductor/tracks/chronotype-align/ | Completed |
 | T29 | Metabolic Load Digital Twin | **Performance:** Correlate Cardio Load with dose efficacy and hydration. | conductor/tracks/metabolic-twin/ | Completed |
-| T30 | Sentiment & Stress Synthesis | **Mental Health:** Gemini Nano sentiment analysis vs. HRV correlation. | conductor/tracks/stress-synthesis/ | In Progress |
-| T31 | Micro-Mobility Orchestration | **Mobility:** e-bike assistance optimization for heart-medication users. | conductor/tracks/ebike-orchestration/ | Pending |
+| T30 | Sentiment & Stress Synthesis | **Mental Health:** Gemini Nano sentiment analysis vs. HRV correlation. | conductor/tracks/stress-synthesis/ | Completed |
+| T31 | Micro-Mobility Orchestration | **Mobility:** e-bike assistance optimization for heart-medication users. | conductor/tracks/ebike-orchestration/ | In Progress |
 
 ### Track Milestones
 

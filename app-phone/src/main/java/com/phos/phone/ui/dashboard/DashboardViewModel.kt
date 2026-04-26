@@ -45,11 +45,13 @@ class DashboardViewModel(
     private val gaitDao = db.gaitDao()
     private val chronotypeDao = db.chronotypeDao()
     private val metabolicDao = db.metabolicDao()
+    private val sentimentDao = db.sentimentDao()
 
     private val healthSyncManager = HealthSyncManager(application)
     private val gaitManager = GaitManager(gaitDao, healthSyncManager)
     private val chronotypeClassifier = ChronotypeClassifier()
     private val metabolicEngine = MetabolicEngine()
+    private val stressSynthesisEngine = StressSynthesisEngine()
     private val napManager = NapManager(healthSyncManager)
     private val postureIntelligence = PostureIntelligence()
     private val jetLagManager = JetLagManager()
@@ -273,6 +275,13 @@ class DashboardViewModel(
     val metabolicLogs: StateFlow<List<MetabolicLoadLog>> = metabolicDao.getAllLogsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val sentimentLogs: StateFlow<List<SentimentLog>> = sentimentDao.getAllLogsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val burnoutRisk: StateFlow<BurnoutRisk> = combine(sentimentLogs, biometricDao.getLogsByTypeFlow(BiometricType.HRV)) { sentiment, biometrics ->
+        stressSynthesisEngine.detectBurnoutRisk(sentiment, biometrics)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BurnoutRisk(0f, false, null))
+
     val sleepCalibrationInsight: StateFlow<SleepCalibrationInsight?> = combine(sleepSubjectiveLogs, temporalAnchorFlow) { logs, anchor ->
         if (anchor == null || logs.isEmpty()) null
         else {
@@ -482,6 +491,25 @@ class DashboardViewModel(
     fun processVoiceCommand(text: String) {
         viewModelScope.launch {
             _voiceExtractedEntities.value = voiceLogCoordinator.processVoiceCommand(text)
+            processSentiment(text)
+        }
+    }
+
+    private fun processSentiment(text: String) {
+        viewModelScope.launch {
+            val json = nanoEngine.calculateSentiment(text) ?: return@launch
+            try {
+                val score = Regex("\"score\":\\s*([\\d.-]+)").find(json)?.groupValues?.get(1)?.toFloat() ?: 0f
+                val emotion = Regex("\"primaryEmotion\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1) ?: "Unknown"
+                val intensity = Regex("\"intensity\":\\s*(\\d+)").find(json)?.groupValues?.get(1)?.toInt() ?: 5
+                
+                sentimentDao.insertLog(SentimentLog(
+                    text = text,
+                    score = score,
+                    primaryEmotion = emotion,
+                    intensity = intensity
+                ))
+            } catch (e: Exception) {}
         }
     }
 
