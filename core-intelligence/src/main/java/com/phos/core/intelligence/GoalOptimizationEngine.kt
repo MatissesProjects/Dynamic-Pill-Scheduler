@@ -3,6 +3,7 @@ package com.phos.core.intelligence
 import com.phos.core.data.model.Chronotype
 import com.phos.core.data.model.HealthGoal
 import com.phos.core.data.model.MedicationRecord
+import com.phos.core.data.model.MetabolicLoadLog
 import com.phos.core.data.proto.MealPreferences
 import java.time.Instant
 import java.time.LocalTime
@@ -21,7 +22,7 @@ data class OptimizationSuggestion(
 class GoalOptimizationEngine {
 
     /**
-     * Evaluates active health goals and biological chronotype against the current schedule.
+     * Evaluates active health goals and metabolic state against the current schedule.
      */
     fun evaluateGoals(
         goals: List<HealthGoal>,
@@ -29,7 +30,8 @@ class GoalOptimizationEngine {
         mealPreferences: MealPreferences,
         tWakeEpoch: Long,
         nocturiaCount: Int = 0,
-        chronotype: Chronotype = Chronotype.NEUTRAL
+        chronotype: Chronotype = Chronotype.NEUTRAL,
+        metabolicLogs: List<MetabolicLoadLog> = emptyList()
     ): List<OptimizationSuggestion> {
         val suggestions = mutableListOf<OptimizationSuggestion>()
         
@@ -54,7 +56,7 @@ class GoalOptimizationEngine {
             }
         }
 
-        // 2. Chronotype-Aware Alignment (Clinical Chronotherapy)
+        // 2. Chronotype-Aware Alignment
         val antihypertensives = medications.filter { 
             val cat = it.category?.lowercase() ?: ""
             cat == "heart" || it.name.lowercase().contains("lisinopril") || 
@@ -91,7 +93,7 @@ class GoalOptimizationEngine {
             }
         }
 
-        // 3. Statin Circadian Sync (Short-acting only)
+        // 3. Statin Circadian Sync
         val shortStatins = medications.filter { 
             val name = it.name.lowercase()
             name.contains("simvastatin") || name.contains("lovastatin") || name.contains("fluvastatin")
@@ -107,7 +109,22 @@ class GoalOptimizationEngine {
             ))
         }
 
-        // 4. Goal-Based Optimization
+        // 4. Metabolic Digital Twin Logic
+        val recentMetabolic = metabolicLogs.filter { it.timestamp.isAfter(Instant.now().minusSeconds(7200)) } // Last 2 hours
+        val isHyperMetabolic = recentMetabolic.any { it.isHyperMetabolic }
+        
+        if (isHyperMetabolic) {
+            val highStrain = recentMetabolic.maxByOrNull { it.trimpScore }
+            suggestions.add(OptimizationSuggestion(
+                goalId = -4,
+                id = "metabolic_spike",
+                title = "Metabolic Stress Compensation",
+                description = "High cardiovascular strain detected (TRIMP: ${"%.0f".format(highStrain?.trimpScore)}). To avoid absorption spikes and ensure kidney safety, we recommend increasing hydration by 500ml and delaying current doses by 30 minutes.",
+                suggestedMedicationShifts = medications.associate { it.medicationId to it.frequencyOffset + 1800000L } // +30 mins
+            ))
+        }
+
+        // 5. Goal-Based Optimization
         for (goal in goals) {
             val lowerSymptom = goal.targetSymptom.lowercase()
             if (lowerSymptom.contains("stomach") || lowerSymptom.contains("gas") || lowerSymptom.contains("nausea")) {

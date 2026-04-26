@@ -44,10 +44,12 @@ class DashboardViewModel(
     private val sleepSubjectiveDao = db.sleepSubjectiveDao()
     private val gaitDao = db.gaitDao()
     private val chronotypeDao = db.chronotypeDao()
+    private val metabolicDao = db.metabolicDao()
 
     private val healthSyncManager = HealthSyncManager(application)
     private val gaitManager = GaitManager(gaitDao, healthSyncManager)
     private val chronotypeClassifier = ChronotypeClassifier()
+    private val metabolicEngine = MetabolicEngine()
     private val napManager = NapManager(healthSyncManager)
     private val postureIntelligence = PostureIntelligence()
     private val jetLagManager = JetLagManager()
@@ -86,6 +88,7 @@ class DashboardViewModel(
             seedKnowledgeBase()
             syncGait()
             syncChronotype()
+            syncMetabolicLoad()
         }
     }
 
@@ -101,6 +104,17 @@ class DashboardViewModel(
             if (history != null) {
                 val record = chronotypeClassifier.classify(history)
                 chronotypeDao.updateChronotype(record)
+            }
+        }
+    }
+
+    private fun syncMetabolicLoad() {
+        viewModelScope.launch {
+            val exercises = healthSyncManager.fetchRecentExercises() ?: return@launch
+            exercises.forEach { session ->
+                val hr = healthSyncManager.fetchHeartRateForSession(session.startTime, session.endTime) ?: emptyList()
+                val log = metabolicEngine.calculateMetabolicLoad(session, hr)
+                metabolicDao.insertLog(log)
             }
         }
     }
@@ -240,7 +254,7 @@ class DashboardViewModel(
     val nocturiaLogs: StateFlow<List<NocturiaLog>> = nocturiaDao.getNocturiaLogsSince(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val optimizationSuggestions: StateFlow<List<OptimizationSuggestion>> = combine(healthGoals, medications, phosState, temporalAnchorFlow, nocturiaLogs, chronotype) { goals, meds, state, anchor, nocturia, chrono ->
+    val optimizationSuggestions: StateFlow<List<OptimizationSuggestion>> = combine(healthGoals, medications, phosState, temporalAnchorFlow, nocturiaLogs, chronotype, metabolicLogs) { goals, meds, state, anchor, nocturia, chrono, metabolic ->
         if (anchor == null) emptyList()
         else goalOptimizationEngine.evaluateGoals(
             goals = goals, 
@@ -248,11 +262,15 @@ class DashboardViewModel(
             mealPreferences = if(state.hasMealPreferences()) state.mealPreferences else MealPreferences.getDefaultInstance(), 
             tWakeEpoch = anchor.wakeTime, 
             nocturiaCount = nocturia.size,
-            chronotype = chrono?.type ?: Chronotype.NEUTRAL
+            chronotype = chrono?.type ?: Chronotype.NEUTRAL,
+            metabolicLogs = metabolic
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val sleepSubjectiveLogs: StateFlow<List<SleepSubjectiveLog>> = sleepSubjectiveDao.getAllLogsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val metabolicLogs: StateFlow<List<MetabolicLoadLog>> = metabolicDao.getAllLogsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val sleepCalibrationInsight: StateFlow<SleepCalibrationInsight?> = combine(sleepSubjectiveLogs, temporalAnchorFlow) { logs, anchor ->

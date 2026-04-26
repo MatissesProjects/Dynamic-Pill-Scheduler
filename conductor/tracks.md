@@ -28,9 +28,9 @@
 | T25 | Sleep Quality Calibration | **Calibration:** Morning feedback loop to align Fitbit data with feeling. | conductor/tracks/sleep-calibration/ | Completed |
 | T26 | High-Integrity Validation | **Reliability:** Expand test coverage to >80% for AI, Temporal, and UI layers. | conductor/tracks/high-integrity-validation/ | Completed |
 | T27 | Neuromotor Orchestration | **Safety:** Wear OS 5 gait analysis (Stride Length) for side-effect detection. | conductor/tracks/neuromotor-gait/ | Completed |
-| T28 | Chronotype Chronotherapy | **Circadian:** Tailor dose windows to biological clocks (Night Owl vs. Lark). | conductor/tracks/chronotype-align/ | Pending |
-| T29 | Metabolic Load Digital Twin | **Performance:** Correlate Cardio Load with dose efficacy and hydration. | conductor/tracks/metabolic-twin/ | Pending |
-| T30 | Sentiment & Stress Synthesis | **Mental Health:** Gemini Nano sentiment analysis vs. HRV correlation. | conductor/tracks/stress-synthesis/ | Pending |
+| T28 | Chronotype Chronotherapy | **Circadian:** Tailor dose windows to biological clocks (Night Owl vs. Lark). | conductor/tracks/chronotype-align/ | Completed |
+| T29 | Metabolic Load Digital Twin | **Performance:** Correlate Cardio Load with dose efficacy and hydration. | conductor/tracks/metabolic-twin/ | Completed |
+| T30 | Sentiment & Stress Synthesis | **Mental Health:** Gemini Nano sentiment analysis vs. HRV correlation. | conductor/tracks/stress-synthesis/ | In Progress |
 | T31 | Micro-Mobility Orchestration | **Mobility:** e-bike assistance optimization for heart-medication users. | conductor/tracks/ebike-orchestration/ | Pending |
 
 ### Track Milestones
@@ -183,13 +183,13 @@
 - [x] Create "Fall Risk" alert logic in `DashboardViewModel`.
 
 #### T28: Chronotype-Aware Chronotherapy
-- [ ] Implement `ChronotypeClassifier` in `core-intelligence` using 14-day sleep data.
-- [ ] Map BP and Statin medications to chronotype-optimized windows.
-- [ ] Add "Biological Clock" dashboard visualization.
+- [x] Implement `ChronotypeClassifier` in `core-intelligence` using 14-day sleep data.
+- [x] Map BP and Statin medications to chronotype-optimized windows.
+- [x] Add "Biological Clock" dashboard visualization.
 
 #### T29: Metabolic Load Digital Twin
-- [ ] Integrate "Cardio Load" and "Target Load" from Google Health API.
-- [ ] Correlate high metabolic load with increased hydration and dose timing shifts.
+- [x] Integrate "Cardio Load" and "Target Load" from Google Health API.
+- [x] Correlate high metabolic load with increased hydration and dose timing shifts.
 
 #### T30: Sentiment & Stress Synthesis (Gemini Nano)
 - [ ] Update `GeminiNanoEngine` to extract sentiment scores from voice logs.
