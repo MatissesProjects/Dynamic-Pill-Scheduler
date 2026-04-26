@@ -71,4 +71,17 @@ class GeminiNanoEngine(
         val prompt = "Extract health entities (meds, symptoms, foods) to JSON from: $voiceText"
         return generateResponse(prompt)
     }
+
+    /**
+     * Extracts a sentiment score (-1.0 to 1.0) and primary emotion from a health log.
+     */
+    suspend fun calculateSentiment(text: String): String? {
+        val prompt = """
+            Analyze the emotional sentiment of this health journal entry.
+            Return JSON: {score: Float, primaryEmotion: String, intensity: 1-10}
+            Score: -1.0 (extremely stressed/depressed) to 1.0 (extremely calm/happy).
+            Text: "$text"
+        """.trimIndent()
+        return generateResponse(prompt)
+    }
 }
