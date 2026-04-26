@@ -43,9 +43,11 @@ class DashboardViewModel(
     private val nocturiaDao = db.nocturiaDao()
     private val sleepSubjectiveDao = db.sleepSubjectiveDao()
     private val gaitDao = db.gaitDao()
+    private val chronotypeDao = db.chronotypeDao()
 
     private val healthSyncManager = HealthSyncManager(application)
     private val gaitManager = GaitManager(gaitDao, healthSyncManager)
+    private val chronotypeClassifier = ChronotypeClassifier()
     private val napManager = NapManager(healthSyncManager)
     private val postureIntelligence = PostureIntelligence()
     private val jetLagManager = JetLagManager()
@@ -83,12 +85,23 @@ class DashboardViewModel(
             nanoEngine.initialize()
             seedKnowledgeBase()
             syncGait()
+            syncChronotype()
         }
     }
 
     private fun syncGait() {
         viewModelScope.launch {
             gaitManager.syncGaitMetrics()
+        }
+    }
+
+    private fun syncChronotype() {
+        viewModelScope.launch {
+            val history = healthSyncManager.fetchSleepHistory(14)
+            if (history != null) {
+                val record = chronotypeClassifier.classify(history)
+                chronotypeDao.updateChronotype(record)
+            }
         }
     }
 
@@ -205,15 +218,38 @@ class DashboardViewModel(
     val allergenProfile: StateFlow<List<AllergenProfile>> = allergenDao.getAllergensFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val chronotype: StateFlow<ChronotypeRecord?> = chronotypeDao.getChronotypeFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val gaitInsights: StateFlow<List<String>> = flow {
+        while (true) {
+            val deviation = gaitManager.detectGaitDeviation()
+            if (deviation != null && deviation.isSignificant) {
+                val msg = "⚠️ Critical Gait Warning: Stride length has dropped by ${"%.1f".format(deviation.dropPercentage)}%. This may indicate dizziness or neuromotor side effects from recent medication changes. Please consult your doctor if you feel unsteady."
+                emit(listOf(msg))
+            } else {
+                emit(emptyList())
+            }
+            kotlinx.coroutines.delay(3600000) // Check hourly
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val healthGoals: StateFlow<List<HealthGoal>> = goalDao.getActiveGoalsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val nocturiaLogs: StateFlow<List<NocturiaLog>> = nocturiaDao.getNocturiaLogsSince(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val optimizationSuggestions: StateFlow<List<OptimizationSuggestion>> = combine(healthGoals, medications, phosState, temporalAnchorFlow, nocturiaLogs) { goals, meds, state, anchor, nocturia ->
+    val optimizationSuggestions: StateFlow<List<OptimizationSuggestion>> = combine(healthGoals, medications, phosState, temporalAnchorFlow, nocturiaLogs, chronotype) { goals, meds, state, anchor, nocturia, chrono ->
         if (anchor == null) emptyList()
-        else goalOptimizationEngine.evaluateGoals(goals, meds, if(state.hasMealPreferences()) state.mealPreferences else MealPreferences.getDefaultInstance(), anchor.wakeTime, nocturia.size)
+        else goalOptimizationEngine.evaluateGoals(
+            goals = goals, 
+            medications = meds, 
+            mealPreferences = if(state.hasMealPreferences()) state.mealPreferences else MealPreferences.getDefaultInstance(), 
+            tWakeEpoch = anchor.wakeTime, 
+            nocturiaCount = nocturia.size,
+            chronotype = chrono?.type ?: Chronotype.NEUTRAL
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val sleepSubjectiveLogs: StateFlow<List<SleepSubjectiveLog>> = sleepSubjectiveDao.getAllLogsFlow()
