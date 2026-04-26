@@ -17,6 +17,7 @@ import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.RunningStrideLengthRecord
 import androidx.health.connect.client.records.StepsCadenceRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
 
 class HealthSyncManager(private val context: Context) {
 
@@ -31,7 +32,8 @@ class HealthSyncManager(private val context: Context) {
         HealthPermission.getReadPermission(RestingHeartRateRecord::class),
         HealthPermission.getReadPermission(BloodPressureRecord::class),
         HealthPermission.getReadPermission(RunningStrideLengthRecord::class),
-        HealthPermission.getReadPermission(StepsCadenceRecord::class)
+        HealthPermission.getReadPermission(StepsCadenceRecord::class),
+        HealthPermission.getReadPermission(ExerciseSessionRecord::class)
     )
 
     suspend fun hasPermissions(): Boolean {
@@ -170,6 +172,28 @@ class HealthSyncManager(private val context: Context) {
                 )
             )
             return healthConnectClient.readRecords(request).records
+        } catch (e: Exception) { return null }
+    }
+
+    suspend fun fetchRecentExercises(): List<ExerciseSessionRecord>? {
+        try {
+            if (!hasPermissions()) return null
+            val request = ReadRecordsRequest(
+                recordType = ExerciseSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(Instant.now().minus(24, ChronoUnit.HOURS), Instant.now())
+            )
+            return healthConnectClient.readRecords(request).records
+        } catch (e: Exception) { return null }
+    }
+
+    suspend fun fetchHeartRateForSession(startTime: Instant, endTime: Instant): List<HeartRateRecord.Sample>? {
+        try {
+            if (!hasPermissions()) return null
+            val request = ReadRecordsRequest(
+                recordType = HeartRateRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+            )
+            return healthConnectClient.readRecords(request).records.flatMap { it.samples }
         } catch (e: Exception) { return null }
     }
 
