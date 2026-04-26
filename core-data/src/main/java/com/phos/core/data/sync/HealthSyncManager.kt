@@ -15,6 +15,8 @@ import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.BloodPressureRecord
+import androidx.health.connect.client.records.RunningStrideLengthRecord
+import androidx.health.connect.client.records.StepsCadenceRecord
 
 class HealthSyncManager(private val context: Context) {
 
@@ -27,7 +29,9 @@ class HealthSyncManager(private val context: Context) {
         HealthPermission.getReadPermission(OxygenSaturationRecord::class),
         HealthPermission.getReadPermission(BodyTemperatureRecord::class),
         HealthPermission.getReadPermission(RestingHeartRateRecord::class),
-        HealthPermission.getReadPermission(BloodPressureRecord::class)
+        HealthPermission.getReadPermission(BloodPressureRecord::class),
+        HealthPermission.getReadPermission(RunningStrideLengthRecord::class),
+        HealthPermission.getReadPermission(StepsCadenceRecord::class)
     )
 
     suspend fun hasPermissions(): Boolean {
@@ -183,6 +187,27 @@ class HealthSyncManager(private val context: Context) {
                 timeRangeFilter = TimeRangeFilter.between(Instant.now().minus(24, ChronoUnit.HOURS), Instant.now())
             )
             return healthConnectClient.readRecords(request).records.maxByOrNull { it.time }?.temperature?.inCelsius
+        } catch (e: Exception) { return null }
+    }
+
+    suspend fun fetchGaitMetrics(): List<Pair<RunningStrideLengthRecord, StepsCadenceRecord?>>? {
+        try {
+            if (!hasPermissions()) return null
+            val timeFilter = TimeRangeFilter.between(Instant.now().minus(24, ChronoUnit.HOURS), Instant.now())
+            
+            val strideRequest = ReadRecordsRequest(recordType = RunningStrideLengthRecord::class, timeRangeFilter = timeFilter)
+            val cadenceRequest = ReadRecordsRequest(recordType = StepsCadenceRecord::class, timeRangeFilter = timeFilter)
+            
+            val strides = healthConnectClient.readRecords(strideRequest).records
+            val cadences = healthConnectClient.readRecords(cadenceRequest).records
+            
+            // Map strides to cadences by timestamp proximity
+            return strides.map { stride ->
+                val matchingCadence = cadences.minByOrNull { 
+                    Math.abs(it.startTime.toEpochMilli() - stride.startTime.toEpochMilli()) 
+                }
+                Pair(stride, matchingCadence)
+            }
         } catch (e: Exception) { return null }
     }
 }
