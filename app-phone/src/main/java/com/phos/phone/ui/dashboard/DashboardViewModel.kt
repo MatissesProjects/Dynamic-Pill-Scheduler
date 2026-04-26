@@ -42,8 +42,10 @@ class DashboardViewModel(
     private val goalDao = db.goalDao()
     private val nocturiaDao = db.nocturiaDao()
     private val sleepSubjectiveDao = db.sleepSubjectiveDao()
+    private val gaitDao = db.gaitDao()
 
     private val healthSyncManager = HealthSyncManager(application)
+    private val gaitManager = GaitManager(gaitDao, healthSyncManager)
     private val napManager = NapManager(healthSyncManager)
     private val postureIntelligence = PostureIntelligence()
     private val jetLagManager = JetLagManager()
@@ -80,6 +82,13 @@ class DashboardViewModel(
         viewModelScope.launch {
             nanoEngine.initialize()
             seedKnowledgeBase()
+            syncGait()
+        }
+    }
+
+    private fun syncGait() {
+        viewModelScope.launch {
+            gaitManager.syncGaitMetrics()
         }
     }
 
@@ -154,6 +163,19 @@ class DashboardViewModel(
     val sideEffectAlerts: StateFlow<List<SideEffectRule>> = combine(medications, collisionResolverFlow, dismissedIds) { meds, resolver, dismissed ->
         resolver.getSideEffectAlerts(meds).filter { alert ->
             !dismissed.contains("side_effect_${alert.medicationId}_${alert.sideEffect}")
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val gaitInsights: StateFlow<List<String>> = flow {
+        while (true) {
+            val deviation = gaitManager.detectGaitDeviation()
+            if (deviation != null && deviation.isSignificant) {
+                val msg = "⚠️ Critical Gait Warning: Stride length has dropped by ${"%.1f".format(deviation.dropPercentage)}%. This may indicate dizziness or neuromotor side effects from recent medication changes. Please consult your doctor if you feel unsteady."
+                emit(listOf(msg))
+            } else {
+                emit(emptyList())
+            }
+            kotlinx.coroutines.delay(3600000) // Check hourly
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

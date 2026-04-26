@@ -27,7 +27,7 @@
 | T24 | Nocturia Optimization | **Circadian Safety:** Track and minimize nighttime bathroom breaks. | conductor/tracks/nocturia-optimization/ | Completed |
 | T25 | Sleep Quality Calibration | **Calibration:** Morning feedback loop to align Fitbit data with feeling. | conductor/tracks/sleep-calibration/ | Completed |
 | T26 | High-Integrity Validation | **Reliability:** Expand test coverage to >80% for AI, Temporal, and UI layers. | conductor/tracks/high-integrity-validation/ | Completed |
-| T27 | Neuromotor Orchestration | **Safety:** Wear OS 5 gait analysis (Stride Length) for side-effect detection. | conductor/tracks/neuromotor-gait/ | In Progress |
+| T27 | Neuromotor Orchestration | **Safety:** Wear OS 5 gait analysis (Stride Length) for side-effect detection. | conductor/tracks/neuromotor-gait/ | Completed |
 | T28 | Chronotype Chronotherapy | **Circadian:** Tailor dose windows to biological clocks (Night Owl vs. Lark). | conductor/tracks/chronotype-align/ | Pending |
 | T29 | Metabolic Load Digital Twin | **Performance:** Correlate Cardio Load with dose efficacy and hydration. | conductor/tracks/metabolic-twin/ | Pending |
 | T30 | Sentiment & Stress Synthesis | **Mental Health:** Gemini Nano sentiment analysis vs. HRV correlation. | conductor/tracks/stress-synthesis/ | Pending |
@@ -178,9 +178,9 @@
 - [x] Implement `DataLayerRepositoryTest` for cross-device sync integrity.
 
 #### T27: Neuromotor Orchestration & Gait Analysis
-- [ ] Implement `GaitManager` in `core-data` to ingest Stride Length and Cadence.
-- [ ] Build baseline gait logic for medication version comparison.
-- [ ] Create "Fall Risk" alert logic in `DashboardViewModel`.
+- [x] Implement `GaitManager` in `core-data` to ingest Stride Length and Cadence.
+- [x] Build baseline gait logic for medication version comparison.
+- [x] Create "Fall Risk" alert logic in `DashboardViewModel`.
 
 #### T28: Chronotype-Aware Chronotherapy
 - [ ] Implement `ChronotypeClassifier` in `core-intelligence` using 14-day sleep data.
