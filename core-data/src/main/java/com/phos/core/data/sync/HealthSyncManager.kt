@@ -156,6 +156,23 @@ class HealthSyncManager(private val context: Context) {
         }
     }
 
+    /**
+     * Fetches a longer history of sleep sessions for chronotype classification.
+     */
+    suspend fun fetchSleepHistory(days: Int = 14): List<SleepSessionRecord>? {
+        try {
+            if (!hasPermissions()) return null
+            val request = ReadRecordsRequest(
+                recordType = SleepSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(
+                    Instant.now().minus(days.toLong(), ChronoUnit.DAYS),
+                    Instant.now()
+                )
+            )
+            return healthConnectClient.readRecords(request).records
+        } catch (e: Exception) { return null }
+    }
+
     suspend fun fetchLatestHeartRate(): List<HeartRateRecord.Sample>? {
         try {
             if (!hasPermissions()) return null
