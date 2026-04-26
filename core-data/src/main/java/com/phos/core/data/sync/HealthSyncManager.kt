@@ -3,21 +3,11 @@ package com.phos.core.data.sync
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-
-import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.records.OxygenSaturationRecord
-import androidx.health.connect.client.records.BodyTemperatureRecord
-import androidx.health.connect.client.records.RestingHeartRateRecord
-import androidx.health.connect.client.records.BloodPressureRecord
-import androidx.health.connect.client.records.RunningStrideLengthRecord
-import androidx.health.connect.client.records.StepsCadenceRecord
-import androidx.health.connect.client.records.ExerciseSessionRecord
 
 class HealthSyncManager(private val context: Context) {
 
@@ -33,7 +23,9 @@ class HealthSyncManager(private val context: Context) {
         HealthPermission.getReadPermission(BloodPressureRecord::class),
         HealthPermission.getReadPermission(RunningStrideLengthRecord::class),
         HealthPermission.getReadPermission(StepsCadenceRecord::class),
-        HealthPermission.getReadPermission(ExerciseSessionRecord::class)
+        HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+        HealthPermission.getReadPermission(PowerRecord::class),
+        HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class)
     )
 
     suspend fun hasPermissions(): Boolean {
@@ -41,15 +33,12 @@ class HealthSyncManager(private val context: Context) {
             val granted = healthConnectClient.permissionController.getGrantedPermissions()
             granted.containsAll(permissions)
         } catch (e: Exception) {
-            // Log error or handle specific exceptions like API unavailable
             false
         }
     }
 
     /**
      * Fetches the latest sleep session end time to use as T-Wake.
-     * Strategy: Bridge short interruptions (bathroom breaks < 30 mins) to prevent premature T-Wake anchoring.
-     * @return Triple<Instant, Boolean, List<Pair<Instant, Instant>>>? The end time, interruption flag, and list of bridged intervals.
      */
     suspend fun fetchLatestTWakeFull(): Triple<Instant, Boolean, List<Pair<Instant, Instant>>>? {
         try {
@@ -66,17 +55,13 @@ class HealthSyncManager(private val context: Context) {
             val response = healthConnectClient.readRecords(request)
             if (response.records.isEmpty()) return null
 
-            // 1. Sort records by start time
             val sortedRecords = response.records.sortedBy { it.startTime }
-
-            // 2. Heal/Bridge sessions and get the bridged intervals (the gaps)
             val result = healSleepSessionsWithGaps(sortedRecords)
             val consolidatedSessions = result.first
             val bridgedGaps = result.second
             
             val wereInterruptions = bridgedGaps.isNotEmpty()
 
-            // 3. Filtering for valid sessions (at least 3 hours consolidated)
             val bestSession = consolidatedSessions
                 .filter { ChronoUnit.MINUTES.between(it.first, it.second) > 180 }
                 .maxByOrNull { it.second } ?: return null
@@ -87,9 +72,6 @@ class HealthSyncManager(private val context: Context) {
         }
     }
 
-    /**
-     * Consolidates multiple sleep sessions and returns both merged blocks AND the bridged gaps.
-     */
     internal fun healSleepSessionsWithGaps(records: List<SleepSessionRecord>): Pair<List<Pair<Instant, Instant>>, List<Pair<Instant, Instant>>> {
         if (records.isEmpty()) return Pair(emptyList(), emptyList())
         
@@ -102,11 +84,9 @@ class HealthSyncManager(private val context: Context) {
         for (i in 1 until records.size) {
             val nextStart = records[i].startTime
             val nextEnd = records[i].endTime
-
             val gapMinutes = ChronoUnit.MINUTES.between(currentEnd, nextStart)
             
             if (gapMinutes < 30) {
-                // Bridge the gap
                 gaps.add(Pair(currentEnd, nextStart))
                 currentEnd = nextEnd
             } else {
@@ -119,9 +99,6 @@ class HealthSyncManager(private val context: Context) {
         return Pair(merged, gaps)
     }
 
-    /**
-     * Legacy support for backward compatibility during refactor.
-     */
     suspend fun fetchLatestTWake(): Pair<Instant, Boolean>? {
         val res = fetchLatestTWakeFull() ?: return null
         return Pair(res.first, res.second)
@@ -131,13 +108,9 @@ class HealthSyncManager(private val context: Context) {
         return healSleepSessionsWithGaps(records).first
     }
 
-    /**
-     * Fetches the latest nap (short sleep session < 3 hours) in the last 12 hours.
-     */
     suspend fun fetchLatestNap(): SleepSessionRecord? {
         try {
             if (!hasPermissions()) return null
-
             val request = ReadRecordsRequest(
                 recordType = SleepSessionRecord::class,
                 timeRangeFilter = TimeRangeFilter.between(
@@ -145,7 +118,6 @@ class HealthSyncManager(private val context: Context) {
                     Instant.now()
                 )
             )
-
             val response = healthConnectClient.readRecords(request)
             return response.records
                 .filter { 
@@ -153,14 +125,9 @@ class HealthSyncManager(private val context: Context) {
                     mins in 15..179 
                 }
                 .maxByOrNull { it.endTime }
-        } catch (e: Exception) {
-            return null
-        }
+        } catch (e: Exception) { return null }
     }
 
-    /**
-     * Fetches a longer history of sleep sessions for chronotype classification.
-     */
     suspend fun fetchSleepHistory(days: Int = 14): List<SleepSessionRecord>? {
         try {
             if (!hasPermissions()) return null
@@ -191,6 +158,28 @@ class HealthSyncManager(private val context: Context) {
             if (!hasPermissions()) return null
             val request = ReadRecordsRequest(
                 recordType = HeartRateRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+            )
+            return healthConnectClient.readRecords(request).records.flatMap { it.samples }
+        } catch (e: Exception) { return null }
+    }
+
+    suspend fun fetchPowerForSession(startTime: Instant, endTime: Instant): List<PowerRecord.Sample>? {
+        try {
+            if (!hasPermissions()) return null
+            val request = ReadRecordsRequest(
+                recordType = PowerRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+            )
+            return healthConnectClient.readRecords(request).records.flatMap { it.samples }
+        } catch (e: Exception) { return null }
+    }
+
+    suspend fun fetchCadenceForSession(startTime: Instant, endTime: Instant): List<CyclingPedalingCadenceRecord.Sample>? {
+        try {
+            if (!hasPermissions()) return null
+            val request = ReadRecordsRequest(
+                recordType = CyclingPedalingCadenceRecord::class,
                 timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
             )
             return healthConnectClient.readRecords(request).records.flatMap { it.samples }
@@ -242,7 +231,6 @@ class HealthSyncManager(private val context: Context) {
             val strides = healthConnectClient.readRecords(strideRequest).records
             val cadences = healthConnectClient.readRecords(cadenceRequest).records
             
-            // Map strides to cadences by timestamp proximity
             return strides.map { stride ->
                 val matchingCadence = cadences.minByOrNull { 
                     Math.abs(it.startTime.toEpochMilli() - stride.startTime.toEpochMilli()) 
