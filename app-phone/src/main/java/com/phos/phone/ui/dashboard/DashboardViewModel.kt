@@ -51,6 +51,7 @@ class DashboardViewModel(
     private val gaitManager = GaitManager(gaitDao, healthSyncManager)
     private val chronotypeClassifier = ChronotypeClassifier()
     private val metabolicEngine = MetabolicEngine()
+    private val ebikeNormalizer = EbikeEffortNormalizer()
     private val stressSynthesisEngine = StressSynthesisEngine()
     private val napManager = NapManager(healthSyncManager)
     private val postureIntelligence = PostureIntelligence()
@@ -115,8 +116,26 @@ class DashboardViewModel(
             val exercises = healthSyncManager.fetchRecentExercises() ?: return@launch
             exercises.forEach { session ->
                 val hr = healthSyncManager.fetchHeartRateForSession(session.startTime, session.endTime) ?: emptyList()
-                val log = metabolicEngine.calculateMetabolicLoad(session, hr)
-                metabolicDao.insertLog(log)
+                
+                if (session.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_CYCLING) {
+                    val power = healthSyncManager.fetchPowerForSession(session.startTime, session.endTime) ?: emptyList()
+                    val cadence = healthSyncManager.fetchCadenceForSession(session.startTime, session.endTime) ?: emptyList()
+                    val effort = ebikeNormalizer.normalizeEffort(session, power, hr, cadence)
+                    
+                    // We store normalized load as TRIMP for consistent tracking
+                    val log = MetabolicLoadLog(
+                        exerciseSessionId = session.metadata.id,
+                        trimpScore = effort.normalizedCardioLoad,
+                        avgHeartRate = if (hr.isNotEmpty()) hr.map { it.beatsPerMinute }.average() else 0.0,
+                        durationMinutes = java.time.Duration.between(session.startTime, session.endTime).toMinutes(),
+                        timestamp = session.endTime,
+                        isHyperMetabolic = effort.wasHighIntensity
+                    )
+                    metabolicDao.insertLog(log)
+                } else {
+                    val log = metabolicEngine.calculateMetabolicLoad(session, hr)
+                    metabolicDao.insertLog(log)
+                }
             }
         }
     }
@@ -258,15 +277,21 @@ class DashboardViewModel(
 
     val optimizationSuggestions: StateFlow<List<OptimizationSuggestion>> = combine(healthGoals, medications, phosState, temporalAnchorFlow, nocturiaLogs, chronotype, metabolicLogs) { goals, meds, state, anchor, nocturia, chrono, metabolic ->
         if (anchor == null) emptyList()
-        else goalOptimizationEngine.evaluateGoals(
-            goals = goals, 
-            medications = meds, 
-            mealPreferences = if(state.hasMealPreferences()) state.mealPreferences else MealPreferences.getDefaultInstance(), 
-            tWakeEpoch = anchor.wakeTime, 
-            nocturiaCount = nocturia.size,
-            chronotype = chrono?.type ?: Chronotype.NEUTRAL,
-            metabolicLogs = metabolic
-        )
+        else {
+            val betaBlockerNames = listOf("metoprolol", "atenolol", "bisoprolol", "carvedilol", "propranolol")
+            val hasBetaBlocker = meds.any { med -> betaBlockerNames.any { med.name.lowercase().contains(it) } }
+            
+            goalOptimizationEngine.evaluateGoals(
+                goals = goals, 
+                medications = meds, 
+                mealPreferences = if(state.hasMealPreferences()) state.mealPreferences else MealPreferences.getDefaultInstance(), 
+                tWakeEpoch = anchor.wakeTime, 
+                nocturiaCount = nocturia.size,
+                chronotype = chrono?.type ?: Chronotype.NEUTRAL,
+                metabolicLogs = metabolic,
+                isOnBetaBlocker = hasBetaBlocker
+            )
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val sleepSubjectiveLogs: StateFlow<List<SleepSubjectiveLog>> = sleepSubjectiveDao.getAllLogsFlow()

@@ -31,7 +31,8 @@ class GoalOptimizationEngine {
         tWakeEpoch: Long,
         nocturiaCount: Int = 0,
         chronotype: Chronotype = Chronotype.NEUTRAL,
-        metabolicLogs: List<MetabolicLoadLog> = emptyList()
+        metabolicLogs: List<MetabolicLoadLog> = emptyList(),
+        isOnBetaBlocker: Boolean = false
     ): List<OptimizationSuggestion> {
         val suggestions = mutableListOf<OptimizationSuggestion>()
         
@@ -109,18 +110,41 @@ class GoalOptimizationEngine {
             ))
         }
 
-        // 4. Metabolic Digital Twin Logic
-        val recentMetabolic = metabolicLogs.filter { it.timestamp.isAfter(Instant.now().minusSeconds(7200)) } // Last 2 hours
-        val isHyperMetabolic = recentMetabolic.any { it.isHyperMetabolic }
+        // 4. Metabolic Digital Twin & e-Bike Safety
+        val last2hMetabolic = metabolicLogs.filter { it.timestamp.isAfter(Instant.now().minusSeconds(7200)) }
+        val isHyperMetabolic = last2hMetabolic.any { it.isHyperMetabolic }
         
         if (isHyperMetabolic) {
-            val highStrain = recentMetabolic.maxByOrNull { it.trimpScore }
+            val highStrain = last2hMetabolic.maxByOrNull { it.trimpScore }
             suggestions.add(OptimizationSuggestion(
                 goalId = -4,
                 id = "metabolic_spike",
                 title = "Metabolic Stress Compensation",
-                description = "High cardiovascular strain detected (TRIMP: ${"%.0f".format(highStrain?.trimpScore)}). To avoid absorption spikes and ensure kidney safety, we recommend increasing hydration by 500ml and delaying current doses by 30 minutes.",
-                suggestedMedicationShifts = medications.associate { it.medicationId to it.frequencyOffset + 1800000L } // +30 mins
+                description = "High cardiovascular strain detected. To avoid absorption spikes and ensure kidney safety, we recommend increasing hydration and delaying current doses by 30 minutes.",
+                suggestedMedicationShifts = medications.associate { it.medicationId to it.frequencyOffset + 1800000L }
+            ))
+        }
+
+        // e-Bike specific: Post-Ride Hypotension (if a cycling session ended recently)
+        val last30mMetabolic = metabolicLogs.filter { it.timestamp.isAfter(Instant.now().minusSeconds(1800)) }
+        if (last30mMetabolic.isNotEmpty()) {
+            suggestions.add(OptimizationSuggestion(
+                goalId = -5,
+                id = "ebike_cooldown",
+                title = "Post-Ride Safety",
+                description = "Vigorous activity detected. Please ensure you perform a 5-minute low-assist cooldown to prevent dizziness (post-exercise hypotension), especially if taking blood pressure meds.",
+                suggestedMedicationShifts = emptyMap()
+            ))
+        }
+        
+        // e-Bike specific: Safety Bridge for Beta-Blockers
+        if (isOnBetaBlocker && isHyperMetabolic) {
+            suggestions.add(OptimizationSuggestion(
+                goalId = -6,
+                id = "beta_blocker_ceiling",
+                title = "Heart Rate Ceiling Safety",
+                description = "Your heart rate is approaching the ceiling imposed by your medication. Suggesting higher e-bike motor assistance for upcoming inclines to maintain safe exertion levels.",
+                suggestedMedicationShifts = emptyMap()
             ))
         }
 
@@ -143,10 +167,5 @@ class GoalOptimizationEngine {
         }
         
         return suggestions
-    }
-    
-    private fun formatOffset(offsetMillis: Long): String {
-        val hours = offsetMillis / 3600000L
-        return "+${hours}h"
     }
 }

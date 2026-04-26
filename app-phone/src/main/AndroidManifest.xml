@@ -6,7 +6,9 @@
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_RUNNING_STRIDE_LENGTH" />
     <uses-permission android:name="android.permission.health.READ_STEPS_CADENCE" />
-    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.health.READ_POWER" />
+    <uses-permission android:name="android.permission.health.READ_CYCLING_PEDALING_CADENCE" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application>
