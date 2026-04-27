@@ -17,6 +17,7 @@ class HealthSyncManager(private val context: Context) {
         HealthPermission.getReadPermission(SleepSessionRecord::class),
         HealthPermission.getReadPermission(HeartRateRecord::class),
         HealthPermission.getReadPermission(StepsRecord::class),
+        HealthPermission.getReadPermission(DistanceRecord::class),
         HealthPermission.getReadPermission(OxygenSaturationRecord::class),
         HealthPermission.getReadPermission(BodyTemperatureRecord::class),
         HealthPermission.getReadPermission(RestingHeartRateRecord::class),
@@ -184,6 +185,28 @@ class HealthSyncManager(private val context: Context) {
         } catch (e: Exception) { return null }
     }
 
+    suspend fun fetchDistanceForSession(startTime: Instant, endTime: Instant): Double {
+        try {
+            if (!hasPermissions()) return 0.0
+            val request = ReadRecordsRequest(
+                recordType = DistanceRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+            )
+            return healthConnectClient.readRecords(request).records.sumOf { it.distance.inMeters }
+        } catch (e: Exception) { return 0.0 }
+    }
+
+    suspend fun fetchStepsForSession(startTime: Instant, endTime: Instant): Long {
+        try {
+            if (!hasPermissions()) return 0L
+            val request = ReadRecordsRequest(
+                recordType = StepsRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+            )
+            return healthConnectClient.readRecords(request).records.sumOf { it.count }
+        } catch (e: Exception) { return 0L }
+    }
+
     suspend fun fetchLatestHeartRate(): List<HeartRateRecord.Sample>? {
         try {
             if (!hasPermissions()) return null
@@ -216,12 +239,5 @@ class HealthSyncManager(private val context: Context) {
             )
             return healthConnectClient.readRecords(request).records.maxByOrNull { it.time }?.temperature?.inCelsius
         } catch (e: Exception) { return null }
-    }
-
-    /**
-     * Stub for gait metrics until Wear OS 5 record types are fully resolved in classpath.
-     */
-    suspend fun fetchGaitMetrics(): List<Pair<Any, Any?>>? {
-        return emptyList()
     }
 }

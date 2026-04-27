@@ -3,6 +3,8 @@ package com.phos.core.data.engine
 import com.phos.core.data.dao.GaitDao
 import com.phos.core.data.model.GaitLog
 import com.phos.core.data.sync.HealthSyncManager
+import androidx.health.connect.client.records.ExerciseSessionRecord
+import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -19,10 +21,31 @@ class GaitManager(
 ) {
 
     /**
-     * Placeholder for gait sync.
+     * Estimates stride length from recent exercise sessions (Distance / Steps).
      */
     suspend fun syncGaitMetrics() {
-        // Temporarily disabled due to shifting Health Connect Alpha API for Wear OS 5 metrics
+        val sessions = healthSyncManager.fetchRecentExercises() ?: return
+        
+        sessions.forEach { session ->
+            // Only process running or walking for gait analysis
+            if (session.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_RUNNING || 
+                session.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_WALKING) {
+                
+                val distance = healthSyncManager.fetchDistanceForSession(session.startTime, session.endTime)
+                val steps = healthSyncManager.fetchStepsForSession(session.startTime, session.endTime)
+                
+                if (steps > 100) { // Ensure enough data for a stable average
+                    val estimatedStride = distance / steps
+                    
+                    gaitDao.insertLog(GaitLog(
+                        strideLengthMeters = estimatedStride,
+                        cadenceSpm = (steps.toDouble() / Duration.between(session.startTime, session.endTime).toMinutes()),
+                        timestamp = session.endTime,
+                        source = "Inferred-HealthConnect"
+                    ))
+                }
+            }
+        }
     }
 
     /**

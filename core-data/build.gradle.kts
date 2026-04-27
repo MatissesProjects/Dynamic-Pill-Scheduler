@@ -36,7 +36,7 @@ android {
 
 dependencies {
     val roomVersion = "2.6.1"
-    val healthConnectVersion = "1.1.0-alpha11"
+    val healthConnectVersion = "1.1.0"
     val horologistVersion = "0.5.21"
 
     implementation("androidx.room:room-runtime:$roomVersion")
