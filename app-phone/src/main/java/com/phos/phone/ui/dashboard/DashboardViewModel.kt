@@ -53,6 +53,7 @@ class DashboardViewModel(
     private val metabolicEngine = MetabolicEngine()
     private val ebikeNormalizer = EbikeEffortNormalizer()
     private val stressSynthesisEngine = StressSynthesisEngine()
+    private val giProtectionEngine = GIProtectionEngine()
     private val napManager = NapManager(healthSyncManager)
     private val postureIntelligence = PostureIntelligence()
     private val jetLagManager = JetLagManager()
@@ -226,6 +227,17 @@ class DashboardViewModel(
             }
             kotlinx.coroutines.delay(3600000) // Check hourly
         }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val symptomLogs: StateFlow<List<SymptomLog>> = intelligenceDao.getSymptomsSince(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val giProtectionInsights: StateFlow<List<String>> = combine(medications, giIrritantIds, symptomLogs) { meds, irritants, symptoms ->
+        val culprits = giProtectionEngine.correlateStomachPain(meds, irritants, symptoms)
+        if (culprits.isNotEmpty()) {
+            val names = meds.filter { culprits.contains(it.medicationId) }.map { it.name }.distinct()
+            listOf("Gastric Irritation Detected: Your recent stomach discomfort correlates with ${names.joinToString()}. We recommend ensuring these are taken with a full meal or a thick liquid (like yogurt) to buffer the lining.")
+        } else emptyList()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val alertnessIntervention: StateFlow<AlertnessIntervention?> = combine(

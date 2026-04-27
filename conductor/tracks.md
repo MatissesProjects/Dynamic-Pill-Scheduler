@@ -33,6 +33,8 @@
 | T30 | Sentiment & Stress Synthesis | **Mental Health:** Gemini Nano sentiment analysis vs. HRV correlation. | conductor/tracks/stress-synthesis/ | Completed |
 | T31 | Micro-Mobility Orchestration | **Mobility:** e-bike assistance optimization for heart-medication users. | conductor/tracks/ebike-orchestration/ | Completed |
 | T32 | Activity-Based Wakefulness | **Alertness:** Suppress nap drives using scheduled workout reminders. | conductor/tracks/alertness-orchestration/ | Completed |
+| T33 | Gastric Protection | **Safety:** AI-driven GI irritant detection and food-aligned buffering. | conductor/tracks/gastric-protection/ | Completed |
+| T34 | Sleep Pressure Modeling | **Circadian:** AI-driven adenosine drive tracking and nap forecasting. | conductor/tracks/sleep-pressure/ | Pending |
 
 ### Track Milestones
 
@@ -50,3 +52,13 @@
 - [x] Implement `AlertnessOrchestrator` to identify "Nap Vulnerability Zones" via Gemini Nano.
 - [x] Build workout reminder logic for pre-dip alertness injection.
 - [x] Correlate sleep debt with next-day alertness interventions.
+
+#### T33: Gastric Protection & GI-Aware Scheduling
+- [x] Implement `GIProtectionEngine` to scan meds for gastric irritants.
+- [x] Build "Stomach Buffer" suggestion logic in `GoalOptimizationEngine`.
+- [x] Correlate stomach pain logs with irritant dose proximity.
+
+#### T34: Sleep Pressure Modeling (Adenosine Drive)
+- [ ] Implement `AdenosineEngine` to model sleep pressure accumulation.
+- [ ] Build "Nap Propensity" forecasting UI.
+- [ ] Correlate caffeine intake with adenosine receptor blocking.

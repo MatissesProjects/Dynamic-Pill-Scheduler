@@ -37,6 +37,13 @@ This plan outlines the integration of cutting-edge physiological research and Pi
 - **Intervention:** 30 minutes before a predicted dip, suggest a 10-20 minute "Alertness Micro-bout" (e.g., e-bike ride or brisk walk).
 - **Mechanism:** Leverage acute exercise neurotransmitter release (norepinephrine/dopamine) to reset sleep pressure (adenosine).
 
+### T33: Gastric Protection & GI-Aware Scheduling
+**Concept:** Automatically detect and mitigate medication-induced stomach discomfort.
+- **Intelligence:** Use Gemini Nano to scan the medication list for high-risk GI irritants (NSAIDs, Bisphosphonates, Iron, etc.).
+- **Dynamic Requirement:** Force "WITH_FOOD" status for identified irritants, regardless of initial setup.
+- **Gastric Buffer Logic:** Propose a 30-minute "Stomach Buffer" window (e.g., suggest a snack) before doses of irritants if no meal is scheduled.
+- **Symptom Correlation:** Correlate user-logged "Stomach Pain" symptoms with dose proximity to refine the "Gastric Sensitivity" profile.
+
 
 ## Implementation Strategy
 - **M1:** Implement `GaitManager` in `core-data`.

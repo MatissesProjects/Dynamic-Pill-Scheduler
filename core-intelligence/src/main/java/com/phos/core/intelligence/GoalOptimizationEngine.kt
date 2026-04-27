@@ -32,7 +32,8 @@ class GoalOptimizationEngine {
         nocturiaCount: Int = 0,
         chronotype: Chronotype = Chronotype.NEUTRAL,
         metabolicLogs: List<MetabolicLoadLog> = emptyList(),
-        isOnBetaBlocker: Boolean = false
+        isOnBetaBlocker: Boolean = false,
+        giIrritantIds: List<String> = emptyList()
     ): List<OptimizationSuggestion> {
         val suggestions = mutableListOf<OptimizationSuggestion>()
         
@@ -125,30 +126,22 @@ class GoalOptimizationEngine {
             ))
         }
 
-        // e-Bike specific: Post-Ride Hypotension (if a cycling session ended recently)
-        val last30mMetabolic = metabolicLogs.filter { it.timestamp.isAfter(Instant.now().minusSeconds(1800)) }
-        if (last30mMetabolic.isNotEmpty()) {
-            suggestions.add(OptimizationSuggestion(
-                goalId = -5,
-                id = "ebike_cooldown",
-                title = "Post-Ride Safety",
-                description = "Vigorous activity detected. Please ensure you perform a 5-minute low-assist cooldown to prevent dizziness (post-exercise hypotension), especially if taking blood pressure meds.",
-                suggestedMedicationShifts = emptyMap()
-            ))
-        }
-        
-        // e-Bike specific: Safety Bridge for Beta-Blockers
-        if (isOnBetaBlocker && isHyperMetabolic) {
-            suggestions.add(OptimizationSuggestion(
-                goalId = -6,
-                id = "beta_blocker_ceiling",
-                title = "Heart Rate Ceiling Safety",
-                description = "Your heart rate is approaching the ceiling imposed by your medication. Suggesting higher e-bike motor assistance for upcoming inclines to maintain safe exertion levels.",
-                suggestedMedicationShifts = emptyMap()
-            ))
+        // 5. Gastric Protection Logic
+        val scheduledIrritants = medications.filter { giIrritantIds.contains(it.medicationId) }
+        if (scheduledIrritants.isNotEmpty()) {
+            val noFoodScheduled = scheduledIrritants.filter { it.foodRequirement != "WITH_FOOD" }
+            if (noFoodScheduled.isNotEmpty()) {
+                suggestions.add(OptimizationSuggestion(
+                    goalId = -10,
+                    id = "gi_protection",
+                    title = "Gastric Safety Protocol",
+                    description = "Detected known gastric irritants (${noFoodScheduled.joinToString { it.name }}). We've enforced a 'WITH_FOOD' requirement. Ensure you eat a balanced snack or meal 15-30 mins before these doses.",
+                    suggestedMedicationShifts = emptyMap() // Keep time, change requirement
+                ))
+            }
         }
 
-        // 5. Goal-Based Optimization
+        // 6. Goal-Based Optimization
         for (goal in goals) {
             val lowerSymptom = goal.targetSymptom.lowercase()
             if (lowerSymptom.contains("stomach") || lowerSymptom.contains("gas") || lowerSymptom.contains("nausea")) {
