@@ -32,6 +32,7 @@
 | T29 | Metabolic Load Digital Twin | **Performance:** Correlate Cardio Load with dose efficacy and hydration. | conductor/tracks/metabolic-twin/ | Completed |
 | T30 | Sentiment & Stress Synthesis | **Mental Health:** Gemini Nano sentiment analysis vs. HRV correlation. | conductor/tracks/stress-synthesis/ | Completed |
 | T31 | Micro-Mobility Orchestration | **Mobility:** e-bike assistance optimization for heart-medication users. | conductor/tracks/ebike-orchestration/ | Completed |
+| T32 | Activity-Based Wakefulness | **Alertness:** Suppress nap drives using scheduled workout reminders. | conductor/tracks/alertness-orchestration/ | Completed |
 
 ### Track Milestones
 
@@ -44,3 +45,8 @@
 - [x] Implement `EbikeEffortNormalizer` to calculate activity load relative to heart-rate blunting medications.
 - [x] Build "Safety Bridge" climb-assistance alerts for users on Beta-Blockers.
 - [x] Implement "Post-Exercise Hypotension" cooldown reminders.
+
+#### T32: Activity-Based Wakefulness (Nap Prevention)
+- [x] Implement `AlertnessOrchestrator` to identify "Nap Vulnerability Zones" via Gemini Nano.
+- [x] Build workout reminder logic for pre-dip alertness injection.
+- [x] Correlate sleep debt with next-day alertness interventions.

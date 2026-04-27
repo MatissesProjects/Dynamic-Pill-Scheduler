@@ -31,6 +31,12 @@ This plan outlines the integration of cutting-edge physiological research and Pi
 - **Assistance Optimization:** For users on Beta-Blockers, suggest higher e-bike assistance levels during steep inclines to prevent "hitting the heart rate ceiling."
 - **Safety:** Trigger a "Cool-Down Alert" after vigorous rides to prevent post-exercise hypotension (common with BP meds).
 
+### T32: Activity-Based Wakefulness Orchestration (Nap Prevention)
+**Concept:** Use exercise as a non-pharmacological tool to suppress daytime sleepiness.
+- **Logic:** Identify "Nap Vulnerability Zones" based on current-day sleep debt and the 7-9 hour post-wake "circadian dip."
+- **Intervention:** 30 minutes before a predicted dip, suggest a 10-20 minute "Alertness Micro-bout" (e.g., e-bike ride or brisk walk).
+- **Mechanism:** Leverage acute exercise neurotransmitter release (norepinephrine/dopamine) to reset sleep pressure (adenosine).
+
 
 ## Implementation Strategy
 - **M1:** Implement `GaitManager` in `core-data`.

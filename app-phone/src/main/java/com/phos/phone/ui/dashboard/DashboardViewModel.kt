@@ -59,6 +59,7 @@ class DashboardViewModel(
     private val mealScheduler = MealScheduler()
     private val goalOptimizationEngine = GoalOptimizationEngine()
     private val sleepCalibrationEngine = SleepCalibrationEngine()
+    private val alertnessOrchestrator = AlertnessOrchestrator()
     
     private val nanoEngine = injectedNanoEngine ?: GeminiNanoEngine(application)
     
@@ -227,6 +228,35 @@ class DashboardViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val alertnessIntervention: StateFlow<AlertnessIntervention?> = combine(
+        temporalAnchorFlow,
+        sleepSubjectiveLogs,
+        metabolicLogs
+    ) { anchor, sleepLogs, metabolic ->
+        if (anchor == null) null
+        else {
+            val history = healthSyncManager.fetchSleepHistory(7) ?: emptyList()
+            val prompt = alertnessOrchestrator.buildPredictionPrompt(anchor.wakeTime, history, sleepLogs, metabolic)
+            val json = nanoEngine.generateResponse(prompt) ?: return@combine null
+            
+            try {
+                val isVulnerable = json.contains("\"isVulnerable\": true")
+                val mins = Regex("\"predictedMinutesUntilDip\":\\s*(\\d+)").find(json)?.groupValues?.get(1)?.toLong() ?: 0L
+                val reason = Regex("\"reason\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1) ?: ""
+                
+                if (isVulnerable) {
+                    AlertnessIntervention(
+                        title = "AI Wakefulness Prediction",
+                        description = reason,
+                        suggestedActivity = "15-min E-Bike ride or Brisk Walk",
+                        timeToDipMinutes = mins,
+                        isHighRisk = sleepLogs.firstOrNull()?.let { it.reportedQuality <= 4 } ?: false
+                    )
+                } else null
+            } catch (e: Exception) { null }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     private val temporalAnchorFlow = temporalAnchorDao.getLatestAnchorFlow()
     
     val napOverlaps: StateFlow<List<NapOverlap>> = combine(medications, temporalAnchorFlow) { meds, anchor ->
@@ -255,19 +285,6 @@ class DashboardViewModel(
 
     val chronotype: StateFlow<ChronotypeRecord?> = chronotypeDao.getChronotypeFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    val gaitInsights: StateFlow<List<String>> = flow {
-        while (true) {
-            val deviation = gaitManager.detectGaitDeviation()
-            if (deviation != null && deviation.isSignificant) {
-                val msg = "⚠️ Critical Gait Warning: Stride length has dropped by ${"%.1f".format(deviation.dropPercentage)}%. This may indicate dizziness or neuromotor side effects from recent medication changes. Please consult your doctor if you feel unsteady."
-                emit(listOf(msg))
-            } else {
-                emit(emptyList())
-            }
-            kotlinx.coroutines.delay(3600000) // Check hourly
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val healthGoals: StateFlow<List<HealthGoal>> = goalDao.getActiveGoalsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
