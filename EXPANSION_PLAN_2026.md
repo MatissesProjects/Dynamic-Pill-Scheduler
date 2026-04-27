@@ -37,3 +37,11 @@ This plan outlines the integration of cutting-edge physiological research and Pi
 - **M2:** Build `ChronotypeClassifier` in `core-intelligence`.
 - **M3:** Expand `DashboardViewModel` to handle Cardio Load alerts.
 - **M4:** Update `VoiceLogCoordinator` for sentiment extraction.
+
+## Verification & High-Integrity Testing
+Every new expansion track must be accompanied by exhaustive unit tests:
+- `GaitManagerTest`: Verify baseline calculations and 15% drop detection.
+- `ChronotypeClassifierTest`: Validate MSFsc formula and Lark/Owl classification.
+- `MetabolicEngineTest`: Ensure TRIMP scores correctly weight HR zones.
+- `StressSynthesisEngineTest`: Verify burnout risk correlation (Sentiment + HRV).
+- `EbikeEffortNormalizerTest`: Validate e-bike vs traditional detection heuristics.

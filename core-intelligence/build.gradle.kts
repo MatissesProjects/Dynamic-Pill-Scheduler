@@ -34,6 +34,7 @@ android {
 
 dependencies {
     implementation(project(":core-data"))
+    implementation("androidx.health.connect:connect-client:1.1.0-alpha11")
     
     // ML Kit GenAI Prompt (Multimodal bridge to Gemini Nano)
     implementation("com.google.mlkit:genai-prompt:1.0.0-beta2")
