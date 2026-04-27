@@ -84,4 +84,16 @@ class GeminiNanoEngine(
         """.trimIndent()
         return generateResponse(prompt)
     }
+
+    /**
+     * Identifies which medications in a list are known gastric irritants.
+     */
+    suspend fun detectGI_Irritants(medicationNames: List<String>): String? {
+        val prompt = """
+            Analyze this list of medications and identify which ones are known to cause gastric irritation or stomach discomfort.
+            List: ${medicationNames.joinToString(", ")}
+            Return JSON: {irritants: ["MedName1", "MedName2"], advice: "General stomach protection advice"}
+        """.trimIndent()
+        return generateResponse(prompt)
+    }
 }
