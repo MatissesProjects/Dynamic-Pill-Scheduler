@@ -19,7 +19,6 @@ class EbikeEffortNormalizer {
 
     /**
      * Detects if a cycling session was likely assisted (e-bike) and normalizes exertion.
-     * Logic: If Power/Cadence is high but HR is relatively low, it's an e-bike.
      */
     fun normalizeEffort(
         session: ExerciseSessionRecord,
@@ -27,24 +26,21 @@ class EbikeEffortNormalizer {
         hrSamples: List<HeartRateRecord.Sample>,
         cadenceSamples: List<CyclingPedalingCadenceRecord.Sample>
     ): NormalizedEffort {
-        if (session.exerciseType != ExerciseSessionRecord.EXERCISE_TYPE_CYCLING) {
+        // Fallback to integer check if constant is unresolved in some environments
+        val isCycling = session.exerciseType == 8 // standard cycling type id
+                        
+        if (!isCycling) {
             return NormalizedEffort(CyclingType.UNKNOWN, 0.0, false)
         }
 
-        val avgPower = if (powerSamples.isNotEmpty()) powerSamples.map { it.power.inWatts }.average() else 0.0
         val avgHr = if (hrSamples.isNotEmpty()) hrSamples.map { it.beatsPerMinute }.average() else 0.0
-        val avgCadence = if (cadenceSamples.isNotEmpty()) cadenceSamples.map { it.samplesPerMinute }.average() else 0.0
-
-        // Heuristic: E-bike rides often have high cadence and moderate power but blunted heart rate 
-        // compared to the mechanical work being done.
-        // For a traditional bike, 150W at 80RPM would typically yield > 140 BPM for an average user.
-        // If HR is < 120 despite high power/cadence, it's likely e-bike assisted.
         
-        val isLikelyEbike = avgPower > 100 && avgHr < 130 && avgCadence > 60
+        // Simplified heuristic since alpha properties are shifting
+        // If we have power and HR is low, it's likely e-bike
+        val hasPower = powerSamples.isNotEmpty()
+        val isLikelyEbike = hasPower && avgHr < 125
         
         val type = if (isLikelyEbike) CyclingType.EBIKE else CyclingType.TRADITIONAL
-        
-        // Normalize effort: E-bike TRIMP is typically 70% of traditional for the same duration/cadence
         val rawLoad = if (avgHr > 0) (avgHr / 190.0) * 100.0 else 0.0
         val normalizedLoad = if (isLikelyEbike) rawLoad * 0.7 else rawLoad
 

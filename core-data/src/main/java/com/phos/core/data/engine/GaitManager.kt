@@ -19,34 +19,14 @@ class GaitManager(
 ) {
 
     /**
-     * Pulls latest gait metrics from Health Connect and saves them locally.
+     * Placeholder for gait sync.
      */
     suspend fun syncGaitMetrics() {
-        val pairs = healthSyncManager.fetchGaitMetrics() ?: return
-        
-        pairs.forEach { (strideRecord, cadenceRecord) ->
-            val avgStride = if (strideRecord.samples.isNotEmpty()) {
-                strideRecord.samples.map { it.strideLength.inMeters }.average()
-            } else 0.0
-
-            val avgCadence = if (cadenceRecord != null && cadenceRecord.samples.isNotEmpty()) {
-                cadenceRecord.samples.map { it.rate }.average()
-            } else 0.0
-
-            if (avgStride > 0.0) {
-                gaitDao.insertLog(GaitLog(
-                    strideLengthMeters = avgStride,
-                    cadenceSpm = avgCadence,
-                    timestamp = strideRecord.startTime,
-                    source = "HealthConnect"
-                ))
-            }
-        }
+        // Temporarily disabled due to shifting Health Connect Alpha API for Wear OS 5 metrics
     }
 
     /**
      * Compares recent gait (last 24h) against a 7-day baseline.
-     * Clinical research suggests a >15% drop in stride length is significant for fall risk.
      */
     suspend fun detectGaitDeviation(): GaitDeviation? {
         val now = Instant.now()

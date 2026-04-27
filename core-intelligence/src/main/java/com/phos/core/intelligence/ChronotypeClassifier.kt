@@ -1,11 +1,10 @@
 package com.phos.core.intelligence
 
-import com.google.android.horologist.health.client.column
 import com.phos.core.data.model.Chronotype
 import com.phos.core.data.model.ChronotypeRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import java.time.Duration
-import java.time.LocalTime
+import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
@@ -48,9 +47,9 @@ class ChronotypeClassifier {
             return ChronotypeRecord(type = Chronotype.UNKNOWN, midSleepTimeMillis = 0L, confidence = 0.2f)
         }
 
-        val avgSDf = freeDaySleep.map { it.toMillis() }.average()
-        val avgSDw = if (workDaySleep.isNotEmpty()) workDaySleep.map { it.toMillis() }.average() else avgSDf
-        val avgMSF = freeDayMidPoints.average()
+        val avgSDf = freeDaySleep.map { it.toMillis().toDouble() }.average()
+        val avgSDw = if (workDaySleep.isNotEmpty()) workDaySleep.map { it.toMillis().toDouble() }.average() else avgSDf
+        val avgMSF = freeDayMidPoints.map { it.toDouble() }.average()
 
         // MSFsc Calculation (Corrected for oversleep on weekends)
         val msfSc = avgMSF - (avgSDf - avgSDw) / 2.0

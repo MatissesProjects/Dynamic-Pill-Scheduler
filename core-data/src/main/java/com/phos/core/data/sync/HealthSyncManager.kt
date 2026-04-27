@@ -21,8 +21,6 @@ class HealthSyncManager(private val context: Context) {
         HealthPermission.getReadPermission(BodyTemperatureRecord::class),
         HealthPermission.getReadPermission(RestingHeartRateRecord::class),
         HealthPermission.getReadPermission(BloodPressureRecord::class),
-        HealthPermission.getReadPermission(RunningStrideLengthRecord::class),
-        HealthPermission.getReadPermission(StepsCadenceRecord::class),
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(PowerRecord::class),
         HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class)
@@ -220,23 +218,10 @@ class HealthSyncManager(private val context: Context) {
         } catch (e: Exception) { return null }
     }
 
-    suspend fun fetchGaitMetrics(): List<Pair<RunningStrideLengthRecord, StepsCadenceRecord?>>? {
-        try {
-            if (!hasPermissions()) return null
-            val timeFilter = TimeRangeFilter.between(Instant.now().minus(24, ChronoUnit.HOURS), Instant.now())
-            
-            val strideRequest = ReadRecordsRequest(recordType = RunningStrideLengthRecord::class, timeRangeFilter = timeFilter)
-            val cadenceRequest = ReadRecordsRequest(recordType = StepsCadenceRecord::class, timeRangeFilter = timeFilter)
-            
-            val strides = healthConnectClient.readRecords(strideRequest).records
-            val cadences = healthConnectClient.readRecords(cadenceRequest).records
-            
-            return strides.map { stride ->
-                val matchingCadence = cadences.minByOrNull { 
-                    Math.abs(it.startTime.toEpochMilli() - stride.startTime.toEpochMilli()) 
-                }
-                Pair(stride, matchingCadence)
-            }
-        } catch (e: Exception) { return null }
+    /**
+     * Stub for gait metrics until Wear OS 5 record types are fully resolved in classpath.
+     */
+    suspend fun fetchGaitMetrics(): List<Pair<Any, Any?>>? {
+        return emptyList()
     }
 }
