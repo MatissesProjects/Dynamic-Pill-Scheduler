@@ -1,12 +1,10 @@
 package com.phos.core.intelligence
 
-import com.phos.core.data.dao.DoseLogDao
-import com.phos.core.data.dao.InteractionDao
-import com.phos.core.data.dao.IntelligenceDao
-import com.phos.core.data.dao.MedicationDao
+import com.phos.core.data.dao.*
 import com.phos.core.data.model.DoseLog
 import com.phos.core.data.model.FoodLog
 import com.phos.core.data.model.SymptomLog
+import com.phos.core.data.model.DreamLog
 import java.time.Instant
 
 class VoiceLogCoordinator(
@@ -14,6 +12,7 @@ class VoiceLogCoordinator(
     private val interactionDao: InteractionDao,
     private val medicationDao: MedicationDao,
     private val intelligenceDao: IntelligenceDao,
+    private val dreamDao: DreamDao,
     private val parser: VoiceEntityParser
 ) {
     /**
@@ -56,6 +55,17 @@ class VoiceLogCoordinator(
                 foodId = voiceFood.name.lowercase(),
                 name = voiceFood.name,
                 timestamp = now
+            ))
+        }
+
+        // 4. Log Dreams (T36)
+        entities.dreams.forEach { voiceDream ->
+            val today = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.withZone(java.time.ZoneId.systemDefault()).format(Instant.now())
+            dreamDao.insertLog(DreamLog(
+                date = today,
+                rawText = voiceDream.description,
+                intensity = 5,
+                vividness = 5
             ))
         }
 

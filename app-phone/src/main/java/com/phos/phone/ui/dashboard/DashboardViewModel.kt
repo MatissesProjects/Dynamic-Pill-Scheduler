@@ -47,6 +47,7 @@ class DashboardViewModel(
     private val metabolicDao = db.metabolicDao()
     private val sentimentDao = db.sentimentDao()
     private val caffeineDao = db.caffeineDao()
+    private val dreamDao = db.dreamDao()
 
     private val healthSyncManager = HealthSyncManager(application)
     private val gaitManager = GaitManager(gaitDao, healthSyncManager)
@@ -69,7 +70,7 @@ class DashboardViewModel(
     
     private val voiceParser = GeminiVoiceParser(nanoEngine)
     private val voiceLogCoordinator = VoiceLogCoordinator(
-        doseLogDao, interactionDao, medicationDao, intelligenceDao, voiceParser
+        doseLogDao, interactionDao, medicationDao, intelligenceDao, dreamDao, voiceParser
     )
     
     val voiceManager: VoiceManager = injectedVoiceManager ?: VoiceManager(application)
@@ -98,6 +99,56 @@ class DashboardViewModel(
             syncChronotype()
             syncMetabolicLoad()
             syncBetaBlockerSafety()
+            syncSleepRestorationAudit()
+        }
+    }
+
+    private fun syncSleepRestorationAudit() {
+        viewModelScope.launch {
+            val meds = medications.value
+            val betaBlockerNames = listOf("metoprolol", "atenolol", "bisoprolol", "carvedilol", "propranolol")
+            val hasBetaBlocker = meds.any { med -> 
+                betaBlockerNames.any { med.name.lowercase().contains(it) } 
+            }
+            
+            if (!hasBetaBlocker) {
+                _sleepRestorationAudit.value = null
+                return@launch
+            }
+            
+            val today = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.withZone(java.time.ZoneId.systemDefault()).format(Instant.now())
+            val sleepSamples = healthSyncManager.fetchSleepStages(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS), Instant.now()) ?: emptyList()
+            
+            if (sleepSamples.isEmpty()) return@launch
+            
+            val mappedSamples = sleepSamples.map { 
+                SleepStageSample(it.startTime, it.endTime, when(it.stage) {
+                    androidx.health.connect.client.records.SleepStageRecord.STAGE_TYPE_AWAKE -> SleepStage.AWAKE
+                    androidx.health.connect.client.records.SleepStageRecord.STAGE_TYPE_REM -> SleepStage.REM
+                    androidx.health.connect.client.records.SleepStageRecord.STAGE_TYPE_DEEP -> SleepStage.DEEP
+                    else -> SleepStage.LIGHT
+                })
+            }
+            
+            val fragmentation = remSafetyEngine.calculateFragmentationIndex(mappedSamples)
+            val dreamLogs = dreamDao.getLogsForDate(today)
+            val avgIntensity = if (dreamLogs.isNotEmpty()) dreamLogs.map { it.intensity }.average().toInt() else null
+            
+            _sleepRestorationAudit.value = remSafetyEngine.buildRestorationAudit(fragmentation, avgIntensity)
+        }
+    }
+
+    fun logDreamJournal(text: String) {
+        viewModelScope.launch {
+            val json = nanoEngine.synthesizeDreamIntensity(text)
+            val intensity = if (json != null) Regex("\"intensity\":\\s*(\\d+)").find(json)?.groupValues?.get(1)?.toInt() ?: 5 else 5
+            val vividness = if (json != null) Regex("\"vividness\":\\s*(\\d+)").find(json)?.groupValues?.get(1)?.toInt() ?: 5 else 5
+            
+            val today = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.withZone(java.time.ZoneId.systemDefault()).format(Instant.now())
+            dreamDao.insertLog(DreamLog(date = today, rawText = text, intensity = intensity, vividness = vividness))
+            
+            // Refresh audit after logging a dream
+            syncSleepRestorationAudit()
         }
     }
 
@@ -441,6 +492,9 @@ class DashboardViewModel(
     private val _betaBlockerInsights = MutableStateFlow<List<BetaBlockerInsight>>(emptyList())
     val betaBlockerInsights: StateFlow<List<BetaBlockerInsight>> = _betaBlockerInsights.asStateFlow()
 
+    private val _sleepRestorationAudit = MutableStateFlow<SleepRestorationAudit?>(null)
+    val sleepRestorationAudit: StateFlow<SleepRestorationAudit?> = _sleepRestorationAudit.asStateFlow()
+
     fun detectUpcomingTravel() {
         viewModelScope.launch {
             _travelProposal.value = jetLagManager.proposeAdvanceTitration(
@@ -631,8 +685,14 @@ class DashboardViewModel(
 
     fun processVoiceCommand(text: String) {
         viewModelScope.launch {
-            _voiceExtractedEntities.value = voiceLogCoordinator.processVoiceCommand(text)
+            val entities = voiceLogCoordinator.processVoiceCommand(text)
+            _voiceExtractedEntities.value = entities
             processSentiment(text)
+            
+            // Refresh sleep audit if dreams were detected
+            if (entities.dreams.isNotEmpty()) {
+                syncSleepRestorationAudit()
+            }
         }
     }
 

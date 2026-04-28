@@ -64,6 +64,7 @@ fun MainDashboard(
     healthGoals: List<HealthGoal>,
     optimizationSuggestions: List<OptimizationSuggestion>,
     betaBlockerInsights: List<BetaBlockerInsight>,
+    sleepRestorationAudit: SleepRestorationAudit?,
     sleepCalibrationInsight: SleepCalibrationInsight?,
     sleepSubjectiveLogs: List<SleepSubjectiveLog>,
     voiceState: VoiceState,
@@ -229,6 +230,7 @@ fun MainDashboard(
                     postureRecommendation = postureRecommendation,
                     travelProposal = travelProposal,
                     optimizationSuggestions = optimizationSuggestions,
+                    sleepRestorationAudit = sleepRestorationAudit,
                     sleepCalibrationInsight = sleepCalibrationInsight,
                     onUpdateMedication = onUpdateMedication,
                     onDeleteMedication = onDeleteMedication,
@@ -805,6 +807,7 @@ fun VerticalTimeline(
     postureRecommendation: PosturalRecommendation?,
     travelProposal: TravelProposal?,
     optimizationSuggestions: List<OptimizationSuggestion>,
+    sleepRestorationAudit: SleepRestorationAudit?,
     sleepCalibrationInsight: SleepCalibrationInsight?,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
@@ -869,6 +872,18 @@ fun VerticalTimeline(
 
         if (lastAiInsight.isNotEmpty()) {
             item { InsightCard(title = "AI Baseline Insight", insight = lastAiInsight, icon = Icons.Default.AutoAwesome, onDismiss = { onDismissInsight("baseline") }) }
+        }
+
+        sleepRestorationAudit?.let { audit ->
+            item {
+                InsightCard(
+                    title = "Sleep Restoration Audit: ${audit.remStabilityScore}/100 Stability",
+                    insight = audit.restorationMessage,
+                    icon = Icons.Default.Bedtime,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    onDismiss = { onDismissInsight("sleep_audit_${audit.date}") }
+                )
+            }
         }
         
         travelProposal?.let { proposal ->

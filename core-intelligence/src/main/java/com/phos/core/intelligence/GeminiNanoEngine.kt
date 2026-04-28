@@ -96,4 +96,19 @@ class GeminiNanoEngine(
         """.trimIndent()
         return generateResponse(prompt)
     }
+
+    /**
+     * M2: Dream vividness synthesis.
+     * Extracts intensity and vividness scores from a dream description.
+     */
+    suspend fun synthesizeDreamIntensity(dreamText: String): String? {
+        val prompt = """
+            Analyze this dream journal entry for intensity and vividness.
+            Intensity is the emotional or physical impact (1-10).
+            Vividness is the level of detail and clarity (1-10).
+            Return JSON: {intensity: Int, vividness: Int}
+            Text: "$dreamText"
+        """.trimIndent()
+        return generateResponse(prompt)
+    }
 }

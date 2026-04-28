@@ -36,7 +36,7 @@
 | T33 | Gastric Protection | **Safety:** AI-driven GI irritant detection and food-aligned buffering. | conductor/tracks/gastric-protection/ | Completed |
 | T34 | Sleep Pressure Modeling | **Circadian:** AI-driven adenosine drive tracking and nap forecasting. | conductor/tracks/sleep-pressure/ | Completed |
 | T35 | Beta-Blocker Side Effects | **Safety:** Monitor "Idle Speed" (bradycardia) and afternoon fatigue slumps. | conductor/tracks/beta-blocker-safety/ | Completed |
-| T36 | REM Stability & Dreams | **Circadian:** Analysis of REM fragmentation and vivid dream synthesis. | conductor/tracks/rem-architecture/ | Pending |
+| T36 | REM Stability & Dreams | **Circadian:** Analysis of REM fragmentation and vivid dream synthesis. | conductor/tracks/rem-architecture/ | Completed |
 | T37 | Muscle-Heart Mismatch | **Performance:** "Heavy Legs" detection via Cardio Load vs. Activity delta. | conductor/tracks/cardio-mismatch/ | Pending |
 | T38 | Heart Rate Recovery | **ANS Resilience:** Autonomic recovery speed monitoring across doses. | conductor/tracks/hr-recovery/ | Pending |
 | T39 | Heart Failure Warning | **Safety:** Predictive decompensation warning via multivariate fusion. | conductor/tracks/hf-warning/ | Pending |
@@ -76,9 +76,9 @@
 - [x] Create "Oxygenation Bout" light-activity reminders.
 
 #### T36: REM Stability & Dream Synthesis
-- [ ] Implement REM fragmentation detection from `SleepStageRecord`.
-- [ ] Use Gemini Nano to quantify dream vividness from voice logs.
-- [ ] Build "Sleep Restoration Audit" summary.
+- [x] Implement REM fragmentation detection from `SleepStageRecord`.
+- [x] Use Gemini Nano to quantify dream vividness from voice logs.
+- [x] Build "Sleep Restoration Audit" summary.
 
 #### T37: Muscle-Heart Mismatch (Heavy Legs)
 - [ ] Build heuristic to detect low Cardio Load during periods of high Step Rate.

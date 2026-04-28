@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
             val healthGoals by viewModel.healthGoals.collectAsState()
             val optimizationSuggestions by viewModel.optimizationSuggestions.collectAsState()
             val betaBlockerInsights by viewModel.betaBlockerInsights.collectAsState()
+            val sleepRestorationAudit by viewModel.sleepRestorationAudit.collectAsState()
             
             val sleepCalibrationInsight by viewModel.sleepCalibrationInsight.collectAsState()
             val sleepSubjectiveLogs by viewModel.sleepSubjectiveLogs.collectAsState()
@@ -71,6 +72,7 @@ class MainActivity : ComponentActivity() {
                         healthGoals = healthGoals,
                         optimizationSuggestions = optimizationSuggestions,
                         betaBlockerInsights = betaBlockerInsights,
+                        sleepRestorationAudit = sleepRestorationAudit,
                         sleepCalibrationInsight = sleepCalibrationInsight,
                         sleepSubjectiveLogs = sleepSubjectiveLogs,
                         voiceState = voiceState,
