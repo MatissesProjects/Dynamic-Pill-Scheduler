@@ -65,6 +65,8 @@ fun MainDashboard(
     optimizationSuggestions: List<OptimizationSuggestion>,
     betaBlockerInsights: List<BetaBlockerInsight>,
     sleepRestorationAudit: SleepRestorationAudit?,
+    dailyReadiness: DailyReadiness?,
+    cardioMismatch: CardioMismatchInsight?,
     sleepCalibrationInsight: SleepCalibrationInsight?,
     sleepSubjectiveLogs: List<SleepSubjectiveLog>,
     voiceState: VoiceState,
@@ -76,6 +78,7 @@ fun MainDashboard(
     onUpdateWakeTime: (Long) -> Unit,
     onToggleTimeFormat: (Boolean) -> Unit,
     onDismissInsight: (String) -> Unit,
+    onConfirmHeavyLegs: (CardioMismatchInsight) -> Unit,
     onRequestPRNAdvisory: (PRNMedication) -> Unit,
     onLogPRNDose: (PRNMedication) -> Unit,
     onClearPRNAdvisory: () -> Unit,
@@ -808,6 +811,8 @@ fun VerticalTimeline(
     travelProposal: TravelProposal?,
     optimizationSuggestions: List<OptimizationSuggestion>,
     sleepRestorationAudit: SleepRestorationAudit?,
+    dailyReadiness: DailyReadiness?,
+    cardioMismatch: CardioMismatchInsight?,
     sleepCalibrationInsight: SleepCalibrationInsight?,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
@@ -883,6 +888,49 @@ fun VerticalTimeline(
                     color = MaterialTheme.colorScheme.primaryContainer,
                     onDismiss = { onDismissInsight("sleep_audit_${audit.date}") }
                 )
+            }
+        }
+
+        dailyReadiness?.let { readiness ->
+            item {
+                InsightCard(
+                    title = "Daily Readiness: ${readiness.score}/100",
+                    insight = readiness.recommendation,
+                    icon = Icons.Default.Bolt,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    onDismiss = { onDismissInsight("readiness_${readiness.date}") }
+                )
+            }
+        }
+
+        cardioMismatch?.let { mismatch ->
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.HeartBroken, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Muscle-Heart Mismatch Detected", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                        }
+                        Text(
+                            text = "Your physical activity (Step Rate: ${"%.1f".format(mismatch.stepRate)}) is out-pacing your cardiac response (HR: ${"%.1f".format(mismatch.heartRate)}). This often feels like 'Heavy Legs'.",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                            TextButton(onClick = { onDismissInsight("mismatch_${mismatch.timestamp}") }) { Text("Dismiss") }
+                            Button(
+                                onClick = { onConfirmHeavyLegs(mismatch) },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Text("Confirm Heavy Legs")
+                            }
+                        }
+                    }
+                }
             }
         }
         

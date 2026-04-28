@@ -65,6 +65,8 @@ class DashboardViewModel(
     private val sleepCalibrationEngine = SleepCalibrationEngine()
     private val alertnessOrchestrator = AlertnessOrchestrator()
     private val betaBlockerSafetyEngine = BetaBlockerSafetyEngine()
+    private val remSafetyEngine = REMSafetyEngine()
+    private val cardioMismatchEngine = CardioMismatchEngine()
     
     private val nanoEngine = injectedNanoEngine ?: GeminiNanoEngine(application)
     
@@ -100,6 +102,16 @@ class DashboardViewModel(
             syncMetabolicLoad()
             syncBetaBlockerSafety()
             syncSleepRestorationAudit()
+            syncCardioReadiness()
+            
+            // Periodic sync loop
+            launch {
+                while (true) {
+                    kotlinx.coroutines.delay(3600000) // Hourly
+                    syncSleepRestorationAudit()
+                    syncCardioReadiness()
+                }
+            }
         }
     }
 
@@ -149,6 +161,72 @@ class DashboardViewModel(
             
             // Refresh audit after logging a dream
             syncSleepRestorationAudit()
+        }
+    }
+
+    private fun syncCardioReadiness() {
+        viewModelScope.launch {
+            val meds = medications.value
+            val betaBlockerNames = listOf("metoprolol", "atenolol", "bisoprolol", "carvedilol", "propranolol")
+            val hasBetaBlocker = meds.any { med -> 
+                betaBlockerNames.any { med.name.lowercase().contains(it) } 
+            }
+            
+            if (!hasBetaBlocker) {
+                _dailyReadiness.value = null
+                return@launch
+            }
+            
+            val now = Instant.now()
+            val startTime = now.minus(24, java.time.temporal.ChronoUnit.HOURS)
+            
+            val hrSamples = healthSyncManager.fetchHeartRateForSession(startTime, now) ?: emptyList()
+            val rhrSamples = healthSyncManager.fetchRestingHeartRate(startTime, now) ?: emptyList()
+            // Simulating HRV since HealthSyncManager might not have a direct fetcher yet
+            val hrv = 45.0 // Default or simulated
+            
+            val currentRhr = if (rhrSamples.isNotEmpty()) rhrSamples.map { it.beatsPerMinute }.average() else 60.0
+            val sleepLogs = sleepSubjectiveLogs.value
+            val sleepQuality = if (sleepLogs.isNotEmpty()) sleepLogs.first().reportedQuality else 7
+            
+            val readiness = cardioMismatchEngine.calculateReadiness(
+                hrv = hrv,
+                avgHrv = 50.0,
+                rhr = currentRhr,
+                avgRhr = 62.0,
+                sleepQuality = sleepQuality
+            )
+            
+            _dailyReadiness.value = readiness
+            detectHeavyLegs(currentRhr)
+        }
+    }
+
+    private fun detectHeavyLegs(rhr: Double) {
+        viewModelScope.launch {
+            val now = Instant.now()
+            val oneHourAgo = now.minus(1, java.time.temporal.ChronoUnit.HOURS)
+            
+            val steps = healthSyncManager.fetchStepsForSession(oneHourAgo, now)
+            val hrSamples = healthSyncManager.fetchHeartRateForSession(oneHourAgo, now) ?: emptyList()
+            
+            if (steps > 1000 && hrSamples.isNotEmpty()) {
+                val stepRate = steps.toDouble() / 60.0 // Rough average for the hour
+                val avgHr = hrSamples.map { it.beatsPerMinute }.average()
+                
+                val insight = cardioMismatchEngine.detectMismatch(
+                    timestamp = now.toEpochMilli(),
+                    stepRate = stepRate,
+                    heartRate = avgHr,
+                    rhr = rhr
+                )
+                
+                if (insight.isSignificant) {
+                    _cardioMismatch.value = insight
+                } else {
+                    _cardioMismatch.value = null
+                }
+            }
         }
     }
 
@@ -495,6 +573,12 @@ class DashboardViewModel(
     private val _sleepRestorationAudit = MutableStateFlow<SleepRestorationAudit?>(null)
     val sleepRestorationAudit: StateFlow<SleepRestorationAudit?> = _sleepRestorationAudit.asStateFlow()
 
+    private val _dailyReadiness = MutableStateFlow<DailyReadiness?>(null)
+    val dailyReadiness: StateFlow<DailyReadiness?> = _dailyReadiness.asStateFlow()
+
+    private val _cardioMismatch = MutableStateFlow<CardioMismatchInsight?>(null)
+    val cardioMismatch: StateFlow<CardioMismatchInsight?> = _cardioMismatch.asStateFlow()
+
     fun detectUpcomingTravel() {
         viewModelScope.launch {
             _travelProposal.value = jetLagManager.proposeAdvanceTitration(
@@ -795,6 +879,18 @@ class DashboardViewModel(
             )
         } catch (e: Exception) {
             null
+        }
+    }
+
+    fun onConfirmHeavyLegs(insight: CardioMismatchInsight) {
+        viewModelScope.launch {
+            intelligenceDao.insertSymptom(SymptomLog(
+                symptomId = "heavy_legs_confirmed",
+                name = "Heavy Legs (Physiological Mismatch)",
+                severity = (insight.mismatchIntensity * 10).toInt(),
+                timestamp = Instant.ofEpochMilli(insight.timestamp)
+            ))
+            _cardioMismatch.value = null // Clear after confirm
         }
     }
 

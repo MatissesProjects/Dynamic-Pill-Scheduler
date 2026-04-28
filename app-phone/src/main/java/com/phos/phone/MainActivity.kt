@@ -44,6 +44,8 @@ class MainActivity : ComponentActivity() {
             val optimizationSuggestions by viewModel.optimizationSuggestions.collectAsState()
             val betaBlockerInsights by viewModel.betaBlockerInsights.collectAsState()
             val sleepRestorationAudit by viewModel.sleepRestorationAudit.collectAsState()
+            val dailyReadiness by viewModel.dailyReadiness.collectAsState()
+            val cardioMismatch by viewModel.cardioMismatch.collectAsState()
             
             val sleepCalibrationInsight by viewModel.sleepCalibrationInsight.collectAsState()
             val sleepSubjectiveLogs by viewModel.sleepSubjectiveLogs.collectAsState()
@@ -73,6 +75,8 @@ class MainActivity : ComponentActivity() {
                         optimizationSuggestions = optimizationSuggestions,
                         betaBlockerInsights = betaBlockerInsights,
                         sleepRestorationAudit = sleepRestorationAudit,
+                        dailyReadiness = dailyReadiness,
+                        cardioMismatch = cardioMismatch,
                         sleepCalibrationInsight = sleepCalibrationInsight,
                         sleepSubjectiveLogs = sleepSubjectiveLogs,
                         voiceState = voiceState,
@@ -97,6 +101,9 @@ class MainActivity : ComponentActivity() {
                         },
                         onDismissInsight = { id ->
                             viewModel.dismissInsight(id)
+                        },
+                        onConfirmHeavyLegs = { insight ->
+                            viewModel.onConfirmHeavyLegs(insight)
                         },
                         onRequestPRNAdvisory = { med ->
                             viewModel.requestPRNAdvisory(med)

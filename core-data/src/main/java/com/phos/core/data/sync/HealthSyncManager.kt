@@ -152,6 +152,28 @@ class HealthSyncManager(private val context: Context) {
         } catch (e: Exception) { return null }
     }
 
+    suspend fun fetchRestingHeartRate(startTime: Instant, endTime: Instant): List<RestingHeartRateRecord>? {
+        try {
+            if (!hasPermissions()) return null
+            val request = ReadRecordsRequest(
+                recordType = RestingHeartRateRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+            )
+            return healthConnectClient.readRecords(request).records
+        } catch (e: Exception) { return null }
+    }
+
+    suspend fun fetchHrv(startTime: Instant, endTime: Instant): List<HeartRateVariabilityRmssdRecord>? {
+        try {
+            if (!hasPermissions()) return null
+            val request = ReadRecordsRequest(
+                recordType = HeartRateVariabilityRmssdRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+            )
+            return healthConnectClient.readRecords(request).records
+        } catch (e: Exception) { return null }
+    }
+
     suspend fun fetchHeartRateForSession(startTime: Instant, endTime: Instant): List<HeartRateRecord.Sample>? {
         try {
             if (!hasPermissions()) return null

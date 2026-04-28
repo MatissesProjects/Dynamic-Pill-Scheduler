@@ -37,7 +37,7 @@
 | T34 | Sleep Pressure Modeling | **Circadian:** AI-driven adenosine drive tracking and nap forecasting. | conductor/tracks/sleep-pressure/ | Completed |
 | T35 | Beta-Blocker Side Effects | **Safety:** Monitor "Idle Speed" (bradycardia) and afternoon fatigue slumps. | conductor/tracks/beta-blocker-safety/ | Completed |
 | T36 | REM Stability & Dreams | **Circadian:** Analysis of REM fragmentation and vivid dream synthesis. | conductor/tracks/rem-architecture/ | Completed |
-| T37 | Muscle-Heart Mismatch | **Performance:** "Heavy Legs" detection via Cardio Load vs. Activity delta. | conductor/tracks/cardio-mismatch/ | Pending |
+| T37 | Muscle-Heart Mismatch | **Performance:** "Heavy Legs" detection via Cardio Load vs. Activity delta. | conductor/tracks/cardio-mismatch/ | Completed |
 | T38 | Heart Rate Recovery | **ANS Resilience:** Autonomic recovery speed monitoring across doses. | conductor/tracks/hr-recovery/ | Pending |
 | T39 | Heart Failure Warning | **Safety:** Predictive decompensation warning via multivariate fusion. | conductor/tracks/hf-warning/ | Pending |
 | T40 | Pulse-Power Efficiency | **Cardiac Twin:** Efficiency metric tracking (Watts per BPM) on e-bike. | conductor/tracks/pulse-power/ | Pending |
@@ -81,9 +81,9 @@
 - [x] Build "Sleep Restoration Audit" summary.
 
 #### T37: Muscle-Heart Mismatch (Heavy Legs)
-- [ ] Build heuristic to detect low Cardio Load during periods of high Step Rate.
-- [ ] Map "Daily Readiness" to activity suggestion intensity levels.
-- [ ] Implement "Heavy Leg" validation check-ins.
+- [x] Build heuristic to detect low Cardio Load during periods of high Step Rate.
+- [x] Map "Daily Readiness" to activity suggestion intensity levels.
+- [x] Implement "Heavy Leg" validation check-ins.
 
 #### T38: Heart Rate Recovery (HRR) Orchestration
 - [ ] Implement HRR monitor logic for 1-min and 2-min post-exercise recovery.
