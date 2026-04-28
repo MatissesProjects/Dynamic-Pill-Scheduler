@@ -69,6 +69,9 @@ class DashboardViewModel(
     private val remSafetyEngine = REMSafetyEngine()
     private val cardioMismatchEngine = CardioMismatchEngine()
     private val hrrOrchestrator = HRROrchestrator()
+    private val hfDecompensationEngine = HFDecompensationEngine()
+    private val pulsePowerEngine = PulsePowerEngine()
+    private val nocturnalRespiratoryEngine = NocturnalRespiratoryEngine()
     
     private val nanoEngine = injectedNanoEngine ?: GeminiNanoEngine(application)
     
@@ -106,6 +109,9 @@ class DashboardViewModel(
             syncSleepRestorationAudit()
             syncCardioReadiness()
             syncHrrAudit()
+            syncHFDecompensation()
+            syncPulsePowerEfficiency()
+            syncNocturnalRespiratoryStrain()
             
             // Periodic sync loop
             launch {
@@ -114,6 +120,9 @@ class DashboardViewModel(
                     syncSleepRestorationAudit()
                     syncCardioReadiness()
                     syncHrrAudit()
+                    syncHFDecompensation()
+                    syncPulsePowerEfficiency()
+                    syncNocturnalRespiratoryStrain()
                 }
             }
         }
@@ -633,6 +642,90 @@ class DashboardViewModel(
 
     private val _hrrAudit = MutableStateFlow<HRRAudit?>(null)
     val hrrAudit: StateFlow<HRRAudit?> = _hrrAudit.asStateFlow()
+
+    private val _hfInsight = MutableStateFlow<HFDecompensationInsight?>(null)
+    val hfInsight: StateFlow<HFDecompensationInsight?> = _hfInsight.asStateFlow()
+
+    private val _efficiencyInsight = MutableStateFlow<EfficiencyInsight?>(null)
+    val efficiencyInsight: StateFlow<EfficiencyInsight?> = _efficiencyInsight.asStateFlow()
+
+    private val _congestionInsight = MutableStateFlow<CongestionInsight?>(null)
+    val congestionInsight: StateFlow<CongestionInsight?> = _congestionInsight.asStateFlow()
+
+    private fun syncHFDecompensation() {
+        viewModelScope.launch {
+            val now = Instant.now()
+            val weekAgo = now.minus(7, java.time.temporal.ChronoUnit.DAYS)
+            
+            // In a real app, we'd fetch these from healthSyncManager
+            // For now we simulate trend data
+            val current = HFTrendData(
+                avgRespiratoryRate = 18.5,
+                avgOxygenSaturation = 94.0,
+                avgRestingHeartRate = 72.0,
+                avgHrv = 38.0
+            )
+            val baseline = HFTrendData(
+                avgRespiratoryRate = 16.0,
+                avgOxygenSaturation = 98.0,
+                avgRestingHeartRate = 65.0,
+                avgHrv = 45.0
+            )
+            
+            val insight = hfDecompensationEngine.calculateFluidProxy(current, baseline)
+            _hfInsight.value = insight
+            
+            // Tighten diuretic safe-gaps if needed (T39 M3)
+            if (insight.riskLevel == HFRiskLevel.ELEVATED || insight.riskLevel == HFRiskLevel.CRITICAL) {
+                val adjustment = hfDecompensationEngine.getSafetyTighteningMillis(insight.riskLevel)
+                dataLayerRepository.updateSafetyTightening(adjustment)
+            }
+        }
+    }
+
+    private fun syncPulsePowerEfficiency() {
+        viewModelScope.launch {
+            val now = Instant.now()
+            val exercises = healthSyncManager.fetchRecentExercises() ?: return@launch
+            val cyclingSessions = exercises.filter { it.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_CYCLING }
+            
+            if (cyclingSessions.isNotEmpty()) {
+                val lastSession = cyclingSessions.first()
+                val hr = healthSyncManager.fetchHeartRateForSession(lastSession.startTime, lastSession.endTime) ?: emptyList()
+                val power = healthSyncManager.fetchPowerForSession(lastSession.startTime, lastSession.endTime) ?: emptyList()
+                
+                val metrics = power.mapNotNull { p ->
+                    val matchingHr = hr.minByOrNull { Math.abs(it.time.toEpochMilli() - p.time.toEpochMilli()) }
+                    matchingHr?.let { PulsePowerMetric(p.time, p.power, it.beatsPerMinute) }
+                }
+                
+                val insight = pulsePowerEngine.calculateEfficiency(metrics, 1.0) // Assume 1.0 as baseline
+                _efficiencyInsight.value = insight
+            }
+        }
+    }
+
+    private fun syncNocturnalRespiratoryStrain() {
+        viewModelScope.launch {
+            val now = Instant.now()
+            val lastNight = now.minus(12, java.time.temporal.ChronoUnit.HOURS)
+            
+            val rr = healthSyncManager.fetchRespiratoryRate(lastNight, now) ?: emptyList()
+            val spo2 = healthSyncManager.fetchOxygenSaturation(lastNight, now) ?: emptyList()
+            
+            // In a real app, we'd cross-reference with sleep position sensor data
+            val metrics = rr.map { r ->
+                NocturnalRespiratoryMetric(
+                    timestamp = r.time,
+                    respiratoryRate = r.rate,
+                    sleepPosition = if (r.time.toEpochMilli() % 2 == 0L) SleepPosition.FLAT else SleepPosition.PROPPED_UP,
+                    oxygenSaturation = spo2.minByOrNull { Math.abs(it.time.toEpochMilli() - r.time.toEpochMilli()) }?.value ?: 95.0
+                )
+            }
+            
+            _congestionInsight.value = nocturnalRespiratoryEngine.analyzeCongestion(metrics)
+        }
+    }
 
     fun detectUpcomingTravel() {
         viewModelScope.launch {

@@ -111,4 +111,24 @@ class GeminiNanoEngine(
         """.trimIndent()
         return generateResponse(prompt)
     }
+
+    /**
+     * M2: HF Decompensation predictive reasoning.
+     */
+    suspend fun analyzeHFDecompensationRisk(
+        currentRR: Double,
+        baselineRR: Double,
+        currentSpO2: Double,
+        baselineSpO2: Double,
+        currentRHR: Double,
+        baselineRHR: Double
+    ): String? {
+        val prompt = """
+            Analyze these heart failure metrics for 48-hour decompensation risk.
+            Current Metrics: RR: $currentRR, SpO2: $currentSpO2%, RHR: $currentRHR BPM.
+            Baseline: RR: $baselineRR, SpO2: $baselineSpO2%, RHR: $baselineRHR BPM.
+            Return JSON: {predictedRisk: "Low/Elevated/Critical", reasoning: "Clinical reasoning", outlook48h: "Prediction summary"}
+        """.trimIndent()
+        return generateResponse(prompt)
+    }
 }
