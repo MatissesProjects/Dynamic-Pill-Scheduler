@@ -41,11 +41,10 @@ overview of the PHOS project architecture, testing strategy, and setup requireme
   area for expansion. We have a robust setup for Multimodal AI and Health Sync, but ensuring these complex asynchronous
   flows are comprehensively covered by automated tests is the next critical priority.
 
-  5. Completed Track: T35 - Beta-Blocker Side Effects
-  We have successfully implemented Track 35, providing physiological monitoring for Beta-Blocker users.
-  Key achievements:
-   * Idle Speed Monitor: Implemented morning bradycardia detection (RHR < 50 BPM) in the 30-minute post-wake window.
-   * 6-Hour Slump Correlation: Built logic to map HR drops (>15% below daily average) to the 6-hour post-dose metabolic peak.
-   * Oxygenation Bouts: Integrated automated suggestions for 5-minute light activity during metabolic slumps.
-   * UI Integration: Insights are dynamically rendered in the Vertical Timeline with specific icons (Warning, BatteryAlert, DirectionsWalk).
-   * Verification: Validated the `BetaBlockerSafetyEngine` with exhaustive unit tests (100% pass rate).
+  5. Completed Tracks: T35 - T37 (Physiological Performance & Safety)
+  We have successfully implemented a major block of performance and safety features:
+   * T35: Beta-Blocker Safety: Built the "Idle Speed" monitor (bradycardia) and 6-hour post-dose fatigue correlation.
+   * T36: REM Stability & Dreams: Implemented REM fragmentation detection and used Gemini Nano to synthesize dream vividness from voice logs.
+   * T37: Muscle-Heart Mismatch: Created the "Heavy Legs" detector (Activity vs. HR delta) and the internal PHOS "Daily Readiness" scoring system.
+   * UI/UX: All insights (bradycardia, REM stability, readiness, and mismatches) are dynamically rendered in the Vertical Timeline with context-aware icons.
+   * Testing: All new engines (BetaBlockerSafety, REMSafety, CardioMismatch) are covered by exhaustive unit tests with 100% pass rate.
