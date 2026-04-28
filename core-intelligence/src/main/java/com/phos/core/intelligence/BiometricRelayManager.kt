@@ -4,9 +4,15 @@ import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.util.Log
+import com.phos.core.intelligence.proto.RelayRequest
+import com.phos.core.intelligence.proto.RelayResponse
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.protobuf.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -111,17 +117,25 @@ class BiometricRelayManager(
     /**
      * Offloads biometric deltas to the discovered node.
      */
-    suspend fun offloadData(data: ByteArray): Boolean = withContext(ioDispatcher) {
-        val node = _discoveredNode.value ?: return@withContext false
+    suspend fun offloadData(request: RelayRequest): RelayResponse? = withContext(ioDispatcher) {
+        val node = _discoveredNode.value ?: return@withContext null
         try {
-            // Placeholder for actual Protobuf POST request
             @Suppress("DEPRECATION")
-            Log.i(TAG, "Offloading ${data.size} bytes to ${node.host}:${node.port}")
-            // client.post("http://${node.host}:${node.port}/sync") { setBody(data) }
-            true
+            Log.i(TAG, "Offloading data to ${node.host}:${node.port}")
+            val response: HttpResponse = client.post("http://${node.host}:${node.port}/sync") {
+                contentType(ContentType.Application.ProtoBuf)
+                setBody(request)
+            }
+            
+            if (response.status == HttpStatusCode.OK) {
+                response.body<RelayResponse>()
+            } else {
+                Log.e(TAG, "Server returned error: ${response.status}")
+                null
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Data offload failed", e)
-            false
+            null
         }
     }
 }

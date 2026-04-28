@@ -25,6 +25,9 @@ interface IntelligenceDao {
     @Query("SELECT * FROM symptom_logs ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getRecentSymptoms(limit: Int): List<SymptomLog>
 
+    @Query("SELECT * FROM symptom_logs WHERE timestamp >= :since ORDER BY timestamp DESC")
+    suspend fun getRecentSymptoms(since: Instant): List<SymptomLog>
+
     @Query("SELECT * FROM environmental_logs ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getRecentEnvironmental(limit: Int): List<EnvironmentalLog>
 }

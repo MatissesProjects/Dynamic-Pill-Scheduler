@@ -51,4 +51,11 @@ class BiometricRelayManagerTest {
         val result = relayManager.authenticate(serviceInfo)
         assert(result)
     }
+
+    @Test
+    fun `test offloadData returns null when no node discovered`() = runTest(testDispatcher) {
+        val request = mock<com.phos.core.intelligence.proto.RelayRequest>()
+        val result = relayManager.offloadData(request)
+        assert(result == null)
+    }
 }

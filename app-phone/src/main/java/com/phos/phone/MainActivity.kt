@@ -15,15 +15,21 @@ import com.phos.phone.ui.dashboard.DashboardViewModel
 import com.phos.core.data.proto.PhosState
 import com.phos.phone.ui.theme.PhosTheme
 import kotlinx.coroutines.launch
+import com.phos.core.intelligence.LocalSyncWorker
 
 class MainActivity : ComponentActivity() {
-    
+
     private val viewModel: DashboardViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
+        // Schedule overnight local sync
+        LocalSyncWorker.schedule(this)
+
         setContent {
+...
+
             val scope = rememberCoroutineScope()
             val medications by viewModel.medications.collectAsState()
             val prnMedications by viewModel.prnMedications.collectAsState()
