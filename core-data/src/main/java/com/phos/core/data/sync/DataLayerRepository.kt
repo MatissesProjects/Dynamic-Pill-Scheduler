@@ -58,6 +58,14 @@ class DataLayerRepository(
         }
     }
 
+    suspend fun updateSafetyTightening(millis: Long) {
+        dataStore.updateData { currentState ->
+            currentState.toBuilder()
+                .setSafetyTighteningMillis(millis)
+                .build()
+        }
+    }
+
     suspend fun addMedication(medicationId: String, name: String, scheduledTime: Long) {
         dataStore.updateData { currentState ->
             val medication = com.phos.core.data.proto.Medication.newBuilder()
