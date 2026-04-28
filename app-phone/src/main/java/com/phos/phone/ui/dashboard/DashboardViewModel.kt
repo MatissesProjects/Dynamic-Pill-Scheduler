@@ -46,6 +46,7 @@ class DashboardViewModel(
     private val chronotypeDao = db.chronotypeDao()
     private val metabolicDao = db.metabolicDao()
     private val sentimentDao = db.sentimentDao()
+    private val caffeineDao = db.caffeineDao()
 
     private val healthSyncManager = HealthSyncManager(application)
     private val gaitManager = GaitManager(gaitDao, healthSyncManager)
@@ -54,6 +55,7 @@ class DashboardViewModel(
     private val ebikeNormalizer = EbikeEffortNormalizer()
     private val stressSynthesisEngine = StressSynthesisEngine()
     private val giProtectionEngine = GIProtectionEngine()
+    private val adenosineEngine = AdenosineEngine()
     private val napManager = NapManager(healthSyncManager)
     private val postureIntelligence = PostureIntelligence()
     private val jetLagManager = JetLagManager()
@@ -232,6 +234,14 @@ class DashboardViewModel(
     val symptomLogs: StateFlow<List<SymptomLog>> = intelligenceDao.getSymptomsSince(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val caffeineLogs: StateFlow<List<CaffeineLog>> = caffeineDao.getAllLogsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val adenosineState: StateFlow<SleepPressureState?> = combine(temporalAnchorFlow, caffeineLogs) { anchor, caffeine ->
+        if (anchor == null) null
+        else adenosineEngine.calculateCurrentState(anchor.wakeTime, caffeine)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val giProtectionInsights: StateFlow<List<String>> = combine(medications, giIrritantIds, symptomLogs) { meds, irritants, symptoms ->
         val culprits = giProtectionEngine.correlateStomachPain(meds, irritants, symptoms)
         if (culprits.isNotEmpty()) {
@@ -304,13 +314,15 @@ class DashboardViewModel(
     val nocturiaLogs: StateFlow<List<NocturiaLog>> = nocturiaDao.getNocturiaLogsSince(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val optimizationSuggestions: StateFlow<List<OptimizationSuggestion>> = combine(healthGoals, medications, phosState, temporalAnchorFlow, nocturiaLogs, chronotype, metabolicLogs) { goals, meds, state, anchor, nocturia, chrono, metabolic ->
+    val optimizationSuggestions: StateFlow<List<OptimizationSuggestion>> = combine(
+        healthGoals, medications, phosState, temporalAnchorFlow, nocturiaLogs, chronotype, metabolicLogs, adenosineState
+    ) { goals, meds, state, anchor, nocturia, chrono, metabolic, adenosine ->
         if (anchor == null) emptyList()
         else {
             val betaBlockerNames = listOf("metoprolol", "atenolol", "bisoprolol", "carvedilol", "propranolol")
             val hasBetaBlocker = meds.any { med -> betaBlockerNames.any { med.name.lowercase().contains(it) } }
             
-            goalOptimizationEngine.evaluateGoals(
+            val suggestions = goalOptimizationEngine.evaluateGoals(
                 goals = goals, 
                 medications = meds, 
                 mealPreferences = if(state.hasMealPreferences()) state.mealPreferences else MealPreferences.getDefaultInstance(), 
@@ -319,7 +331,20 @@ class DashboardViewModel(
                 chronotype = chrono?.type ?: Chronotype.NEUTRAL,
                 metabolicLogs = metabolic,
                 isOnBetaBlocker = hasBetaBlocker
-            )
+            ).toMutableList()
+
+            // 7. Adenosine / Nap Propensity Safety
+            if (adenosine != null && adenosine.napPropensityScore > 80) {
+                suggestions.add(OptimizationSuggestion(
+                    goalId = -20,
+                    id = "high_sleep_pressure",
+                    title = "Critical Sleep Pressure",
+                    description = "AI models show extreme homeostatic sleep pressure (Propensity: ${adenosine.napPropensityScore}%). To stay awake and safe, we recommend a 15-min E-Bike alertness micro-bout now.",
+                    suggestedMedicationShifts = emptyMap()
+                ))
+            }
+            
+            suggestions
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -526,6 +551,12 @@ class DashboardViewModel(
     fun logAppetite(hunger: Int, difficulty: Int) {
         viewModelScope.launch {
             appetiteDao.insertAppetiteLog(AppetiteLog(hungerLevel = hunger, difficultyLevel = difficulty))
+        }
+    }
+
+    fun logCaffeine(mg: Int, source: String) {
+        viewModelScope.launch {
+            caffeineDao.insertLog(CaffeineLog(mg = mg, source = source))
         }
     }
 

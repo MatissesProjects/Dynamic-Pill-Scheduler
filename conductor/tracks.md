@@ -34,7 +34,7 @@
 | T31 | Micro-Mobility Orchestration | **Mobility:** e-bike assistance optimization for heart-medication users. | conductor/tracks/ebike-orchestration/ | Completed |
 | T32 | Activity-Based Wakefulness | **Alertness:** Suppress nap drives using scheduled workout reminders. | conductor/tracks/alertness-orchestration/ | Completed |
 | T33 | Gastric Protection | **Safety:** AI-driven GI irritant detection and food-aligned buffering. | conductor/tracks/gastric-protection/ | Completed |
-| T34 | Sleep Pressure Modeling | **Circadian:** AI-driven adenosine drive tracking and nap forecasting. | conductor/tracks/sleep-pressure/ | Pending |
+| T34 | Sleep Pressure Modeling | **Circadian:** AI-driven adenosine drive tracking and nap forecasting. | conductor/tracks/sleep-pressure/ | Completed |
 | T35 | Beta-Blocker Side Effects | **Safety:** Monitor "Idle Speed" (bradycardia) and afternoon fatigue slumps. | conductor/tracks/beta-blocker-safety/ | Pending |
 | T36 | REM Stability & Dreams | **Circadian:** Analysis of REM fragmentation and vivid dream synthesis. | conductor/tracks/rem-architecture/ | Pending |
 | T37 | Muscle-Heart Mismatch | **Performance:** "Heavy Legs" detection via Cardio Load vs. Activity delta. | conductor/tracks/cardio-mismatch/ | Pending |
@@ -66,9 +66,9 @@
 - [x] Correlate stomach pain logs with irritant dose proximity.
 
 #### T34: Sleep Pressure Modeling (Adenosine Drive)
-- [ ] Implement `AdenosineEngine` to model sleep pressure accumulation.
-- [ ] Build "Nap Propensity" forecasting UI.
-- [ ] Correlate caffeine intake with adenosine receptor blocking.
+- [x] Implement `AdenosineEngine` to model sleep pressure accumulation.
+- [x] Build "Nap Propensity" forecasting UI.
+- [x] Correlate caffeine intake with adenosine receptor blocking.
 
 #### T35: Beta-Blocker Side-Effect Tracking
 - [ ] Build "Idle Speed" RHR monitor for morning bradycardia detection.
