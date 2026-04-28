@@ -42,7 +42,7 @@
 | T39 | Heart Failure Warning | **Safety:** Predictive decompensation warning via multivariate fusion. | conductor/tracks/hf-warning/ | Completed |
 | T40 | Pulse-Power Efficiency | **Cardiac Twin:** Efficiency metric tracking (Watts per BPM) on e-bike. | conductor/tracks/pulse-power/ | Completed |
 | T41 | Respiration & Congestion | **Safety:** Nocturnal respiratory strain detection (fluid proxy). | conductor/tracks/nocturnal-resp/ | Completed |
-| T42 | Alcohol & Metabolic Load Synthesis | **Safety:** CYP450 competition tracking for spirits and fermented beverages. | conductor/tracks/alcohol-metabolism/ | Proposed |
+| T42 | Alcohol & Metabolic Load Synthesis | **Safety:** CYP450 competition tracking for spirits and fermented beverages. | conductor/tracks/alcohol-metabolism/ | Completed |
 | T43 | Orthostatic Posture & Biomechanics | **Safety:** Wearable barometer + CV posture analysis for BP drops. | conductor/tracks/orthostatic-posture/ | Proposed |
 | T44 | Micronutrient Chelation Avoidance | **Intelligence:** Timing doses around calcium-fortified dairy-free alternatives. | conductor/tracks/chelation-avoidance/ | Proposed |
 | T45 | Environmental Respiratory Strain | **Context:** Localized AQI/particulate fusion with nocturnal SpO2. | conductor/tracks/environmental-resp/ | Proposed |
@@ -111,9 +111,9 @@
 - [x] Create "Clinical Consultation" alerts for persistent congestion signals.
 
 #### T42: Alcohol & Metabolic Load Synthesis
-- [ ] Build `MetabolicClearanceEngine` to adjust medication half-life models.
-- [ ] Implement "First-Pass Metabolism" alerts for nighttime dose delays.
-- [ ] Correlate RHR spikes and HRV drops with specific beverage types.
+- [x] Build `MetabolicClearanceEngine` to adjust medication half-life models.
+- [x] Implement "First-Pass Metabolism" alerts for nighttime dose delays.
+- [x] Correlate RHR spikes and HRV drops with specific beverage types.
 
 #### T43: Orthostatic Posture & Biomechanics
 - [ ] Utilize Wear OS barometer data to detect rapid vertical transitions.

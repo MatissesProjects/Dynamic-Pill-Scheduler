@@ -49,11 +49,14 @@ class DashboardViewModel(
     private val caffeineDao = db.caffeineDao()
     private val dreamDao = db.dreamDao()
     private val hrrDao = db.hrrDao()
+    private val alcoholDao = db.alcoholDao()
+    private val userProfileDao = db.userProfileDao()
 
     private val healthSyncManager = HealthSyncManager(application)
     private val gaitManager = GaitManager(gaitDao, healthSyncManager)
     private val chronotypeClassifier = ChronotypeClassifier()
     private val metabolicEngine = MetabolicEngine()
+    private val metabolicClearanceEngine = MetabolicClearanceEngine()
     private val ebikeNormalizer = EbikeEffortNormalizer()
     private val stressSynthesisEngine = StressSynthesisEngine()
     private val giProtectionEngine = GIProtectionEngine()
@@ -112,6 +115,7 @@ class DashboardViewModel(
             syncHFDecompensation()
             syncPulsePowerEfficiency()
             syncNocturnalRespiratoryStrain()
+            syncMetabolicClearance()
             
             // Periodic sync loop
             launch {
@@ -123,8 +127,28 @@ class DashboardViewModel(
                     syncHFDecompensation()
                     syncPulsePowerEfficiency()
                     syncNocturnalRespiratoryStrain()
+                    syncMetabolicClearance()
                 }
             }
+        }
+    }
+
+    fun logAlcohol(beverageType: BeverageType, abv: Double, volumeMl: Double) {
+        viewModelScope.launch {
+            alcoholDao.insertLog(AlcoholLog(
+                timestamp = Instant.now(),
+                beverageType = beverageType,
+                abv = abv,
+                volumeMl = volumeMl
+            ))
+            syncMetabolicClearance()
+        }
+    }
+
+    fun updateUserProfile(weightKg: Double, gender: Gender) {
+        viewModelScope.launch {
+            userProfileDao.updateProfile(UserProfile(weightKg = weightKg, gender = gender))
+            syncMetabolicClearance()
         }
     }
 
@@ -651,6 +675,34 @@ class DashboardViewModel(
 
     private val _congestionInsight = MutableStateFlow<CongestionInsight?>(null)
     val congestionInsight: StateFlow<CongestionInsight?> = _congestionInsight.asStateFlow()
+
+    private val _ebac = MutableStateFlow<Double>(0.0)
+    val ebac: StateFlow<Double> = _ebac.asStateFlow()
+
+    val alcoholLogs: StateFlow<List<AlcoholLog>> = alcoholDao.getAllLogsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val userProfile: StateFlow<UserProfile?> = userProfileDao.getUserProfileFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private fun syncMetabolicClearance() {
+        viewModelScope.launch {
+            val profile = userProfile.value ?: return@launch
+            val recentLogs = alcoholDao.getLogsSince(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))
+            val currentBAC = metabolicClearanceEngine.calculateEBAC(recentLogs, profile)
+            _ebac.value = currentBAC
+            
+            if (currentBAC > 0.05) {
+                // High BAC Alert: Correlate with medications
+                val activeMeds = medications.value.filter { it.metabolicPathway != null }
+                if (activeMeds.isNotEmpty()) {
+                    val names = activeMeds.map { it.name }.distinct()
+                    // Propose delay for next doses if liver is monopolized (T42 M2)
+                    // (Implementation detail: This would trigger a notification or timeline warning)
+                }
+            }
+        }
+    }
 
     private fun syncHFDecompensation() {
         viewModelScope.launch {

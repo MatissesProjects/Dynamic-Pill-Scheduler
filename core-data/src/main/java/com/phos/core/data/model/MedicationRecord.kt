@@ -14,6 +14,10 @@ data class MedicationRecord(
     val category: String? = "General", // e.g., "Heart", "Supplements", "Pain"
     val foodRequirement: String = "NONE", // "NONE", "WITH_FOOD", "EMPTY_STOMACH"
     
+    // Pharmacokinetics (T42)
+    val halfLifeMinutes: Int? = null,
+    val metabolicPathway: String? = null, // e.g., "CYP3A4", "CYP2D6"
+
     // Temporal Versioning
     val validFrom: Long,
     val validTo: Long = Long.MAX_VALUE
