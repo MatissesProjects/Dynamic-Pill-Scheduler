@@ -39,9 +39,14 @@
 | T36 | REM Stability & Dreams | **Circadian:** Analysis of REM fragmentation and vivid dream synthesis. | conductor/tracks/rem-architecture/ | Completed |
 | T37 | Muscle-Heart Mismatch | **Performance:** "Heavy Legs" detection via Cardio Load vs. Activity delta. | conductor/tracks/cardio-mismatch/ | Completed |
 | T38 | Heart Rate Recovery | **ANS Resilience:** Autonomic recovery speed monitoring across doses. | conductor/tracks/hr-recovery/ | Completed |
-| T39 | Heart Failure Warning | **Safety:** Predictive decompensation warning via multivariate fusion. | conductor/tracks/hf-warning/ | Pending |
-| T40 | Pulse-Power Efficiency | **Cardiac Twin:** Efficiency metric tracking (Watts per BPM) on e-bike. | conductor/tracks/pulse-power/ | Pending |
-| T41 | Respiration & Congestion | **Safety:** Nocturnal respiratory strain detection (fluid proxy). | conductor/tracks/nocturnal-resp/ | Pending |
+| T39 | Heart Failure Warning | **Safety:** Predictive decompensation warning via multivariate fusion. | conductor/tracks/hf-warning/ | Completed |
+| T40 | Pulse-Power Efficiency | **Cardiac Twin:** Efficiency metric tracking (Watts per BPM) on e-bike. | conductor/tracks/pulse-power/ | Completed |
+| T41 | Respiration & Congestion | **Safety:** Nocturnal respiratory strain detection (fluid proxy). | conductor/tracks/nocturnal-resp/ | Completed |
+| T42 | Alcohol & Metabolic Load Synthesis | **Safety:** CYP450 competition tracking for spirits and fermented beverages. | conductor/tracks/alcohol-metabolism/ | Proposed |
+| T43 | Orthostatic Posture & Biomechanics | **Safety:** Wearable barometer + CV posture analysis for BP drops. | conductor/tracks/orthostatic-posture/ | Proposed |
+| T44 | Micronutrient Chelation Avoidance | **Intelligence:** Timing doses around calcium-fortified dairy-free alternatives. | conductor/tracks/chelation-avoidance/ | Proposed |
+| T45 | Environmental Respiratory Strain | **Context:** Localized AQI/particulate fusion with nocturnal SpO2. | conductor/tracks/environmental-resp/ | Proposed |
+| T46 | Local Intelligence Harness Sync | **Architecture:** Async offloading of complex correlations to local LLM nodes. | conductor/tracks/local-intelligence/ | Proposed |
 
 ### Track Milestones
 
@@ -91,16 +96,41 @@
 - [x] Create "Autonomic Strain" haptic alerts.
 
 #### T39: Heart Failure Warning System (HF Early-Warning)
-- [ ] Build sensor-fusion aggregator for HRV, RHR, RR, and SpO2.
-- [ ] Develop Gemini Nano prompt templates for multivariate decompensation prediction.
-- [ ] Implement "Safety Tightening" logic for diuretic safe-gaps.
+- [x] Build sensor-fusion aggregator for HRV, RHR, RR, and SpO2.
+- [x] Develop Gemini Nano prompt templates for multivariate decompensation prediction.
+- [x] Implement "Safety Tightening" logic for diuretic safe-gaps.
 
 #### T40: Cardiac Output Efficiency (Pulse-Power Twin)
-- [ ] Build e-bike `Watts per BPM` efficiency calculator.
-- [ ] Implement efficiency-drop detection logic.
-- [ ] Add "Myocardial Protection" assist-level suggestions.
+- [x] Build e-bike `Watts per BPM` efficiency calculator.
+- [x] Implement efficiency-drop detection logic.
+- [x] Add "Myocardial Protection" assist-level suggestions.
 
 #### T41: Nightly Respiration & Congestion Proxy
-- [ ] Implement orthopnea detection logic (RR increase vs. sleep position).
-- [ ] Build nocturnal respiratory strain monitor.
-- [ ] Create "Clinical Consultation" alerts for persistent congestion signals.
+- [x] Implement orthopnea detection logic (RR increase vs. sleep position).
+- [x] Build nocturnal respiratory strain monitor.
+- [x] Create "Clinical Consultation" alerts for persistent congestion signals.
+
+#### T42: Alcohol & Metabolic Load Synthesis
+- [ ] Build `MetabolicClearanceEngine` to adjust medication half-life models.
+- [ ] Implement "First-Pass Metabolism" alerts for nighttime dose delays.
+- [ ] Correlate RHR spikes and HRV drops with specific beverage types.
+
+#### T43: Orthostatic Posture & Biomechanics
+- [ ] Utilize Wear OS barometer data to detect rapid vertical transitions.
+- [ ] Integrate webcam/MediaPipe feedback loop for desk worker posture correlation.
+- [ ] Generate "Postural Transition Warnings" during peak medication windows.
+
+#### T44: Micronutrient Chelation Avoidance
+- [ ] Expand `GIProtectionEngine` to scan for chelation risks (Ca, Mg, Fe).
+- [ ] Implement "Fortified Food Buffer" rule for medication timing.
+- [ ] Add CV models to `FoodVisionEngine` for dairy-free alternatives.
+
+#### T45: Environmental Respiratory Strain
+- [ ] Integrate localized weather API for PM2.5 and Ozone data.
+- [ ] Correlate SpO2 drops with external air quality drops.
+- [ ] Suggest "Window Closure" nudges prior to sleep.
+
+#### T46: Local Intelligence Harness Sync
+- [ ] Build secure local API relay for biometric data offloading.
+- [ ] Schedule asynchronous deep synthesis for overnight charging.
+- [ ] Sync optimized scheduling models back to mobile device.
