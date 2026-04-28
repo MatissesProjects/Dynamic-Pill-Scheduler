@@ -90,6 +90,29 @@ This plan outlines the integration of cutting-edge physiological research and Pi
 - **Detection:** Identify "Orthopnea Proxies" (e.g., increased RR/decreased SpO2 specifically during flat sleep stages vs. upright-propped stages).
 - **Safety:** Suggest a "Dose Adjustment Consultation" if nocturnal respiratory strain increases for 3 consecutive nights.
 
+### T42: Autonomic Mapping (HRV vs. Slump Prediction)
+**Concept:** Correlate nightly autonomic balance with next-day lethargy.
+- **Logic:** Track nightly HRV against the magnitude of the 2 PM "heavy leg" slump.
+- **Hypothesis:** High parasympathetic dominance (unusually high HRV) may predict worse afternoon fatigue.
+- **Prediction:** Alert the user at T-Wake if nightly HRV suggests a high-vulnerability slump day.
+
+### T43: Perceived Exertion (RPE) Disconnect
+**Concept:** Quantify the cardiovascular ceiling imposed by Metoprolol.
+- **The Test:** Repeatable physical task (e.g., 5-min stairs).
+- **Data:** Peak HR vs. User-reported RPE (1-10).
+- **Insight:** Highlight the "Efficiency Gap" where RPE is high but HR remains suppressed.
+
+### T44: Blood Pressure (Hypotension) Fusion
+**Concept:** Integrate pressure data to identify the cause of "moving through mud."
+- **Integration:** Pull Blood Pressure logs (Sys/Dia) from Health Connect.
+- **Protocol:** Match BP checks with "Idle Speed" RHR (Wake/2 PM).
+- **Detection:** Flag Systolic BP < 100 during slumps as a high-risk fatigue factor.
+
+### T45: Raw Data Science (Takeout Integration)
+**Concept:** Enable external deep-dives via Google Takeout.
+- **Action:** Support ingestion of raw JSON/CSV archives for multi-variable regression.
+- **Analysis:** Correlate long-term shifts (e.g., 5bpm RHR drop) with REM fragmentation and adherence trends.
+
 
 ## Implementation Strategy
 - **M1:** Implement `GaitManager` in `core-data`.
