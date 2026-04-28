@@ -44,9 +44,15 @@
 | T41 | Respiration & Congestion | **Safety:** Nocturnal respiratory strain detection (fluid proxy). | conductor/tracks/nocturnal-resp/ | Completed |
 | T42 | Alcohol & Metabolic Load Synthesis | **Safety:** CYP450 competition tracking for spirits and fermented beverages. | conductor/tracks/alcohol-metabolism/ | Completed |
 | T43 | Orthostatic Posture & Biomechanics | **Safety:** Wearable barometer + CV posture analysis for BP drops. | conductor/tracks/orthostatic-posture/ | Completed |
-| T44 | Micronutrient Chelation Avoidance | **Intelligence:** Timing doses around calcium-fortified dairy-free alternatives. | conductor/tracks/chelation-avoidance/ | Proposed |
-| T45 | Environmental Respiratory Strain | **Context:** Localized AQI/particulate fusion with nocturnal SpO2. | conductor/tracks/environmental-resp/ | Proposed |
-| T46 | Local Intelligence Harness Sync | **Architecture:** Async offloading of complex correlations to local LLM nodes. | conductor/tracks/local-intelligence/ | Proposed |
+| T44 | Micronutrient Chelation Avoidance | **Intelligence:** Timing doses around calcium-fortified dairy-free alternatives. | conductor/tracks/chelation-avoidance/ | Completed |
+| T45 | Environmental Respiratory Strain | **Context:** Localized AQI/particulate fusion with nocturnal SpO2. | conductor/tracks/environmental-resp/ | Completed |
+| T46 | Local Intelligence Harness Sync | **Architecture:** Async offloading of complex correlations to local LLM nodes. | conductor/tracks/local-intelligence/ | Completed |
+| T47 | Neuro-Cognitive Load Tracking | **Intelligence:** Speech fluidity analysis as a proxy for brain fog. | conductor/tracks/neuro-load/ | Proposed |
+| T48 | Thermal Dysregulation Shield | **Safety:** Correlating skin temp with meds that inhibit sweating. | conductor/tracks/thermal-shield/ | Proposed |
+| T49 | Endocrine & Hormonal Sync | **Orchestration:** Aligning meds with circadian cortisol peaks. | conductor/tracks/hormonal-sync/ | Proposed |
+| T50 | Biological Velocity Modeling | **Modeling:** Tracking Pace of Aging via HRV-derived metrics. | conductor/tracks/bio-velocity/ | Proposed |
+| T51 | Privacy-Preserving Care Mesh | **Social:** ZKP status sharing without revealing medication details. | conductor/tracks/care-mesh/ | Proposed |
+| T52 | Acoustic Stress Correlation | **Environment:** Correlating noise pollution with BP and efficacy. | conductor/tracks/acoustic-stress/ | Proposed |
 
 ### Track Milestones
 
@@ -121,16 +127,46 @@
 - [x] Generate "Postural Transition Warnings" during peak medication windows.
 
 #### T44: Micronutrient Chelation Avoidance
-- [ ] Expand `GIProtectionEngine` to scan for chelation risks (Ca, Mg, Fe).
-- [ ] Implement "Fortified Food Buffer" rule for medication timing.
-- [ ] Add CV models to `FoodVisionEngine` for dairy-free alternatives.
+- [x] Expand `GIProtectionEngine` to scan for chelation risks (Ca, Mg, Fe).
+- [x] Implement "Fortified Food Buffer" rule for medication timing.
+- [x] Add CV models to `FoodVisionEngine` for dairy-free alternatives.
 
 #### T45: Environmental Respiratory Strain
-- [ ] Integrate localized weather API for PM2.5 and Ozone data.
-- [ ] Correlate SpO2 drops with external air quality drops.
-- [ ] Suggest "Window Closure" nudges prior to sleep.
+- [x] Integrate localized weather API for PM2.5 and Ozone data.
+- [x] Correlate SpO2 drops with external air quality drops.
+- [x] Suggest "Window Closure" nudges prior to sleep.
 
 #### T46: Local Intelligence Harness Sync
-- [ ] Build secure local API relay for biometric data offloading.
-- [ ] Schedule asynchronous deep synthesis for overnight charging.
-- [ ] Sync optimized scheduling models back to mobile device.
+- [x] Build secure local API relay for biometric data offloading.
+- [x] Schedule asynchronous deep synthesis for overnight charging.
+- [x] Sync optimized scheduling models back to mobile device.
+
+#### T47: Neuro-Cognitive Load Tracking
+- [ ] Implement speech fluidity analyzer using Gemini Nano.
+- [ ] Correlate "Word-Finding" latency with medication peak concentration.
+- [ ] Generate "Brain Fog" alerts and propose dose-timing adjustments.
+
+#### T48: Thermal Dysregulation Shield
+- [ ] Monitor skin temperature deviations via Pixel Watch 3.
+- [ ] Correlate spikes with meds known to inhibit sweating (anticholinergics).
+- [ ] Create "Hyperthermia Risk" alerts during heatwaves.
+
+#### T49: Endocrine & Hormonal Sync
+- [ ] Map circadian cortisol peaks to T-Wake temporal logic.
+- [ ] Orchestrate thyroid/insulin dose windows with fasting intervals.
+- [ ] Build "Hormonal Harmony" optimization report.
+
+#### T50: Biological Velocity Modeling
+- [ ] Implement "Pace of Aging" algorithm using HRV and RHR trends.
+- [ ] Compare biological age vs. chronological age in real-time.
+- [ ] Correlate medication adherence with "Bio-Velocity" improvements.
+
+#### T51: Privacy-Preserving Care Mesh
+- [ ] Implement Zero-Knowledge Proof (ZKP) logic for safety status.
+- [ ] Enable "Red/Yellow/Green" status sharing with trusted contacts.
+- [ ] Ensure specific medication names and biometric values never leave the device.
+
+#### T52: Acoustic Stress Correlation
+- [ ] Integrate ambient noise monitoring via Watch microphone.
+- [ ] Correlate high-decibel windows with elevated blood pressure logs.
+- [ ] Implement "Acoustic Shielding" reminders for hypertensive patients.

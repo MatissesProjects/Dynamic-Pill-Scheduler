@@ -7,8 +7,12 @@ import java.time.Instant
 @Entity(tableName = "environmental_logs")
 data class EnvironmentalLog(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val barometricPressure: Float, // hPa
-    val temperature: Float? = null,
-    val humidity: Float? = null,
-    val timestamp: Instant = Instant.now()
+    val timestamp: Instant,
+    val aqi: Int,
+    val pm25: Double, // µg/m³
+    val ozone: Double, // ppb
+    val barometricPressure: Double, // hPa
+    val humidity: Double,
+    val temperatureCelsius: Double,
+    val locationLabel: String? = null
 )

@@ -44,3 +44,16 @@ data class SideEffectRule(
     val sideEffect: String,
     val advice: String
 )
+
+/**
+ * T44: Micronutrient Chelation Avoidance
+ * Rules for medications that bind with minerals (Ca, Mg, Fe).
+ */
+@Entity(tableName = "chelation_rules")
+data class ChelationRule(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val medicationId: String,
+    val mineralType: String, // "CALCIUM", "MAGNESIUM", "IRON"
+    val requiredGapMinutes: Int,
+    val advice: String
+)

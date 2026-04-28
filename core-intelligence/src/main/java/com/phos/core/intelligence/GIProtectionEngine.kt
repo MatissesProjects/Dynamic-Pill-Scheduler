@@ -11,7 +11,57 @@ data class GIProtectionInsight(
     val needsGastricBuffer: Boolean
 )
 
+data class ChelationInsight(
+    val medicationName: String,
+    val mineralType: String,
+    val conflictingFoodName: String,
+    val advice: String,
+    val riskLevel: String = "CRITICAL"
+)
+
 class GIProtectionEngine {
+
+    /**
+     * T44: Micronutrient Chelation Avoidance
+     * Detects if a medication is taken too close to a mineral-rich food (chelation risk).
+     */
+    fun detectChelationRisk(
+        medication: MedicationRecord,
+        foodLogs: List<com.phos.core.data.model.FoodLog>,
+        rules: List<com.phos.core.data.model.ChelationRule>
+    ): ChelationInsight? {
+        val rule = rules.find { it.medicationId == medication.medicationId } ?: return null
+        
+        // Find food logs within the required gap window (both before and after)
+        val now = Instant.now()
+        val gapMinutes = rule.requiredGapMinutes
+        
+        val conflictingFood = foodLogs.find { food ->
+            val nutrients = food.nutrients ?: return@find false
+            val hasMineral = when (rule.mineralType) {
+                "CALCIUM" -> (nutrients.calciumMg ?: 0.0) > 50.0 // Threshold for significant calcium
+                "IRON" -> (nutrients.ironMg ?: 0.0) > 2.0
+                else -> false
+            }
+            
+            if (!hasMineral) return@find false
+            
+            val foodTime = Instant.ofEpochMilli(food.timestamp)
+            val minutesDiff = Math.abs(ChronoUnit.MINUTES.between(foodTime, now))
+            minutesDiff < gapMinutes
+        }
+
+        if (conflictingFood != null) {
+            return ChelationInsight(
+                medicationName = medication.name,
+                mineralType = rule.mineralType,
+                conflictingFoodName = conflictingFood.name,
+                advice = rule.advice
+            )
+        }
+        
+        return null
+    }
 
     /**
      * Identifies if recent stomach discomfort correlates with irritant dose timing.

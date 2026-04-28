@@ -21,6 +21,9 @@ interface InteractionDao {
     @Query("SELECT * FROM side_effect_rules")
     fun getAllSideEffectRules(): Flow<List<SideEffectRule>>
 
+    @Query("SELECT * FROM chelation_rules")
+    fun getAllChelationRules(): Flow<List<com.phos.core.data.model.ChelationRule>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRule(rule: InteractionRule)
 
@@ -29,6 +32,9 @@ interface InteractionDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSideEffectRule(rule: SideEffectRule)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChelationRule(rule: com.phos.core.data.model.ChelationRule)
 
     @Query("SELECT * FROM food_logs WHERE timestamp > :since")
     suspend fun getRecentFoodLogs(since: Long): List<FoodLog>
