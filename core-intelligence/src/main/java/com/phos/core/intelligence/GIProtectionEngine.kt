@@ -21,7 +21,7 @@ class GIProtectionEngine {
         irritantIds: List<String>,
         symptomLogs: List<SymptomLog>
     ): List<String> {
-        val stomachPainLogs = symptomLogs.filter { it.name.lowercase().contains("stomach") || it.name.lowercase().contains("gastric") }
+        val stomachPainLogs = symptomLogs.filter { it.symptomName.lowercase().contains("stomach") || it.symptomName.lowercase().contains("gastric") }
         val culpritIds = mutableListOf<String>()
 
         stomachPainLogs.forEach { log ->
