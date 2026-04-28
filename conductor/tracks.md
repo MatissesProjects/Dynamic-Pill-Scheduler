@@ -47,7 +47,7 @@
 | T44 | Micronutrient Chelation Avoidance | **Intelligence:** Timing doses around calcium-fortified dairy-free alternatives. | conductor/tracks/chelation-avoidance/ | Completed |
 | T45 | Environmental Respiratory Strain | **Context:** Localized AQI/particulate fusion with nocturnal SpO2. | conductor/tracks/environmental-resp/ | Completed |
 | T46 | Local Intelligence Harness Sync | **Architecture:** Async offloading of complex correlations to local LLM nodes. | conductor/tracks/local-intelligence/ | Completed |
-| T47 | Neuro-Cognitive Load Tracking | **Intelligence:** Speech fluidity analysis as a proxy for brain fog. | conductor/tracks/neuro-load/ | Proposed |
+| T47 | Neuro-Cognitive Load Tracking | **Intelligence:** Speech fluidity analysis as a proxy for brain fog. | conductor/tracks/neuro-load/ | Completed |
 | T48 | Thermal Dysregulation Shield | **Safety:** Correlating skin temp with meds that inhibit sweating. | conductor/tracks/thermal-shield/ | Proposed |
 | T49 | Endocrine & Hormonal Sync | **Orchestration:** Aligning meds with circadian cortisol peaks. | conductor/tracks/hormonal-sync/ | Proposed |
 | T50 | Biological Velocity Modeling | **Modeling:** Tracking Pace of Aging via HRV-derived metrics. | conductor/tracks/bio-velocity/ | Proposed |
@@ -142,9 +142,9 @@
 - [x] Sync optimized scheduling models back to mobile device.
 
 #### T47: Neuro-Cognitive Load Tracking
-- [ ] Implement speech fluidity analyzer using Gemini Nano.
-- [ ] Correlate "Word-Finding" latency with medication peak concentration.
-- [ ] Generate "Brain Fog" alerts and propose dose-timing adjustments.
+- [x] Implement speech fluidity analyzer using Gemini Nano.
+- [x] Correlate "Word-Finding" latency with medication peak concentration.
+- [x] Generate "Brain Fog" alerts and propose dose-timing adjustments.
 
 #### T48: Thermal Dysregulation Shield
 - [ ] Monitor skin temperature deviations via Pixel Watch 3.

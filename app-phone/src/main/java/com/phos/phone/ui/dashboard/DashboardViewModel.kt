@@ -79,6 +79,7 @@ class DashboardViewModel(
     private val nocturnalRespiratoryEngine = NocturnalRespiratoryEngine()
     
     private val nanoEngine = injectedNanoEngine ?: GeminiNanoEngine(application)
+    private val neuroLoadEngine = NeuroLoadEngine(nanoEngine)
     
     private val voiceParser = GeminiVoiceParser(nanoEngine)
     private val voiceLogCoordinator = VoiceLogCoordinator(
@@ -737,6 +738,9 @@ class DashboardViewModel(
     private val _congestionInsight = MutableStateFlow<CongestionInsight?>(null)
     val congestionInsight: StateFlow<CongestionInsight?> = _congestionInsight.asStateFlow()
 
+    private val _neuroInsight = MutableStateFlow<NeuroCognitiveInsight?>(null)
+    val neuroInsight: StateFlow<NeuroCognitiveInsight?> = _neuroInsight.asStateFlow()
+
     private val _ebac = MutableStateFlow<Double>(0.0)
     val ebac: StateFlow<Double> = _ebac.asStateFlow()
 
@@ -1034,11 +1038,26 @@ class DashboardViewModel(
         }
     }
 
-    fun processVoiceCommand(text: String) {
+    fun processVoiceCommand(text: String, segments: List<SpeechSegment> = emptyList()) {
         viewModelScope.launch {
             val entities = voiceLogCoordinator.processVoiceCommand(text)
             _voiceExtractedEntities.value = entities
             processSentiment(text)
+
+            // T47: Neuro-Cognitive Analysis
+            if (segments.isNotEmpty()) {
+                val metrics = neuroLoadEngine.analyzeSpeech(segments, text)
+                val now = System.currentTimeMillis()
+                val recentDoses = doseLogDao.getDosesInWindow(now - 4 * 3600000L, now)
+                val activeMeds = medications.value
+
+                val insight = neuroLoadEngine.correlateWithMeds(metrics, activeMeds, recentDoses)
+                _neuroInsight.value = insight
+
+                // Log biometrics for trend analysis
+                biometricDao.insertLog(BiometricLog(type = BiometricType.COGNITIVE_FLUIDITY, value = metrics.fluidityScore.toDouble()))
+                biometricDao.insertLog(BiometricLog(type = BiometricType.BRAIN_FOG_INDEX, value = metrics.brainFogIndex.toDouble()))
+            }
             
             // Refresh sleep audit if dreams were detected
             if (entities.dreams.isNotEmpty()) {
