@@ -38,7 +38,7 @@
 | T35 | Beta-Blocker Side Effects | **Safety:** Monitor "Idle Speed" (bradycardia) and afternoon fatigue slumps. | conductor/tracks/beta-blocker-safety/ | Completed |
 | T36 | REM Stability & Dreams | **Circadian:** Analysis of REM fragmentation and vivid dream synthesis. | conductor/tracks/rem-architecture/ | Completed |
 | T37 | Muscle-Heart Mismatch | **Performance:** "Heavy Legs" detection via Cardio Load vs. Activity delta. | conductor/tracks/cardio-mismatch/ | Completed |
-| T38 | Heart Rate Recovery | **ANS Resilience:** Autonomic recovery speed monitoring across doses. | conductor/tracks/hr-recovery/ | Pending |
+| T38 | Heart Rate Recovery | **ANS Resilience:** Autonomic recovery speed monitoring across doses. | conductor/tracks/hr-recovery/ | Completed |
 | T39 | Heart Failure Warning | **Safety:** Predictive decompensation warning via multivariate fusion. | conductor/tracks/hf-warning/ | Pending |
 | T40 | Pulse-Power Efficiency | **Cardiac Twin:** Efficiency metric tracking (Watts per BPM) on e-bike. | conductor/tracks/pulse-power/ | Pending |
 | T41 | Respiration & Congestion | **Safety:** Nocturnal respiratory strain detection (fluid proxy). | conductor/tracks/nocturnal-resp/ | Pending |
@@ -86,9 +86,9 @@
 - [x] Implement "Heavy Leg" validation check-ins.
 
 #### T38: Heart Rate Recovery (HRR) Orchestration
-- [ ] Implement HRR monitor logic for 1-min and 2-min post-exercise recovery.
-- [ ] Build "Medication-Induced Recovery Audit" trend analysis.
-- [ ] Create "Autonomic Strain" haptic alerts.
+- [x] Implement HRR monitor logic for 1-min and 2-min post-exercise recovery.
+- [x] Build "Medication-Induced Recovery Audit" trend analysis.
+- [x] Create "Autonomic Strain" haptic alerts.
 
 #### T39: Heart Failure Warning System (HF Early-Warning)
 - [ ] Build sensor-fusion aggregator for HRV, RHR, RR, and SpO2.

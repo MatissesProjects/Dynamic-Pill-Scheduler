@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
             val sleepRestorationAudit by viewModel.sleepRestorationAudit.collectAsState()
             val dailyReadiness by viewModel.dailyReadiness.collectAsState()
             val cardioMismatch by viewModel.cardioMismatch.collectAsState()
+            val hrrAudit by viewModel.hrrAudit.collectAsState()
             
             val sleepCalibrationInsight by viewModel.sleepCalibrationInsight.collectAsState()
             val sleepSubjectiveLogs by viewModel.sleepSubjectiveLogs.collectAsState()
@@ -77,6 +78,7 @@ class MainActivity : ComponentActivity() {
                         sleepRestorationAudit = sleepRestorationAudit,
                         dailyReadiness = dailyReadiness,
                         cardioMismatch = cardioMismatch,
+                        hrrAudit = hrrAudit,
                         sleepCalibrationInsight = sleepCalibrationInsight,
                         sleepSubjectiveLogs = sleepSubjectiveLogs,
                         voiceState = voiceState,

@@ -67,6 +67,7 @@ fun MainDashboard(
     sleepRestorationAudit: SleepRestorationAudit?,
     dailyReadiness: DailyReadiness?,
     cardioMismatch: CardioMismatchInsight?,
+    hrrAudit: HRRAudit?,
     sleepCalibrationInsight: SleepCalibrationInsight?,
     sleepSubjectiveLogs: List<SleepSubjectiveLog>,
     voiceState: VoiceState,
@@ -813,6 +814,7 @@ fun VerticalTimeline(
     sleepRestorationAudit: SleepRestorationAudit?,
     dailyReadiness: DailyReadiness?,
     cardioMismatch: CardioMismatchInsight?,
+    hrrAudit: HRRAudit?,
     sleepCalibrationInsight: SleepCalibrationInsight?,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
@@ -899,6 +901,18 @@ fun VerticalTimeline(
                     icon = Icons.Default.Bolt,
                     color = MaterialTheme.colorScheme.primaryContainer,
                     onDismiss = { onDismissInsight("readiness_${readiness.date}") }
+                )
+            }
+        }
+
+        hrrAudit?.let { audit ->
+            item {
+                InsightCard(
+                    title = "Heart Rate Recovery Audit",
+                    insight = "Current 1-min recovery: ${"%.0f".format(audit.currentOneMin)} BPM. Trend: ${if (audit.trendDelta >= 0) "+" else ""}${"%.1f".format(audit.trendDelta * 100)}%\n\n${audit.advice}",
+                    icon = if (audit.isStrained) Icons.Default.Warning else Icons.Default.History,
+                    color = if (audit.isStrained) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+                    onDismiss = { onDismissInsight("hrr_audit_${audit.date}") }
                 )
             }
         }

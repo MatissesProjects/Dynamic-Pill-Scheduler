@@ -10,6 +10,7 @@ message PhosState {
   bool is_24_hour = 4;
   bool was_interrupted = 5;
   MealPreferences meal_preferences = 6;
+  bool autonomic_strain_detected = 7;
 }
 
 message Medication {

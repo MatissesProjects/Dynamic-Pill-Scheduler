@@ -50,6 +50,14 @@ class DataLayerRepository(
         }
     }
 
+    suspend fun updateAutonomicStrain(detected: Boolean) {
+        dataStore.updateData { currentState ->
+            currentState.toBuilder()
+                .setAutonomicStrainDetected(detected)
+                .build()
+        }
+    }
+
     suspend fun addMedication(medicationId: String, name: String, scheduledTime: Long) {
         dataStore.updateData { currentState ->
             val medication = com.phos.core.data.proto.Medication.newBuilder()

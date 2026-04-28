@@ -48,6 +48,7 @@ class DashboardViewModel(
     private val sentimentDao = db.sentimentDao()
     private val caffeineDao = db.caffeineDao()
     private val dreamDao = db.dreamDao()
+    private val hrrDao = db.hrrDao()
 
     private val healthSyncManager = HealthSyncManager(application)
     private val gaitManager = GaitManager(gaitDao, healthSyncManager)
@@ -67,6 +68,7 @@ class DashboardViewModel(
     private val betaBlockerSafetyEngine = BetaBlockerSafetyEngine()
     private val remSafetyEngine = REMSafetyEngine()
     private val cardioMismatchEngine = CardioMismatchEngine()
+    private val hrrOrchestrator = HRROrchestrator()
     
     private val nanoEngine = injectedNanoEngine ?: GeminiNanoEngine(application)
     
@@ -103,6 +105,7 @@ class DashboardViewModel(
             syncBetaBlockerSafety()
             syncSleepRestorationAudit()
             syncCardioReadiness()
+            syncHrrAudit()
             
             // Periodic sync loop
             launch {
@@ -110,6 +113,7 @@ class DashboardViewModel(
                     kotlinx.coroutines.delay(3600000) // Hourly
                     syncSleepRestorationAudit()
                     syncCardioReadiness()
+                    syncHrrAudit()
                 }
             }
         }
@@ -225,6 +229,54 @@ class DashboardViewModel(
                     _cardioMismatch.value = insight
                 } else {
                     _cardioMismatch.value = null
+                }
+            }
+        }
+    }
+
+    private fun syncHrrAudit() {
+        viewModelScope.launch {
+            val exercises = healthSyncManager.fetchRecentExercises() ?: return@launch
+            val medications = medicationDao.getAllActiveMedications()
+            
+            // For simplicity, we correlate with the most recent medication version id
+            val currentMedVersion = medications.maxByOrNull { it.validFrom }?.id ?: 0L
+            
+            exercises.forEach { session ->
+                // Check if we already have a record for this workout
+                // (In a real app, we'd check metadata.id in hrrDao)
+                
+                val hrSamples = healthSyncManager.fetchHeartRateForSession(
+                    session.endTime,
+                    session.endTime.plus(2, java.time.temporal.ChronoUnit.MINUTES)
+                ) ?: emptyList()
+                
+                if (hrSamples.isNotEmpty()) {
+                    val peakHrSamples = healthSyncManager.fetchHeartRateForSession(
+                        session.endTime.minus(30, java.time.temporal.ChronoUnit.SECONDS),
+                        session.endTime
+                    ) ?: emptyList()
+                    val peakHr = if (peakHrSamples.isNotEmpty()) peakHrSamples.maxOf { it.beatsPerMinute } else 120.0
+                    
+                    val record = hrrOrchestrator.calculateHRR(
+                        endTime = session.endTime,
+                        hrSamples = hrSamples.map { BiometricLog(type = BiometricType.HEART_RATE, value = it.beatsPerMinute, timestamp = it.time) },
+                        peakHr = peakHr,
+                        medicationVersion = currentMedVersion
+                    )
+                    hrrDao.insertRecord(record)
+                }
+            }
+            
+            val latestRecord = hrrDao.getRecordsSince(java.time.LocalDate.now().toString()).firstOrNull()
+            if (latestRecord != null) {
+                val history = hrrDao.getRecordsSince(java.time.LocalDate.now().minusDays(7).toString())
+                val audit = hrrOrchestrator.buildHRRAudit(latestRecord, history)
+                _hrrAudit.value = audit
+                
+                // Trigger Watch alert if strained (T38 M3)
+                if (audit?.isStrained == true) {
+                    dataLayerRepository.updateAutonomicStrain(true)
                 }
             }
         }
@@ -578,6 +630,9 @@ class DashboardViewModel(
 
     private val _cardioMismatch = MutableStateFlow<CardioMismatchInsight?>(null)
     val cardioMismatch: StateFlow<CardioMismatchInsight?> = _cardioMismatch.asStateFlow()
+
+    private val _hrrAudit = MutableStateFlow<HRRAudit?>(null)
+    val hrrAudit: StateFlow<HRRAudit?> = _hrrAudit.asStateFlow()
 
     fun detectUpcomingTravel() {
         viewModelScope.launch {
