@@ -44,6 +44,52 @@ This plan outlines the integration of cutting-edge physiological research and Pi
 - **Gastric Buffer Logic:** Propose a 30-minute "Stomach Buffer" window (e.g., suggest a snack) before doses of irritants if no meal is scheduled.
 - **Symptom Correlation:** Correlate user-logged "Stomach Pain" symptoms with dose proximity to refine the "Gastric Sensitivity" profile.
 
+### T34: Sleep Pressure Modeling (Adenosine Drive)
+**Concept:** Use Health Connect sleep history and caffeine logs to model wakefulness.
+- **Logic:** Accumulate "Adenosine Units" per hour awake; subtract units per hour of deep sleep.
+- **Prediction:** Forecast "Nap Propensity" score (0-100) and suggest alertness injections (T32) before the score hits 80.
+
+### T35: Beta-Blocker "Idle Speed" Monitoring (Bradycardia Safety)
+**Concept:** Detect excessive heart-rate suppression (Morning RHR and 2 PM Slumps).
+- **Morning Baseline:** Monitor for RHR < 50 BPM during the first 30 mins of T-Wake.
+- **Slump Logic:** Automatically correlate the "6-hour post-dose peak" with Heart Rate data. If HR is >15% lower than the daily average during a detected slump, trigger a "Sluggishness Validation" check-in.
+- **Intervention:** Suggest a 5-minute "Oxygenation Bout" (light movement) if HR drops below the biological idle threshold.
+
+### T36: REM Architecture & "Dream Synthesis"
+**Concept:** Quantify and manage Metoprolol-induced REM-rebound and vivid dreams.
+- **REM Analysis:** Ingest `SleepStageRecord` from Health Connect. Monitor for fragmented REM (frequent "Awake" spikes during REM blocks).
+- **Dream Journaling:** Use Gemini Nano to extract "Intensity" and "Vividness" from voice-logged dreams.
+- **Correlation:** Map REM fragmentation vs. Dream Intensity to provide a weekly "Sleep Restoration Audit" for doctors.
+
+### T37: Muscle-Heart Mismatch (Heavy Legs Detection)
+**Concept:** Identify the "moving through mud" sensation caused by heart rate capping.
+- **Heuristic:** Detect periods of high activity (Step Rate/Cadence) with abnormally low Cardio Load/HR relative to the historical baseline.
+- **Detection:** If activity is "Moderate" but HR is "Low" (capped by med), and the user reports "Heavy Legs," classify as a Mismatch.
+- **Readiness Integration:** Scale activity suggestions (T32) downward based on the Daily Readiness Score to prevent over-exertion during poor adaptation days.
+
+### T38: Heart Rate Recovery (HRR) Orchestration
+**Concept:** Measure autonomic nervous system (ANS) resilience and recovery.
+- **Logic:** Following any activity with HR > 110 BPM, monitor the rate of decline at 1 and 2 minutes.
+- **Correlation:** Track HRR performance across medication versions. If HRR slows by >15% over a 7-day period, trigger a "Medication-Induced Recovery Audit."
+
+### T39: Multi-Metric Heart Failure (HF) Early-Warning System
+**Concept:** Detect early signs of cardiac decompensation 7-14 days before symptoms.
+- **Logic:** Use sensor fusion (HRV, RHR, Respiratory Rate, and SpO2).
+- **Prediction:** Use Gemini Nano to perform multivariate trend analysis. (e.g., "Sustained increase in nocturnal RHR + 10% drop in HRV = Elevated Risk").
+- **Intervention:** Automatically tighten "Safe Gaps" for diuretics and beta-blockers to ensure perfect adherence during high-risk windows.
+
+### T40: Cardiac Output Efficiency (Pulse-Power Twin)
+**Concept:** Quantify the efficiency of the "Heart-Muscle Bridge."
+- **Logic:** Correlate e-bike `Power (Watts)` with `Heart Rate`.
+- **Metric:** Calculate `Watts per BPM` during steady-state climbs.
+- **Optimization:** If efficiency drops >10% while heart rate remains capped, suggest increasing motor assistance to protect the myocardium.
+
+### T41: Nightly Respiration & Congestion Proxy
+**Concept:** Monitor for sub-clinical pulmonary congestion (fluid in lungs).
+- **Logic:** Ingest nocturnal `Respiratory Rate` and `Oxygen Saturation` (SpO2).
+- **Detection:** Identify "Orthopnea Proxies" (e.g., increased RR/decreased SpO2 specifically during flat sleep stages vs. upright-propped stages).
+- **Safety:** Suggest a "Dose Adjustment Consultation" if nocturnal respiratory strain increases for 3 consecutive nights.
+
 
 ## Implementation Strategy
 - **M1:** Implement `GaitManager` in `core-data`.

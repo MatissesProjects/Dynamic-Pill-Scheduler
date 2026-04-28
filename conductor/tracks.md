@@ -35,6 +35,13 @@
 | T32 | Activity-Based Wakefulness | **Alertness:** Suppress nap drives using scheduled workout reminders. | conductor/tracks/alertness-orchestration/ | Completed |
 | T33 | Gastric Protection | **Safety:** AI-driven GI irritant detection and food-aligned buffering. | conductor/tracks/gastric-protection/ | Completed |
 | T34 | Sleep Pressure Modeling | **Circadian:** AI-driven adenosine drive tracking and nap forecasting. | conductor/tracks/sleep-pressure/ | Pending |
+| T35 | Beta-Blocker Side Effects | **Safety:** Monitor "Idle Speed" (bradycardia) and afternoon fatigue slumps. | conductor/tracks/beta-blocker-safety/ | Pending |
+| T36 | REM Stability & Dreams | **Circadian:** Analysis of REM fragmentation and vivid dream synthesis. | conductor/tracks/rem-architecture/ | Pending |
+| T37 | Muscle-Heart Mismatch | **Performance:** "Heavy Legs" detection via Cardio Load vs. Activity delta. | conductor/tracks/cardio-mismatch/ | Pending |
+| T38 | Heart Rate Recovery | **ANS Resilience:** Autonomic recovery speed monitoring across doses. | conductor/tracks/hr-recovery/ | Pending |
+| T39 | Heart Failure Warning | **Safety:** Predictive decompensation warning via multivariate fusion. | conductor/tracks/hf-warning/ | Pending |
+| T40 | Pulse-Power Efficiency | **Cardiac Twin:** Efficiency metric tracking (Watts per BPM) on e-bike. | conductor/tracks/pulse-power/ | Pending |
+| T41 | Respiration & Congestion | **Safety:** Nocturnal respiratory strain detection (fluid proxy). | conductor/tracks/nocturnal-resp/ | Pending |
 
 ### Track Milestones
 
@@ -62,3 +69,38 @@
 - [ ] Implement `AdenosineEngine` to model sleep pressure accumulation.
 - [ ] Build "Nap Propensity" forecasting UI.
 - [ ] Correlate caffeine intake with adenosine receptor blocking.
+
+#### T35: Beta-Blocker Side-Effect Tracking
+- [ ] Build "Idle Speed" RHR monitor for morning bradycardia detection.
+- [ ] Implement "6-hour Slump" automatic HR correlation logic.
+- [ ] Create "Oxygenation Bout" light-activity reminders.
+
+#### T36: REM Stability & Dream Synthesis
+- [ ] Implement REM fragmentation detection from `SleepStageRecord`.
+- [ ] Use Gemini Nano to quantify dream vividness from voice logs.
+- [ ] Build "Sleep Restoration Audit" summary.
+
+#### T37: Muscle-Heart Mismatch (Heavy Legs)
+- [ ] Build heuristic to detect low Cardio Load during periods of high Step Rate.
+- [ ] Map "Daily Readiness" to activity suggestion intensity levels.
+- [ ] Implement "Heavy Leg" validation check-ins.
+
+#### T38: Heart Rate Recovery (HRR) Orchestration
+- [ ] Implement HRR monitor logic for 1-min and 2-min post-exercise recovery.
+- [ ] Build "Medication-Induced Recovery Audit" trend analysis.
+- [ ] Create "Autonomic Strain" haptic alerts.
+
+#### T39: Heart Failure Warning System (HF Early-Warning)
+- [ ] Build sensor-fusion aggregator for HRV, RHR, RR, and SpO2.
+- [ ] Develop Gemini Nano prompt templates for multivariate decompensation prediction.
+- [ ] Implement "Safety Tightening" logic for diuretic safe-gaps.
+
+#### T40: Cardiac Output Efficiency (Pulse-Power Twin)
+- [ ] Build e-bike `Watts per BPM` efficiency calculator.
+- [ ] Implement efficiency-drop detection logic.
+- [ ] Add "Myocardial Protection" assist-level suggestions.
+
+#### T41: Nightly Respiration & Congestion Proxy
+- [ ] Implement orthopnea detection logic (RR increase vs. sleep position).
+- [ ] Build nocturnal respiratory strain monitor.
+- [ ] Create "Clinical Consultation" alerts for persistent congestion signals.
