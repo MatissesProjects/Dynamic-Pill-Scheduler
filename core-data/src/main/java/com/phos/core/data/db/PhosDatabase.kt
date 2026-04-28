@@ -34,9 +34,10 @@ import com.phos.core.data.model.*
         GaitLog::class,
         ChronotypeRecord::class,
         MetabolicLoadLog::class,
-        SentimentLog::class
+        SentimentLog::class,
+        CaffeineLog::class
     ],
-    version = 19
+    version = 20
 )
 @TypeConverters(Converters::class)
 abstract class PhosDatabase : RoomDatabase() {
@@ -61,4 +62,5 @@ abstract class PhosDatabase : RoomDatabase() {
     abstract fun chronotypeDao(): ChronotypeDao
     abstract fun metabolicDao(): MetabolicDao
     abstract fun sentimentDao(): SentimentDao
+    abstract fun caffeineDao(): CaffeineDao
 }
