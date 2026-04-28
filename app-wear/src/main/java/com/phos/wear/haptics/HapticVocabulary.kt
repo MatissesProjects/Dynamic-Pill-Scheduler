@@ -53,4 +53,15 @@ class HapticVocabulary(private val context: Context) {
         }
         vibrator.vibrate(effect)
     }
+
+    /**
+     * "Thermal Alert" Pattern: A pulsating, "heat-like" rhythm.
+     * Three pulses with increasing duration and intensity.
+     */
+    fun playThermalAlert() {
+        val timings = longArrayOf(0, 200, 100, 400, 100, 600)
+        val amplitudes = intArrayOf(0, 150, 0, 200, 0, 255)
+        val effect = VibrationEffect.createWaveform(timings, amplitudes, -1)
+        vibrator.vibrate(effect)
+    }
 }
