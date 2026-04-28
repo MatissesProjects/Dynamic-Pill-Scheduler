@@ -506,6 +506,21 @@ class DashboardViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val chelationInsights: StateFlow<List<ChelationInsight>> = combine(
+        medications,
+        interactionDao.getAllChelationRules(),
+        flow { 
+            while(true) {
+                emit(interactionDao.getRecentFoodLogs(System.currentTimeMillis() - 24 * 3600000L))
+                kotlinx.coroutines.delay(60000)
+            }
+        }
+    ) { meds, rules, foodLogs ->
+        meds.mapNotNull { med ->
+            giProtectionEngine.detectChelationRisk(med, foodLogs, rules)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val gaitInsights: StateFlow<List<String>> = flow {
         while (true) {
             val deviation = gaitManager.detectGaitDeviation()

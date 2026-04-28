@@ -44,7 +44,7 @@
 | T41 | Respiration & Congestion | **Safety:** Nocturnal respiratory strain detection (fluid proxy). | conductor/tracks/nocturnal-resp/ | Completed |
 | T42 | Alcohol & Metabolic Load Synthesis | **Safety:** CYP450 competition tracking for spirits and fermented beverages. | conductor/tracks/alcohol-metabolism/ | Completed |
 | T43 | Orthostatic Posture & Biomechanics | **Safety:** Wearable barometer + CV posture analysis for BP drops. | conductor/tracks/orthostatic-posture/ | Completed |
-| T44 | Micronutrient Chelation Avoidance | **Intelligence:** Timing doses around calcium-fortified dairy-free alternatives. | conductor/tracks/chelation-avoidance/ | Proposed |
+| T44 | Micronutrient Chelation Avoidance | **Intelligence:** Timing doses around calcium-fortified dairy-free alternatives. | conductor/tracks/chelation-avoidance/ | Completed |
 | T45 | Environmental Respiratory Strain | **Context:** Localized AQI/particulate fusion with nocturnal SpO2. | conductor/tracks/environmental-resp/ | Proposed |
 | T46 | Local Intelligence Harness Sync | **Architecture:** Async offloading of complex correlations to local LLM nodes. | conductor/tracks/local-intelligence/ | Proposed |
 
@@ -121,9 +121,9 @@
 - [x] Generate "Postural Transition Warnings" during peak medication windows.
 
 #### T44: Micronutrient Chelation Avoidance
-- [ ] Expand `GIProtectionEngine` to scan for chelation risks (Ca, Mg, Fe).
-- [ ] Implement "Fortified Food Buffer" rule for medication timing.
-- [ ] Add CV models to `FoodVisionEngine` for dairy-free alternatives.
+- [x] Expand `GIProtectionEngine` to scan for chelation risks (Ca, Mg, Fe).
+- [x] Implement "Fortified Food Buffer" rule for medication timing.
+- [x] Add CV models to `FoodVisionEngine` for dairy-free alternatives.
 
 #### T45: Environmental Respiratory Strain
 - [ ] Integrate localized weather API for PM2.5 and Ozone data.
