@@ -52,6 +52,30 @@ class GeminiNanoEngine(
         return aiClient?.generateResponse(prompt)
     }
 
+    /**
+     * Audits speech text and timing metadata for cognitive load indicators.
+     */
+    suspend fun auditSemanticFluidity(text: String, avgLatency: Long, fillerCount: Int): String? {
+        val prompt = """
+            Audit the following speech log for cognitive load.
+            Text: "$text"
+            Avg Inter-word Latency: ${avgLatency}ms
+            Filler Word Count: $fillerCount
+            
+            Identify:
+            1. Circumlocution: Is the speaker talking around a word they can't find?
+            2. Word-Finding Difficulty: Are there semantic gaps?
+            3. Brain Fog Index: Score from 0.0 (clear) to 1.0 (severe).
+            
+            Return in format:
+            circumlocution: true/false
+            brain_fog_index: 0.X
+            rationale: <short summary>
+        """.trimIndent()
+        
+        return aiClient?.generateResponse(prompt)
+    }
+
     suspend fun analyzePillImage(bitmap: Bitmap): String? {
         val prompt = "Analyze this pill or medication bottle. Return JSON: {detectedName, detectedDosage, detectedColor, detectedShape, frequencyDosesPerDay}"
         return aiClient?.analyzeImage(bitmap, prompt)
@@ -63,7 +87,7 @@ class GeminiNanoEngine(
     }
 
     suspend fun parseNutritionText(ocrText: String): String? {
-        val prompt = "Convert this OCR text from a nutrition label to structured JSON: {calories, proteinG, calciumMg, ingredients: []}. Text: $ocrText"
+        val prompt = "Convert this OCR text from a nutrition label to structured JSON: {calories, proteinG, calories, proteinG, calciumMg, ingredients: []}. Text: $ocrText"
         return generateResponse(prompt)
     }
 

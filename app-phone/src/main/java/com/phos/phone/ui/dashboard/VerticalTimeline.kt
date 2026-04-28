@@ -70,6 +70,7 @@ fun MainDashboard(
     hrrAudit: HRRAudit?,
     sleepCalibrationInsight: SleepCalibrationInsight?,
     sleepSubjectiveLogs: List<SleepSubjectiveLog>,
+    neuroInsight: NeuroCognitiveInsight?,
     voiceState: VoiceState,
     voiceExtractedEntities: ExtractedEntities?,
     onAddMedication: (String, String, Long, Int, String) -> Unit,
@@ -677,7 +678,8 @@ fun MealSyncDashboard(
 fun VoiceOverlay(
     state: VoiceState,
     extractedEntities: ExtractedEntities?,
-    onProcess: (String) -> Unit,
+    neuroInsight: NeuroCognitiveInsight?,
+    onProcess: (String, List<com.phos.core.intelligence.SpeechSegment>) -> Unit,
     onDismiss: () -> Unit
 ) {
     Box(
@@ -704,7 +706,7 @@ fun VoiceOverlay(
                     }
                     is VoiceState.Success -> {
                         Text("Extracting...", style = MaterialTheme.typography.bodyLarge)
-                        LaunchedEffect(state.text) { onProcess(state.text) }
+                        LaunchedEffect(state.text) { onProcess(state.text, state.segments) }
                     }
                     is VoiceState.Error -> {
                         Icon(Icons.Default.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(48.dp))
@@ -714,7 +716,19 @@ fun VoiceOverlay(
                     else -> {}
                 }
 
+                neuroInsight?.let { insight ->
+                    Spacer(Modifier.height(16.dp))
+                    Card(colors = CardDefaults.cardColors(containerColor = if (insight.isSignificant) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer)) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text("🧠 Neuro-Cognitive Audit", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                            Text("Brain Fog: ${"%.1f".format(insight.brainFogIndex * 100)}% | Fluidity: ${"%.1f".format(insight.fluidityScore * 100)}%", style = MaterialTheme.typography.bodySmall)
+                            insight.advice?.let { Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp)) }
+                        }
+                    }
+                }
+
                 extractedEntities?.let { entities ->
+                    Spacer(Modifier.height(16.dp))
                     Text("Understood:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     
@@ -816,6 +830,7 @@ fun VerticalTimeline(
     cardioMismatch: CardioMismatchInsight?,
     hrrAudit: HRRAudit?,
     sleepCalibrationInsight: SleepCalibrationInsight?,
+    neuroInsight: NeuroCognitiveInsight?,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
     onDuplicateMedication: (MedicationRecord) -> Unit,

@@ -57,6 +57,8 @@ class MainActivity : ComponentActivity() {
             val sleepCalibrationInsight by viewModel.sleepCalibrationInsight.collectAsState()
             val sleepSubjectiveLogs by viewModel.sleepSubjectiveLogs.collectAsState()
             
+            val neuroInsight by viewModel.neuroInsight.collectAsState()
+            
             val voiceState by viewModel.voiceManager.state.collectAsState()
             val voiceExtractedEntities by viewModel.voiceExtractedEntities.collectAsState()
             
@@ -87,6 +89,7 @@ class MainActivity : ComponentActivity() {
                         hrrAudit = hrrAudit,
                         sleepCalibrationInsight = sleepCalibrationInsight,
                         sleepSubjectiveLogs = sleepSubjectiveLogs,
+                        neuroInsight = neuroInsight,
                         voiceState = voiceState,
                         voiceExtractedEntities = voiceExtractedEntities,
                         onAddMedication = { name, dosage, offset, frequency, foodRequirement ->
@@ -128,10 +131,11 @@ class MainActivity : ComponentActivity() {
                         onStopVoiceListening = {
                             viewModel.voiceManager.stopListening()
                         },
-                        onProcessVoiceCommand = { text ->
-                            viewModel.processVoiceCommand(text)
+                        onProcessVoiceCommand = { text, segments ->
+                            viewModel.processVoiceCommand(text, segments)
                         },
                         onClearVoiceResults = {
+
                             viewModel.clearVoiceResults()
                         },
                         onAcceptTravelProposal = { proposal ->

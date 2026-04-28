@@ -18,7 +18,9 @@ data class BiometricLog(
 enum class BiometricType {
     HEART_RATE,
     HRV,
-    SPO2
+    SPO2,
+    COGNITIVE_FLUIDITY,
+    BRAIN_FOG_INDEX
 }
 
 /**
