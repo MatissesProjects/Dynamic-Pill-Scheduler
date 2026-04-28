@@ -43,7 +43,7 @@
 | T40 | Pulse-Power Efficiency | **Cardiac Twin:** Efficiency metric tracking (Watts per BPM) on e-bike. | conductor/tracks/pulse-power/ | Completed |
 | T41 | Respiration & Congestion | **Safety:** Nocturnal respiratory strain detection (fluid proxy). | conductor/tracks/nocturnal-resp/ | Completed |
 | T42 | Alcohol & Metabolic Load Synthesis | **Safety:** CYP450 competition tracking for spirits and fermented beverages. | conductor/tracks/alcohol-metabolism/ | Completed |
-| T43 | Orthostatic Posture & Biomechanics | **Safety:** Wearable barometer + CV posture analysis for BP drops. | conductor/tracks/orthostatic-posture/ | Proposed |
+| T43 | Orthostatic Posture & Biomechanics | **Safety:** Wearable barometer + CV posture analysis for BP drops. | conductor/tracks/orthostatic-posture/ | Completed |
 | T44 | Micronutrient Chelation Avoidance | **Intelligence:** Timing doses around calcium-fortified dairy-free alternatives. | conductor/tracks/chelation-avoidance/ | Proposed |
 | T45 | Environmental Respiratory Strain | **Context:** Localized AQI/particulate fusion with nocturnal SpO2. | conductor/tracks/environmental-resp/ | Proposed |
 | T46 | Local Intelligence Harness Sync | **Architecture:** Async offloading of complex correlations to local LLM nodes. | conductor/tracks/local-intelligence/ | Proposed |
@@ -116,9 +116,9 @@
 - [x] Correlate RHR spikes and HRV drops with specific beverage types.
 
 #### T43: Orthostatic Posture & Biomechanics
-- [ ] Utilize Wear OS barometer data to detect rapid vertical transitions.
-- [ ] Integrate webcam/MediaPipe feedback loop for desk worker posture correlation.
-- [ ] Generate "Postural Transition Warnings" during peak medication windows.
+- [x] Utilize Wear OS barometer data to detect rapid vertical transitions.
+- [x] Integrate webcam/MediaPipe feedback loop for desk worker posture correlation.
+- [x] Generate "Postural Transition Warnings" during peak medication windows.
 
 #### T44: Micronutrient Chelation Avoidance
 - [ ] Expand `GIProtectionEngine` to scan for chelation risks (Ca, Mg, Fe).

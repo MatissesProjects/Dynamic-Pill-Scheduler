@@ -17,6 +17,7 @@ class VoiceLogCoordinatorTest {
     private lateinit var interactionDao: InteractionDao
     private lateinit var medicationDao: MedicationDao
     private lateinit var intelligenceDao: IntelligenceDao
+    private lateinit var dreamDao: com.phos.core.data.dao.DreamDao
     private lateinit var parser: VoiceEntityParser
     private lateinit var coordinator: VoiceLogCoordinator
 
@@ -26,8 +27,9 @@ class VoiceLogCoordinatorTest {
         interactionDao = mock()
         medicationDao = mock()
         intelligenceDao = mock()
+        dreamDao = mock()
         parser = mock()
-        coordinator = VoiceLogCoordinator(doseLogDao, interactionDao, medicationDao, intelligenceDao, parser)
+        coordinator = VoiceLogCoordinator(doseLogDao, interactionDao, medicationDao, intelligenceDao, dreamDao, parser)
     }
 
     @Test

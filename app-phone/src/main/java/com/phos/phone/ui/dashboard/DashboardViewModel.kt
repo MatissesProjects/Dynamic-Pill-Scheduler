@@ -51,6 +51,7 @@ class DashboardViewModel(
     private val hrrDao = db.hrrDao()
     private val alcoholDao = db.alcoholDao()
     private val userProfileDao = db.userProfileDao()
+    private val postureDao = db.postureDao()
 
     private val healthSyncManager = HealthSyncManager(application)
     private val gaitManager = GaitManager(gaitDao, healthSyncManager)
@@ -116,6 +117,7 @@ class DashboardViewModel(
             syncPulsePowerEfficiency()
             syncNocturnalRespiratoryStrain()
             syncMetabolicClearance()
+            syncPosture()
             
             // Periodic sync loop
             launch {
@@ -128,8 +130,27 @@ class DashboardViewModel(
                     syncPulsePowerEfficiency()
                     syncNocturnalRespiratoryStrain()
                     syncMetabolicClearance()
+                    syncPosture()
                 }
             }
+        }
+    }
+
+    private fun syncPosture() {
+        viewModelScope.launch {
+            val now = Instant.now()
+            val recentLogs = postureDao.getLogsSince(now.minus(1, java.time.temporal.ChronoUnit.HOURS))
+            
+            val pressureSamples = recentLogs
+                .filter { it.type == PostureLogType.BAROMETRIC_PRESSURE }
+                .sortedBy { it.timestamp }
+                .map { it.value }
+            
+            val meds = medications.value
+            val betaBlockerNames = listOf("metoprolol", "atenolol", "bisoprolol", "carvedilol", "propranolol")
+            val hasBetaBlocker = meds.any { med -> betaBlockerNames.any { med.name.lowercase().contains(it) } }
+            
+            _orthostaticInsight.value = postureIntelligence.detectOrthostaticTransition(pressureSamples, hasBetaBlocker)
         }
     }
 
@@ -678,6 +699,9 @@ class DashboardViewModel(
 
     private val _ebac = MutableStateFlow<Double>(0.0)
     val ebac: StateFlow<Double> = _ebac.asStateFlow()
+
+    private val _orthostaticInsight = MutableStateFlow<OrthostaticInsight?>(null)
+    val orthostaticInsight: StateFlow<OrthostaticInsight?> = _orthostaticInsight.asStateFlow()
 
     val alcoholLogs: StateFlow<List<AlcoholLog>> = alcoholDao.getAllLogsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

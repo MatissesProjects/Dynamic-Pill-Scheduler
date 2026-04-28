@@ -39,9 +39,10 @@ import com.phos.core.data.model.*
         DreamLog::class,
         HRRRecord::class,
         AlcoholLog::class,
-        UserProfile::class
+        UserProfile::class,
+        PostureLog::class
     ],
-    version = 23
+    version = 24
 )
 @TypeConverters(Converters::class)
 abstract class PhosDatabase : RoomDatabase() {
@@ -71,4 +72,5 @@ abstract class PhosDatabase : RoomDatabase() {
     abstract fun hrrDao(): HRRDao
     abstract fun alcoholDao(): AlcoholDao
     abstract fun userProfileDao(): UserProfileDao
+    abstract fun postureDao(): PostureDao
 }
