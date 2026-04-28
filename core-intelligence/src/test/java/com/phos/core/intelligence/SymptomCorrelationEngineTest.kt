@@ -32,7 +32,7 @@ class SymptomCorrelationEngineTest {
             SymptomLog(symptomName = "Stomach Pain", severity = 7, timestamp = Instant.now())
         )
         val environmental = listOf(
-            EnvironmentalLog(barometricPressure = 1005f, timestamp = Instant.now())
+            EnvironmentalLog(barometricPressure = 1005.0, timestamp = Instant.now(), aqi = 50, pm25 = 10.0, ozone = 30.0, humidity = 50.0, temperatureCelsius = 20.0)
         )
         `when`(intelligenceDao.getRecentSymptoms(50)).thenReturn(symptoms)
         `when`(intelligenceDao.getRecentEnvironmental(50)).thenReturn(environmental)

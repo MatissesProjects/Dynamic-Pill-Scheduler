@@ -52,6 +52,7 @@ class DashboardViewModel(
     private val alcoholDao = db.alcoholDao()
     private val userProfileDao = db.userProfileDao()
     private val postureDao = db.postureDao()
+    private val environmentalDao = db.environmentalDao()
 
     private val healthSyncManager = HealthSyncManager(application)
     private val gaitManager = GaitManager(gaitDao, healthSyncManager)
@@ -118,6 +119,7 @@ class DashboardViewModel(
             syncNocturnalRespiratoryStrain()
             syncMetabolicClearance()
             syncPosture()
+            syncEnvironmentalStrain()
             
             // Periodic sync loop
             launch {
@@ -131,8 +133,31 @@ class DashboardViewModel(
                     syncNocturnalRespiratoryStrain()
                     syncMetabolicClearance()
                     syncPosture()
+                    syncEnvironmentalStrain()
                 }
             }
+        }
+    }
+
+    private fun syncEnvironmentalStrain() {
+        viewModelScope.launch {
+            val now = Instant.now()
+            val envLogs = environmentalDao.getLogsSince(now.minus(24, java.time.temporal.ChronoUnit.HOURS))
+            
+            // Re-using nocturnal respiratory strain metrics for correlation
+            val rr = healthSyncManager.fetchRespiratoryRate(now.minus(12, java.time.temporal.ChronoUnit.HOURS), now) ?: emptyList()
+            val spo2 = healthSyncManager.fetchOxygenSaturation(now.minus(12, java.time.temporal.ChronoUnit.HOURS), now) ?: emptyList()
+            
+            val metrics = rr.map { r ->
+                NocturnalRespiratoryMetric(
+                    timestamp = r.time,
+                    respiratoryRate = r.rate,
+                    sleepPosition = SleepPosition.FLAT, // Assume flat for worst-case environmental correlation
+                    oxygenSaturation = spo2.minByOrNull { Math.abs(it.time.toEpochMilli() - r.time.toEpochMilli()) }?.value ?: 95.0
+                )
+            }
+            
+            _environmentalInsight.value = environmentalCorrelationEngine.correlateRespiratoryStrain(metrics, envLogs)
         }
     }
 
@@ -717,6 +742,9 @@ class DashboardViewModel(
 
     private val _orthostaticInsight = MutableStateFlow<OrthostaticInsight?>(null)
     val orthostaticInsight: StateFlow<OrthostaticInsight?> = _orthostaticInsight.asStateFlow()
+
+    private val _environmentalInsight = MutableStateFlow<EnvironmentalInsight?>(null)
+    val environmentalInsight: StateFlow<EnvironmentalInsight?> = _environmentalInsight.asStateFlow()
 
     val alcoholLogs: StateFlow<List<AlcoholLog>> = alcoholDao.getAllLogsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

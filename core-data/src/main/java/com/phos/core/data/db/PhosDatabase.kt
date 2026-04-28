@@ -12,7 +12,6 @@ import com.phos.core.data.model.*
         TemporalAnchor::class,
         DoseLog::class,
         SymptomLog::class,
-        EnvironmentalLog::class,
         InteractionRule::class,
         FoodLog::class,
         GeoBoundary::class,
@@ -40,9 +39,11 @@ import com.phos.core.data.model.*
         HRRRecord::class,
         AlcoholLog::class,
         UserProfile::class,
-        PostureLog::class
+        PostureLog::class,
+        EnvironmentalLog::class,
+        ChelationRule::class
     ],
-    version = 24
+    version = 26
 )
 @TypeConverters(Converters::class)
 abstract class PhosDatabase : RoomDatabase() {
@@ -73,4 +74,5 @@ abstract class PhosDatabase : RoomDatabase() {
     abstract fun alcoholDao(): AlcoholDao
     abstract fun userProfileDao(): UserProfileDao
     abstract fun postureDao(): PostureDao
+    abstract fun environmentalDao(): EnvironmentalDao
 }
