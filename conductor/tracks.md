@@ -35,7 +35,7 @@
 | T32 | Activity-Based Wakefulness | **Alertness:** Suppress nap drives using scheduled workout reminders. | conductor/tracks/alertness-orchestration/ | Completed |
 | T33 | Gastric Protection | **Safety:** AI-driven GI irritant detection and food-aligned buffering. | conductor/tracks/gastric-protection/ | Completed |
 | T34 | Sleep Pressure Modeling | **Circadian:** AI-driven adenosine drive tracking and nap forecasting. | conductor/tracks/sleep-pressure/ | Completed |
-| T35 | Beta-Blocker Side Effects | **Safety:** Monitor "Idle Speed" (bradycardia) and afternoon fatigue slumps. | conductor/tracks/beta-blocker-safety/ | Pending |
+| T35 | Beta-Blocker Side Effects | **Safety:** Monitor "Idle Speed" (bradycardia) and afternoon fatigue slumps. | conductor/tracks/beta-blocker-safety/ | Completed |
 | T36 | REM Stability & Dreams | **Circadian:** Analysis of REM fragmentation and vivid dream synthesis. | conductor/tracks/rem-architecture/ | Pending |
 | T37 | Muscle-Heart Mismatch | **Performance:** "Heavy Legs" detection via Cardio Load vs. Activity delta. | conductor/tracks/cardio-mismatch/ | Pending |
 | T38 | Heart Rate Recovery | **ANS Resilience:** Autonomic recovery speed monitoring across doses. | conductor/tracks/hr-recovery/ | Pending |
@@ -71,9 +71,9 @@
 - [x] Correlate caffeine intake with adenosine receptor blocking.
 
 #### T35: Beta-Blocker Side-Effect Tracking
-- [ ] Build "Idle Speed" RHR monitor for morning bradycardia detection.
-- [ ] Implement "6-hour Slump" automatic HR correlation logic.
-- [ ] Create "Oxygenation Bout" light-activity reminders.
+- [x] Build "Idle Speed" RHR monitor for morning bradycardia detection.
+- [x] Implement "6-hour Slump" automatic HR correlation logic.
+- [x] Create "Oxygenation Bout" light-activity reminders.
 
 #### T36: REM Stability & Dream Synthesis
 - [ ] Implement REM fragmentation detection from `SleepStageRecord`.

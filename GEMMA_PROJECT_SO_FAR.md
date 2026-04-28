@@ -40,3 +40,12 @@ overview of the PHOS project architecture, testing strategy, and setup requireme
   The search confirmed that while the core architecture is highly sophisticated, current test coverage (~9.9%) is a primary
   area for expansion. We have a robust setup for Multimodal AI and Health Sync, but ensuring these complex asynchronous
   flows are comprehensively covered by automated tests is the next critical priority.
+
+  5. Completed Track: T35 - Beta-Blocker Side Effects
+  We have successfully implemented Track 35, providing physiological monitoring for Beta-Blocker users.
+  Key achievements:
+   * Idle Speed Monitor: Implemented morning bradycardia detection (RHR < 50 BPM) in the 30-minute post-wake window.
+   * 6-Hour Slump Correlation: Built logic to map HR drops (>15% below daily average) to the 6-hour post-dose metabolic peak.
+   * Oxygenation Bouts: Integrated automated suggestions for 5-minute light activity during metabolic slumps.
+   * UI Integration: Insights are dynamically rendered in the Vertical Timeline with specific icons (Warning, BatteryAlert, DirectionsWalk).
+   * Verification: Validated the `BetaBlockerSafetyEngine` with exhaustive unit tests (100% pass rate).

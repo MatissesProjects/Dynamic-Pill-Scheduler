@@ -16,4 +16,7 @@ interface TemporalAnchorDao {
 
     @Query("SELECT * FROM temporal_anchors ORDER BY wakeTime DESC LIMIT 1")
     fun getLatestAnchorFlow(): kotlinx.coroutines.flow.Flow<TemporalAnchor?>
+
+    @Query("SELECT * FROM temporal_anchors ORDER BY wakeTime DESC LIMIT 1")
+    suspend fun getLatestAnchor(): TemporalAnchor?
 }

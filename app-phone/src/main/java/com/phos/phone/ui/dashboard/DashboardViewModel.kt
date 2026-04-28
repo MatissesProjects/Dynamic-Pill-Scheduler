@@ -63,6 +63,7 @@ class DashboardViewModel(
     private val goalOptimizationEngine = GoalOptimizationEngine()
     private val sleepCalibrationEngine = SleepCalibrationEngine()
     private val alertnessOrchestrator = AlertnessOrchestrator()
+    private val betaBlockerSafetyEngine = BetaBlockerSafetyEngine()
     
     private val nanoEngine = injectedNanoEngine ?: GeminiNanoEngine(application)
     
@@ -96,6 +97,58 @@ class DashboardViewModel(
             syncGait()
             syncChronotype()
             syncMetabolicLoad()
+            syncBetaBlockerSafety()
+        }
+    }
+
+    private fun syncBetaBlockerSafety() {
+        viewModelScope.launch {
+            val meds = medications.value
+            val betaBlockerNames = listOf("metoprolol", "atenolol", "bisoprolol", "carvedilol", "propranolol")
+            val betaBlockers = meds.filter { med -> 
+                betaBlockerNames.any { med.name.lowercase().contains(it) } 
+            }
+            
+            if (betaBlockers.isEmpty()) {
+                _betaBlockerInsights.value = emptyList()
+                return@launch
+            }
+            
+            val anchor = temporalAnchorDao.getLatestAnchor() ?: return@launch
+            val wakeTime = Instant.ofEpochMilli(anchor.wakeTime)
+            
+            // M1: Idle Speed
+            val morningHr = healthSyncManager.fetchHeartRateForSession(
+                wakeTime, 
+                wakeTime.plus(30, java.time.temporal.ChronoUnit.MINUTES)
+            ) ?: emptyList()
+            val bradycardiaInsight = betaBlockerSafetyEngine.detectBradycardia(anchor, morningHr.map { it.beatsPerMinute })
+            
+            // M2: 6-hour Slump
+            val startOfDay = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.DAYS)
+            val endOfDay = startOfDay.plus(1, java.time.temporal.ChronoUnit.DAYS)
+            val todayDoses = doseLogDao.getDosesInWindow(startOfDay.toEpochMilli(), endOfDay.toEpochMilli())
+            
+            val bbDose = todayDoses.find { dose -> 
+                betaBlockers.any { it.medicationId == dose.medicationId } && dose.status == "TAKEN" 
+            }
+            
+            val slumpInsight = bbDose?.actualTime?.let { actualTime ->
+                val doseInstant = Instant.ofEpochMilli(actualTime)
+                val slumpStart = doseInstant.plus(5, java.time.temporal.ChronoUnit.HOURS).plus(30, java.time.temporal.ChronoUnit.MINUTES)
+                val slumpEnd = doseInstant.plus(6, java.time.temporal.ChronoUnit.HOURS).plus(30, java.time.temporal.ChronoUnit.MINUTES)
+                val slumpHr = healthSyncManager.fetchHeartRateForSession(slumpStart, slumpEnd) ?: emptyList()
+                
+                val dailyHr = healthSyncManager.fetchHeartRateForSession(wakeTime, Instant.now()) ?: emptyList()
+                val dailyAvg = if (dailyHr.isNotEmpty()) dailyHr.map { it.beatsPerMinute }.average() else 0.0
+                
+                betaBlockerSafetyEngine.detectFatigueSlump(actualTime, dailyAvg, slumpHr.map { it.beatsPerMinute })
+            }
+            
+            // M3: Oxygenation Reminder
+            val reminder = betaBlockerSafetyEngine.suggestOxygenationBout(slumpInsight)
+            
+            _betaBlockerInsights.value = listOfNotNull(bradycardiaInsight, slumpInsight, reminder)
         }
     }
 
@@ -384,6 +437,9 @@ class DashboardViewModel(
 
     private val _nutrientAdvisory = MutableStateFlow<NutrientAdvisory?>(null)
     val nutrientAdvisory: StateFlow<NutrientAdvisory?> = _nutrientAdvisory.asStateFlow()
+
+    private val _betaBlockerInsights = MutableStateFlow<List<BetaBlockerInsight>>(emptyList())
+    val betaBlockerInsights: StateFlow<List<BetaBlockerInsight>> = _betaBlockerInsights.asStateFlow()
 
     fun detectUpcomingTravel() {
         viewModelScope.launch {

@@ -20,4 +20,7 @@ interface DoseLogDao {
 
     @Query("UPDATE dose_logs SET status = :status, actualTime = :actualTime WHERE id = :id")
     suspend fun updateStatus(id: Long, status: String, actualTime: Long)
+
+    @Query("SELECT * FROM dose_logs WHERE scheduledTime >= :start AND scheduledTime < :end")
+    suspend fun getDosesInWindow(start: Long, end: Long): List<DoseLog>
 }

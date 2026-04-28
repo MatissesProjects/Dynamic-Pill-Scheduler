@@ -52,6 +52,7 @@ fun MainDashboard(
     phosState: PhosState,
     healthInsights: List<String>,
     sideEffectAlerts: List<SideEffectRule>,
+    betaBlockerInsights: List<BetaBlockerInsight> = emptyList(),
     napOverlaps: List<NapOverlap>,
     postureRecommendation: PosturalRecommendation?,
     prnAdvisory: PRNAdvisory?,
@@ -62,6 +63,7 @@ fun MainDashboard(
     nutrientReferences: List<NutrientReference>,
     healthGoals: List<HealthGoal>,
     optimizationSuggestions: List<OptimizationSuggestion>,
+    betaBlockerInsights: List<BetaBlockerInsight>,
     sleepCalibrationInsight: SleepCalibrationInsight?,
     sleepSubjectiveLogs: List<SleepSubjectiveLog>,
     voiceState: VoiceState,
@@ -798,6 +800,7 @@ fun VerticalTimeline(
     is24Hour: Boolean,
     healthInsights: List<String>,
     sideEffectAlerts: List<SideEffectRule>,
+    betaBlockerInsights: List<BetaBlockerInsight> = emptyList(),
     napOverlaps: List<NapOverlap>,
     postureRecommendation: PosturalRecommendation?,
     travelProposal: TravelProposal?,
@@ -904,6 +907,22 @@ fun VerticalTimeline(
 
         sideEffectAlerts.forEach { alert ->
             item { InsightCard(title = "Side Effect Watch: ${alert.sideEffect}", insight = alert.advice, icon = Icons.Default.Warning, color = MaterialTheme.colorScheme.errorContainer, onDismiss = { onDismissInsight("side_effect_${alert.medicationId}_${alert.sideEffect}") }) }
+        }
+
+        betaBlockerInsights.forEach { insight ->
+            item {
+                InsightCard(
+                    title = insight.title,
+                    insight = insight.description,
+                    icon = when(insight.type) {
+                        BetaBlockerInsightType.BRADYCARDIA -> Icons.Default.Warning
+                        BetaBlockerInsightType.FATIGUE_SLUMP -> Icons.Default.BatteryAlert
+                        BetaBlockerInsightType.OXYGENATION_REMINDER -> Icons.Default.DirectionsWalk
+                    },
+                    color = if (insight.isCritical) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+                    onDismiss = { onDismissInsight("beta_blocker_${insight.type}_${insight.hashCode()}") }
+                )
+            }
         }
 
         if (medications.isEmpty()) {
