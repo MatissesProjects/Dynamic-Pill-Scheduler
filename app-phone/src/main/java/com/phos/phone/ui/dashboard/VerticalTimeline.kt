@@ -71,6 +71,7 @@ fun MainDashboard(
     sleepCalibrationInsight: SleepCalibrationInsight?,
     sleepSubjectiveLogs: List<SleepSubjectiveLog>,
     neuroInsight: NeuroCognitiveInsight?,
+    thermalInsight: ThermalInsight?,
     voiceState: VoiceState,
     voiceExtractedEntities: ExtractedEntities?,
     onAddMedication: (String, String, Long, Int, String) -> Unit,
@@ -831,6 +832,7 @@ fun VerticalTimeline(
     hrrAudit: HRRAudit?,
     sleepCalibrationInsight: SleepCalibrationInsight?,
     neuroInsight: NeuroCognitiveInsight?,
+    thermalInsight: ThermalInsight?,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
     onDuplicateMedication: (MedicationRecord) -> Unit,
@@ -987,6 +989,20 @@ fun VerticalTimeline(
         
         postureRecommendation?.let { rec ->
             item { InsightCard(title = rec.title, insight = rec.recommendation, icon = Icons.Default.VerticalAlignTop, color = MaterialTheme.colorScheme.primaryContainer, onDismiss = { onDismissInsight("posture_${rec.hashCode()}") }) }
+        }
+
+        thermalInsight?.let { insight ->
+            if (insight.riskLevel != ThermalRiskLevel.LOW) {
+                item {
+                    InsightCard(
+                        title = "Thermal Strain: ${insight.riskLevel}",
+                        insight = insight.advice ?: "Detected significant skin temperature delta (${"%.1f".format(insight.tempDelta)}°C).",
+                        icon = Icons.Default.Thermostat,
+                        color = if (insight.riskLevel == ThermalRiskLevel.CRITICAL) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+                        onDismiss = { onDismissInsight("thermal_${insight.hashCode()}") }
+                    )
+                }
+            }
         }
 
         napOverlaps.forEach { overlap ->

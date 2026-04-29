@@ -20,7 +20,8 @@ enum class BiometricType {
     HRV,
     SPO2,
     COGNITIVE_FLUIDITY,
-    BRAIN_FOG_INDEX
+    BRAIN_FOG_INDEX,
+    SKIN_TEMPERATURE
 }
 
 /**

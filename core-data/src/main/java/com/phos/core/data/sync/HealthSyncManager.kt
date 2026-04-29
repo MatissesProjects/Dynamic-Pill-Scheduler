@@ -24,7 +24,8 @@ class HealthSyncManager(private val context: Context) {
         HealthPermission.getReadPermission(BloodPressureRecord::class),
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(PowerRecord::class),
-        HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class)
+        HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class),
+        HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class)
     )
 
     suspend fun hasPermissions(): Boolean {
@@ -282,6 +283,18 @@ class HealthSyncManager(private val context: Context) {
                 timeRangeFilter = TimeRangeFilter.between(Instant.now().minus(24, ChronoUnit.HOURS), Instant.now())
             )
             return healthConnectClient.readRecords(request).records.maxByOrNull { it.time }?.temperature?.inCelsius
+        } catch (e: Exception) { return null }
+    }
+
+    suspend fun fetchLatestSkinTemperature(): Double? {
+        try {
+            if (!hasPermissions()) return null
+            val request = ReadRecordsRequest(
+                recordType = BasalBodyTemperatureRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(Instant.now().minus(24, ChronoUnit.HOURS), Instant.now())
+            )
+            return healthConnectClient.readRecords(request).records
+                .maxByOrNull { it.time }?.temperature?.inCelsius
         } catch (e: Exception) { return null }
     }
 }

@@ -80,6 +80,7 @@ class DashboardViewModel(
     
     private val nanoEngine = injectedNanoEngine ?: GeminiNanoEngine(application)
     private val neuroLoadEngine = NeuroLoadEngine(nanoEngine)
+    private val thermalShieldEngine = ThermalShieldEngine()
     
     private val voiceParser = GeminiVoiceParser(nanoEngine)
     private val voiceLogCoordinator = VoiceLogCoordinator(
@@ -750,6 +751,9 @@ class DashboardViewModel(
     private val _environmentalInsight = MutableStateFlow<EnvironmentalInsight?>(null)
     val environmentalInsight: StateFlow<EnvironmentalInsight?> = _environmentalInsight.asStateFlow()
 
+    private val _thermalInsight = MutableStateFlow<ThermalInsight?>(null)
+    val thermalInsight: StateFlow<ThermalInsight?> = _thermalInsight.asStateFlow()
+
     val alcoholLogs: StateFlow<List<AlcoholLog>> = alcoholDao.getAllLogsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -847,6 +851,28 @@ class DashboardViewModel(
             }
             
             _congestionInsight.value = nocturnalRespiratoryEngine.analyzeCongestion(metrics)
+        }
+    }
+
+    private fun syncSkinTemperature() {
+        viewModelScope.launch {
+            val temp = healthSyncManager.fetchLatestSkinTemperature()
+            if (temp != null) {
+                biometricDao.insertLog(BiometricLog(type = BiometricType.SKIN_TEMPERATURE, value = temp))
+                syncThermalInsight()
+            }
+        }
+    }
+
+    private fun syncThermalInsight() {
+        viewModelScope.launch {
+            val now = Instant.now()
+            val logs = biometricDao.getLogsSince(BiometricType.SKIN_TEMPERATURE, now.minus(12, java.time.temporal.ChronoUnit.HOURS))
+            val activeMeds = medications.value
+            val recentDoses = doseLogDao.getDosesInWindow(now.toEpochMilli() - 4 * 3600000L, now.toEpochMilli())
+            
+            val insight = thermalShieldEngine.analyzeThermalRisk(logs, activeMeds, recentDoses, null)
+            _thermalInsight.value = insight
         }
     }
 
