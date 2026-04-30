@@ -28,8 +28,6 @@ class MainActivity : ComponentActivity() {
         LocalSyncWorker.schedule(this)
 
         setContent {
-...
-
             val scope = rememberCoroutineScope()
             val medications by viewModel.medications.collectAsState()
             val prnMedications by viewModel.prnMedications.collectAsState()
@@ -54,6 +52,7 @@ class MainActivity : ComponentActivity() {
             val cardioMismatch by viewModel.cardioMismatch.collectAsState()
             val hrrAudit by viewModel.hrrAudit.collectAsState()
             
+            val hormonalHarmony by viewModel.hormonalHarmony.collectAsState()
             val sleepCalibrationInsight by viewModel.sleepCalibrationInsight.collectAsState()
             val sleepSubjectiveLogs by viewModel.sleepSubjectiveLogs.collectAsState()
             
@@ -83,6 +82,7 @@ class MainActivity : ComponentActivity() {
                         nutrientReferences = nutrientReferences,
                         healthGoals = healthGoals,
                         optimizationSuggestions = optimizationSuggestions,
+                        hormonalHarmony = hormonalHarmony,
                         betaBlockerInsights = betaBlockerInsights,
                         sleepRestorationAudit = sleepRestorationAudit,
                         dailyReadiness = dailyReadiness,

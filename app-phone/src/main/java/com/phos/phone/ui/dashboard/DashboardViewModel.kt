@@ -16,6 +16,10 @@ import com.phos.core.data.proto.MealPreferences
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.temporal.ChronoUnit
+import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
+import kotlin.math.abs
 
 class DashboardViewModel(
     application: Application,
@@ -77,17 +81,68 @@ class DashboardViewModel(
     private val hfDecompensationEngine = HFDecompensationEngine()
     private val pulsePowerEngine = PulsePowerEngine()
     private val nocturnalRespiratoryEngine = NocturnalRespiratoryEngine()
+    private val hormonalSyncEngine = HormonalSyncEngine(mealScheduler)
+    private val thermalShieldEngine = ThermalShieldEngine()
+    private val environmentalCorrelationEngine = EnvironmentalCorrelationEngine()
     
     private val nanoEngine = injectedNanoEngine ?: GeminiNanoEngine(application)
     private val neuroLoadEngine = NeuroLoadEngine(nanoEngine)
-    private val thermalShieldEngine = ThermalShieldEngine()
-    
     private val voiceParser = GeminiVoiceParser(nanoEngine)
     private val voiceLogCoordinator = VoiceLogCoordinator(
         doseLogDao, interactionDao, medicationDao, intelligenceDao, dreamDao, voiceParser
     )
     
     val voiceManager: VoiceManager = injectedVoiceManager ?: VoiceManager(application)
+
+    // State Declarations
+    private val dismissedIds = dismissedInsightDao.getAllDismissedIds()
+    
+    val phosState: StateFlow<PhosState> = dataLayerRepository.phosStateFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PhosState.getDefaultInstance())
+
+    private val temporalAnchorFlow = temporalAnchorDao.getLatestAnchorFlow()
+
+    val medications: StateFlow<List<MedicationRecord>> = medicationDao.getAllActiveMedicationsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val caffeineLogs: StateFlow<List<CaffeineLog>> = caffeineDao.getAllLogsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val appetiteLogs: StateFlow<List<AppetiteLog>> = appetiteDao.getAppetiteLogsSince(Instant.now().minus(24, ChronoUnit.HOURS))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val sleepSubjectiveLogs: StateFlow<List<SleepSubjectiveLog>> = sleepSubjectiveDao.getAllLogsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val metabolicLogs: StateFlow<List<MetabolicLoadLog>> = metabolicDao.getAllLogsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val nocturiaLogs: StateFlow<List<NocturiaLog>> = nocturiaDao.getNocturiaLogsSince(Instant.now().minus(24, ChronoUnit.HOURS))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val chronotype: StateFlow<ChronotypeRecord?> = chronotypeDao.getChronotypeFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val healthGoals: StateFlow<List<HealthGoal>> = goalDao.getActiveGoalsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val symptomLogs: StateFlow<List<SymptomLog>> = intelligenceDao.getSymptomsSince(Instant.now().minus(24, ChronoUnit.HOURS))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val giIrritantIds: StateFlow<List<String>> = medicationDao.getGIIrritantIdsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val prnMedications: StateFlow<List<PRNMedication>> = prnDao.getAllActivePRNMedicationsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val userProfile: StateFlow<UserProfile?> = userProfileDao.getUserProfileFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val alcoholLogs: StateFlow<List<AlcoholLog>> = alcoholDao.getAllLogsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allergenProfile: StateFlow<List<AllergenProfile>> = allergenDao.getAllergensFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val collisionResolverFlow = combine(
         interactionDao.getAllRules(),
@@ -105,422 +160,7 @@ class DashboardViewModel(
         NutrientAdvisoryEngine(it)
     }
 
-    init {
-        viewModelScope.launch {
-            nanoEngine.initialize()
-            seedKnowledgeBase()
-            syncGait()
-            syncChronotype()
-            syncMetabolicLoad()
-            syncBetaBlockerSafety()
-            syncSleepRestorationAudit()
-            syncCardioReadiness()
-            syncHrrAudit()
-            syncHFDecompensation()
-            syncPulsePowerEfficiency()
-            syncNocturnalRespiratoryStrain()
-            syncMetabolicClearance()
-            syncPosture()
-            syncEnvironmentalStrain()
-            
-            // Periodic sync loop
-            launch {
-                while (true) {
-                    kotlinx.coroutines.delay(3600000) // Hourly
-                    syncSleepRestorationAudit()
-                    syncCardioReadiness()
-                    syncHrrAudit()
-                    syncHFDecompensation()
-                    syncPulsePowerEfficiency()
-                    syncNocturnalRespiratoryStrain()
-                    syncMetabolicClearance()
-                    syncPosture()
-                    syncEnvironmentalStrain()
-                }
-            }
-        }
-    }
-
-    private fun syncEnvironmentalStrain() {
-        viewModelScope.launch {
-            val now = Instant.now()
-            val envLogs = environmentalDao.getLogsSince(now.minus(24, java.time.temporal.ChronoUnit.HOURS))
-            
-            // Re-using nocturnal respiratory strain metrics for correlation
-            val rr = healthSyncManager.fetchRespiratoryRate(now.minus(12, java.time.temporal.ChronoUnit.HOURS), now) ?: emptyList()
-            val spo2 = healthSyncManager.fetchOxygenSaturation(now.minus(12, java.time.temporal.ChronoUnit.HOURS), now) ?: emptyList()
-            
-            val metrics = rr.map { r ->
-                NocturnalRespiratoryMetric(
-                    timestamp = r.time,
-                    respiratoryRate = r.rate,
-                    sleepPosition = SleepPosition.FLAT, // Assume flat for worst-case environmental correlation
-                    oxygenSaturation = spo2.minByOrNull { Math.abs(it.time.toEpochMilli() - r.time.toEpochMilli()) }?.value ?: 95.0
-                )
-            }
-            
-            _environmentalInsight.value = environmentalCorrelationEngine.correlateRespiratoryStrain(metrics, envLogs)
-        }
-    }
-
-    private fun syncPosture() {
-        viewModelScope.launch {
-            val now = Instant.now()
-            val recentLogs = postureDao.getLogsSince(now.minus(1, java.time.temporal.ChronoUnit.HOURS))
-            
-            val pressureSamples = recentLogs
-                .filter { it.type == PostureLogType.BAROMETRIC_PRESSURE }
-                .sortedBy { it.timestamp }
-                .map { it.value }
-            
-            val meds = medications.value
-            val betaBlockerNames = listOf("metoprolol", "atenolol", "bisoprolol", "carvedilol", "propranolol")
-            val hasBetaBlocker = meds.any { med -> betaBlockerNames.any { med.name.lowercase().contains(it) } }
-            
-            _orthostaticInsight.value = postureIntelligence.detectOrthostaticTransition(pressureSamples, hasBetaBlocker)
-        }
-    }
-
-    fun logAlcohol(beverageType: BeverageType, abv: Double, volumeMl: Double) {
-        viewModelScope.launch {
-            alcoholDao.insertLog(AlcoholLog(
-                timestamp = Instant.now(),
-                beverageType = beverageType,
-                abv = abv,
-                volumeMl = volumeMl
-            ))
-            syncMetabolicClearance()
-        }
-    }
-
-    fun updateUserProfile(weightKg: Double, gender: Gender) {
-        viewModelScope.launch {
-            userProfileDao.updateProfile(UserProfile(weightKg = weightKg, gender = gender))
-            syncMetabolicClearance()
-        }
-    }
-
-    private fun syncSleepRestorationAudit() {
-        viewModelScope.launch {
-            val meds = medications.value
-            val betaBlockerNames = listOf("metoprolol", "atenolol", "bisoprolol", "carvedilol", "propranolol")
-            val hasBetaBlocker = meds.any { med -> 
-                betaBlockerNames.any { med.name.lowercase().contains(it) } 
-            }
-            
-            if (!hasBetaBlocker) {
-                _sleepRestorationAudit.value = null
-                return@launch
-            }
-            
-            val today = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.withZone(java.time.ZoneId.systemDefault()).format(Instant.now())
-            val sleepSamples = healthSyncManager.fetchSleepStages(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS), Instant.now()) ?: emptyList()
-            
-            if (sleepSamples.isEmpty()) return@launch
-            
-            val mappedSamples = sleepSamples.map { 
-                SleepStageSample(it.startTime, it.endTime, when(it.stage) {
-                    androidx.health.connect.client.records.SleepStageRecord.STAGE_TYPE_AWAKE -> SleepStage.AWAKE
-                    androidx.health.connect.client.records.SleepStageRecord.STAGE_TYPE_REM -> SleepStage.REM
-                    androidx.health.connect.client.records.SleepStageRecord.STAGE_TYPE_DEEP -> SleepStage.DEEP
-                    else -> SleepStage.LIGHT
-                })
-            }
-            
-            val fragmentation = remSafetyEngine.calculateFragmentationIndex(mappedSamples)
-            val dreamLogs = dreamDao.getLogsForDate(today)
-            val avgIntensity = if (dreamLogs.isNotEmpty()) dreamLogs.map { it.intensity }.average().toInt() else null
-            
-            _sleepRestorationAudit.value = remSafetyEngine.buildRestorationAudit(fragmentation, avgIntensity)
-        }
-    }
-
-    fun logDreamJournal(text: String) {
-        viewModelScope.launch {
-            val json = nanoEngine.synthesizeDreamIntensity(text)
-            val intensity = if (json != null) Regex("\"intensity\":\\s*(\\d+)").find(json)?.groupValues?.get(1)?.toInt() ?: 5 else 5
-            val vividness = if (json != null) Regex("\"vividness\":\\s*(\\d+)").find(json)?.groupValues?.get(1)?.toInt() ?: 5 else 5
-            
-            val today = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.withZone(java.time.ZoneId.systemDefault()).format(Instant.now())
-            dreamDao.insertLog(DreamLog(date = today, rawText = text, intensity = intensity, vividness = vividness))
-            
-            // Refresh audit after logging a dream
-            syncSleepRestorationAudit()
-        }
-    }
-
-    private fun syncCardioReadiness() {
-        viewModelScope.launch {
-            val meds = medications.value
-            val betaBlockerNames = listOf("metoprolol", "atenolol", "bisoprolol", "carvedilol", "propranolol")
-            val hasBetaBlocker = meds.any { med -> 
-                betaBlockerNames.any { med.name.lowercase().contains(it) } 
-            }
-            
-            if (!hasBetaBlocker) {
-                _dailyReadiness.value = null
-                return@launch
-            }
-            
-            val now = Instant.now()
-            val startTime = now.minus(24, java.time.temporal.ChronoUnit.HOURS)
-            
-            val hrSamples = healthSyncManager.fetchHeartRateForSession(startTime, now) ?: emptyList()
-            val rhrSamples = healthSyncManager.fetchRestingHeartRate(startTime, now) ?: emptyList()
-            // Simulating HRV since HealthSyncManager might not have a direct fetcher yet
-            val hrv = 45.0 // Default or simulated
-            
-            val currentRhr = if (rhrSamples.isNotEmpty()) rhrSamples.map { it.beatsPerMinute }.average() else 60.0
-            val sleepLogs = sleepSubjectiveLogs.value
-            val sleepQuality = if (sleepLogs.isNotEmpty()) sleepLogs.first().reportedQuality else 7
-            
-            val readiness = cardioMismatchEngine.calculateReadiness(
-                hrv = hrv,
-                avgHrv = 50.0,
-                rhr = currentRhr,
-                avgRhr = 62.0,
-                sleepQuality = sleepQuality
-            )
-            
-            _dailyReadiness.value = readiness
-            detectHeavyLegs(currentRhr)
-        }
-    }
-
-    private fun detectHeavyLegs(rhr: Double) {
-        viewModelScope.launch {
-            val now = Instant.now()
-            val oneHourAgo = now.minus(1, java.time.temporal.ChronoUnit.HOURS)
-            
-            val steps = healthSyncManager.fetchStepsForSession(oneHourAgo, now)
-            val hrSamples = healthSyncManager.fetchHeartRateForSession(oneHourAgo, now) ?: emptyList()
-            
-            if (steps > 1000 && hrSamples.isNotEmpty()) {
-                val stepRate = steps.toDouble() / 60.0 // Rough average for the hour
-                val avgHr = hrSamples.map { it.beatsPerMinute }.average()
-                
-                val insight = cardioMismatchEngine.detectMismatch(
-                    timestamp = now.toEpochMilli(),
-                    stepRate = stepRate,
-                    heartRate = avgHr,
-                    rhr = rhr
-                )
-                
-                if (insight.isSignificant) {
-                    _cardioMismatch.value = insight
-                } else {
-                    _cardioMismatch.value = null
-                }
-            }
-        }
-    }
-
-    private fun syncHrrAudit() {
-        viewModelScope.launch {
-            val exercises = healthSyncManager.fetchRecentExercises() ?: return@launch
-            val medications = medicationDao.getAllActiveMedications()
-            
-            // For simplicity, we correlate with the most recent medication version id
-            val currentMedVersion = medications.maxByOrNull { it.validFrom }?.id ?: 0L
-            
-            exercises.forEach { session ->
-                // Check if we already have a record for this workout
-                // (In a real app, we'd check metadata.id in hrrDao)
-                
-                val hrSamples = healthSyncManager.fetchHeartRateForSession(
-                    session.endTime,
-                    session.endTime.plus(2, java.time.temporal.ChronoUnit.MINUTES)
-                ) ?: emptyList()
-                
-                if (hrSamples.isNotEmpty()) {
-                    val peakHrSamples = healthSyncManager.fetchHeartRateForSession(
-                        session.endTime.minus(30, java.time.temporal.ChronoUnit.SECONDS),
-                        session.endTime
-                    ) ?: emptyList()
-                    val peakHr = if (peakHrSamples.isNotEmpty()) peakHrSamples.maxOf { it.beatsPerMinute } else 120.0
-                    
-                    val record = hrrOrchestrator.calculateHRR(
-                        endTime = session.endTime,
-                        hrSamples = hrSamples.map { BiometricLog(type = BiometricType.HEART_RATE, value = it.beatsPerMinute, timestamp = it.time) },
-                        peakHr = peakHr,
-                        medicationVersion = currentMedVersion
-                    )
-                    hrrDao.insertRecord(record)
-                }
-            }
-            
-            val latestRecord = hrrDao.getRecordsSince(java.time.LocalDate.now().toString()).firstOrNull()
-            if (latestRecord != null) {
-                val history = hrrDao.getRecordsSince(java.time.LocalDate.now().minusDays(7).toString())
-                val audit = hrrOrchestrator.buildHRRAudit(latestRecord, history)
-                _hrrAudit.value = audit
-                
-                // Trigger Watch alert if strained (T38 M3)
-                if (audit?.isStrained == true) {
-                    dataLayerRepository.updateAutonomicStrain(true)
-                }
-            }
-        }
-    }
-
-    private fun syncBetaBlockerSafety() {
-        viewModelScope.launch {
-            val meds = medications.value
-            val betaBlockerNames = listOf("metoprolol", "atenolol", "bisoprolol", "carvedilol", "propranolol")
-            val betaBlockers = meds.filter { med -> 
-                betaBlockerNames.any { med.name.lowercase().contains(it) } 
-            }
-            
-            if (betaBlockers.isEmpty()) {
-                _betaBlockerInsights.value = emptyList()
-                return@launch
-            }
-            
-            val anchor = temporalAnchorDao.getLatestAnchor() ?: return@launch
-            val wakeTime = Instant.ofEpochMilli(anchor.wakeTime)
-            
-            // M1: Idle Speed
-            val morningHr = healthSyncManager.fetchHeartRateForSession(
-                wakeTime, 
-                wakeTime.plus(30, java.time.temporal.ChronoUnit.MINUTES)
-            ) ?: emptyList()
-            val bradycardiaInsight = betaBlockerSafetyEngine.detectBradycardia(anchor, morningHr.map { it.beatsPerMinute })
-            
-            // M2: 6-hour Slump
-            val startOfDay = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.DAYS)
-            val endOfDay = startOfDay.plus(1, java.time.temporal.ChronoUnit.DAYS)
-            val todayDoses = doseLogDao.getDosesInWindow(startOfDay.toEpochMilli(), endOfDay.toEpochMilli())
-            
-            val bbDose = todayDoses.find { dose -> 
-                betaBlockers.any { it.medicationId == dose.medicationId } && dose.status == "TAKEN" 
-            }
-            
-            val slumpInsight = bbDose?.actualTime?.let { actualTime ->
-                val doseInstant = Instant.ofEpochMilli(actualTime)
-                val slumpStart = doseInstant.plus(5, java.time.temporal.ChronoUnit.HOURS).plus(30, java.time.temporal.ChronoUnit.MINUTES)
-                val slumpEnd = doseInstant.plus(6, java.time.temporal.ChronoUnit.HOURS).plus(30, java.time.temporal.ChronoUnit.MINUTES)
-                val slumpHr = healthSyncManager.fetchHeartRateForSession(slumpStart, slumpEnd) ?: emptyList()
-                
-                val dailyHr = healthSyncManager.fetchHeartRateForSession(wakeTime, Instant.now()) ?: emptyList()
-                val dailyAvg = if (dailyHr.isNotEmpty()) dailyHr.map { it.beatsPerMinute }.average() else 0.0
-                
-                betaBlockerSafetyEngine.detectFatigueSlump(actualTime, dailyAvg, slumpHr.map { it.beatsPerMinute })
-            }
-            
-            // M3: Oxygenation Reminder
-            val reminder = betaBlockerSafetyEngine.suggestOxygenationBout(slumpInsight)
-            
-            _betaBlockerInsights.value = listOfNotNull(bradycardiaInsight, slumpInsight, reminder)
-        }
-    }
-
-    private fun syncGait() {
-        viewModelScope.launch {
-            gaitManager.syncGaitMetrics()
-        }
-    }
-
-    private fun syncChronotype() {
-        viewModelScope.launch {
-            val history = healthSyncManager.fetchSleepHistory(14)
-            if (history != null) {
-                val record = chronotypeClassifier.classify(history)
-                chronotypeDao.updateChronotype(record)
-            }
-        }
-    }
-
-    private fun syncMetabolicLoad() {
-        viewModelScope.launch {
-            val exercises = healthSyncManager.fetchRecentExercises() ?: return@launch
-            exercises.forEach { session ->
-                val hr = healthSyncManager.fetchHeartRateForSession(session.startTime, session.endTime) ?: emptyList()
-                
-                if (session.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_CYCLING) {
-                    val power = healthSyncManager.fetchPowerForSession(session.startTime, session.endTime) ?: emptyList()
-                    val cadence = healthSyncManager.fetchCadenceForSession(session.startTime, session.endTime) ?: emptyList()
-                    val effort = ebikeNormalizer.normalizeEffort(session, power, hr, cadence)
-                    
-                    // We store normalized load as TRIMP for consistent tracking
-                    val log = MetabolicLoadLog(
-                        exerciseSessionId = session.metadata.id,
-                        trimpScore = effort.normalizedCardioLoad,
-                        avgHeartRate = if (hr.isNotEmpty()) hr.map { it.beatsPerMinute }.average() else 0.0,
-                        durationMinutes = java.time.Duration.between(session.startTime, session.endTime).toMinutes(),
-                        timestamp = session.endTime,
-                        isHyperMetabolic = effort.wasHighIntensity
-                    )
-                    metabolicDao.insertLog(log)
-                } else {
-                    val log = metabolicEngine.calculateMetabolicLoad(session, hr)
-                    metabolicDao.insertLog(log)
-                }
-            }
-        }
-    }
-
-    private fun seedKnowledgeBase() {
-        viewModelScope.launch {
-            // Seed Absorption Rules
-            val absorptionRules = listOf(
-                AbsorptionRule(medicationId = "sucralfate", requiredGapMinutes = 120, reason = "Take Sucralfate on an empty stomach, at least 2 hours before other medications to protect gut absorption."),
-                AbsorptionRule(medicationId = "levothyroxine", requiredGapMinutes = 60, reason = "Take Levothyroxine 60 minutes before other meds or food for optimal absorption.")
-            )
-            absorptionRules.forEach { interactionDao.insertAbsorptionRule(it) }
-
-            // Seed Side Effect Rules
-            val sideEffectRules = listOf(
-                SideEffectRule(medicationId = "lisinopril", sideEffect = "Dizziness/Cough", advice = "Monitor for a persistent dry cough or dizziness when standing up."),
-                SideEffectRule(medicationId = "metoprolol", sideEffect = "Low Heart Rate", advice = "Watch for extreme fatigue or very low resting heart rate.")
-            )
-            sideEffectRules.forEach { interactionDao.insertSideEffectRule(it) }
-
-            // Seed Interaction Rules
-            val interactionRules = listOf(
-                InteractionRule(sourceId = "grapefruit", targetId = "statin", gapMillis = 24 * 3600000L, reason = "Grapefruit inhibits metabolism of Statins, increasing toxicity risk.", severity = InteractionSeverity.CRITICAL)
-            )
-            interactionRules.forEach { interactionDao.insertRule(it) }
-
-            // Seed PRN Medications
-            val prnMedications = listOf(
-                PRNMedication(medicationId = "ibuprofen_prn", name = "Ibuprofen", dosage = "400mg", maxDosesPer24h = 4, minGapMinutes = 240, reasonForUse = "Pain/Inflammation", validFrom = System.currentTimeMillis()),
-                PRNMedication(medicationId = "albuterol_prn", name = "Albuterol Inhaler", dosage = "2 puffs", maxDosesPer24h = 8, minGapMinutes = 15, reasonForUse = "Shortness of Breath", validFrom = System.currentTimeMillis())
-            )
-            prnMedications.forEach { prnDao.insert(it) }
-            
-            // Seed Allergens
-            val initialAllergens = listOf(
-                AllergenProfile("dairy", "Dairy", "MODERATE"),
-                AllergenProfile("gluten", "Gluten", "MODERATE")
-            )
-            initialAllergens.forEach { allergenDao.insertAllergen(it) }
-
-            // Seed Nutrient References
-            val foodRefs = listOf(
-                NutrientReference("yogurt", "Greek Yogurt", NutrientFacts(calories = 150, proteinG = 15.0, calciumMg = 200.0, ingredients = listOf("Milk", "Live Cultures")), "Found in: Dairy Aisle"),
-                NutrientReference("spinach", "Spinach", NutrientFacts(calories = 20, calciumMg = 100.0, ironMg = 2.0, ingredients = listOf("Spinach")), "Found in: Produce")
-            )
-            foodRefs.forEach { nutrientDao.insertReference(it) }
-
-            // Seed Depletions
-            val depletions = listOf(
-                MedicationInducedDepletion(medicationNamePattern = "statin", depletedNutrient = "CoQ10", advice = "Statins inhibit the natural production of Coenzyme Q10.", foodSuggestions = listOf("Fatty Fish", "Organ Meats")),
-                MedicationInducedDepletion(medicationNamePattern = "metformin", depletedNutrient = "Vitamin B12", advice = "Long-term Metformin use can reduce B12 absorption.", foodSuggestions = listOf("Eggs", "Dairy", "Fortified Cereals"))
-            )
-            depletions.forEach { nutrientDao.insertDepletion(it) }
-        }
-    }
-
-    private val dismissedIds = dismissedInsightDao.getAllDismissedIds()
-    val medications: StateFlow<List<MedicationRecord>> = medicationDao.getAllActiveMedicationsFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val prnMedications: StateFlow<List<PRNMedication>> = prnDao.getAllActivePRNMedicationsFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val phosState: StateFlow<PhosState> = dataLayerRepository.phosStateFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PhosState.getDefaultInstance())
-
+    // Derived Flows
     val healthInsights: StateFlow<List<String>> = combine(medications, collisionResolverFlow, dismissedIds) { meds, resolver, dismissed ->
         resolver.findAbsorptionSpacingSuggestions(meds).filter { insight ->
             !dismissed.contains("absorption_${insight.hashCode()}")
@@ -533,123 +173,43 @@ class DashboardViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val chelationInsights: StateFlow<List<ChelationInsight>> = combine(
-        medications,
-        interactionDao.getAllChelationRules(),
-        flow { 
-            while(true) {
-                emit(interactionDao.getRecentFoodLogs(System.currentTimeMillis() - 24 * 3600000L))
-                kotlinx.coroutines.delay(60000)
-            }
-        }
-    ) { meds, rules, foodLogs ->
-        meds.mapNotNull { med ->
-            giProtectionEngine.detectChelationRisk(med, foodLogs, rules)
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val gaitInsights: StateFlow<List<String>> = flow {
-        while (true) {
-            val deviation = gaitManager.detectGaitDeviation()
-            if (deviation != null && deviation.isSignificant) {
-                val msg = "⚠️ Critical Gait Warning: Stride length has dropped by ${"%.1f".format(deviation.dropPercentage)}%. This may indicate dizziness or neuromotor side effects from recent medication changes. Please consult your doctor if you feel unsteady."
-                emit(listOf(msg))
-            } else {
-                emit(emptyList())
-            }
-            kotlinx.coroutines.delay(3600000) // Check hourly
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val symptomLogs: StateFlow<List<SymptomLog>> = intelligenceDao.getSymptomsSince(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val caffeineLogs: StateFlow<List<CaffeineLog>> = caffeineDao.getAllLogsFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val hormonalHarmony: StateFlow<HormonalHarmonyReport?> = combine(
+        medications, temporalAnchorFlow, appetiteLogs
+    ) { meds, anchor, appetite ->
+        if (anchor == null) null
+        else hormonalSyncEngine.evaluateHormonalHarmony(meds, anchor, appetite)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val adenosineState: StateFlow<SleepPressureState?> = combine(temporalAnchorFlow, caffeineLogs) { anchor, caffeine ->
         if (anchor == null) null
         else adenosineEngine.calculateCurrentState(anchor.wakeTime, caffeine)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val giProtectionInsights: StateFlow<List<String>> = combine(medications, giIrritantIds, symptomLogs) { meds, irritants, symptoms ->
-        val culprits = giProtectionEngine.correlateStomachPain(meds, irritants, symptoms)
-        if (culprits.isNotEmpty()) {
-            val names = meds.filter { culprits.contains(it.medicationId) }.map { it.name }.distinct()
-            listOf("Gastric Irritation Detected: Your recent stomach discomfort correlates with ${names.joinToString()}. We recommend ensuring these are taken with a full meal or a thick liquid (like yogurt) to buffer the lining.")
-        } else emptyList()
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val alertnessIntervention: StateFlow<AlertnessIntervention?> = combine(
-        temporalAnchorFlow,
-        sleepSubjectiveLogs,
-        metabolicLogs
-    ) { anchor, sleepLogs, metabolic ->
-        if (anchor == null) null
-        else {
-            val history = healthSyncManager.fetchSleepHistory(7) ?: emptyList()
-            val prompt = alertnessOrchestrator.buildPredictionPrompt(anchor.wakeTime, history, sleepLogs, metabolic)
-            val json = nanoEngine.generateResponse(prompt) ?: return@combine null
-            
-            try {
-                val isVulnerable = json.contains("\"isVulnerable\": true")
-                val mins = Regex("\"predictedMinutesUntilDip\":\\s*(\\d+)").find(json)?.groupValues?.get(1)?.toLong() ?: 0L
-                val reason = Regex("\"reason\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1) ?: ""
-                
-                if (isVulnerable) {
-                    AlertnessIntervention(
-                        title = "AI Wakefulness Prediction",
-                        description = reason,
-                        suggestedActivity = "15-min E-Bike ride or Brisk Walk",
-                        timeToDipMinutes = mins,
-                        isHighRisk = sleepLogs.firstOrNull()?.let { it.reportedQuality <= 4 } ?: false
-                    )
-                } else null
-            } catch (e: Exception) { null }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    private val temporalAnchorFlow = temporalAnchorDao.getLatestAnchorFlow()
-    
     val napOverlaps: StateFlow<List<NapOverlap>> = combine(medications, temporalAnchorFlow) { meds, anchor ->
         if (anchor == null) emptyList()
         else napManager.checkNapOverlaps(meds, anchor)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val postureRecommendation: StateFlow<PosturalRecommendation?> = flow {
-        while (true) {
-            val recentFood = interactionDao.getRecentFoodLogs(System.currentTimeMillis() - 2 * 3600000L)
-            emit(postureIntelligence.checkPostPrandialPosture(recentFood))
-            kotlinx.coroutines.delay(60000) // Refresh every minute
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    val appetiteLogs: StateFlow<List<AppetiteLog>> = appetiteDao.getAppetiteLogsSince(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val eatingWindows: StateFlow<List<OptimalEatingWindow>> = combine(medications, temporalAnchorFlow, appetiteLogs, phosState) { meds, anchor, appetite, state ->
         if (anchor == null) emptyList()
         else mealScheduler.findOptimalEatingWindows(meds, anchor, appetite, if(state.hasMealPreferences()) state.mealPreferences else null)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allergenProfile: StateFlow<List<AllergenProfile>> = allergenDao.getAllergensFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val chronotype: StateFlow<ChronotypeRecord?> = chronotypeDao.getChronotypeFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    val healthGoals: StateFlow<List<HealthGoal>> = goalDao.getActiveGoalsFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val nocturiaLogs: StateFlow<List<NocturiaLog>> = nocturiaDao.getNocturiaLogsSince(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     val optimizationSuggestions: StateFlow<List<OptimizationSuggestion>> = combine(
         healthGoals, medications, phosState, temporalAnchorFlow, nocturiaLogs, chronotype, metabolicLogs, adenosineState
-    ) { goals, meds, state, anchor, nocturia, chrono, metabolic, adenosine ->
+    ) { array ->
+        val goals = array[0] as List<HealthGoal>
+        val meds = array[1] as List<MedicationRecord>
+        val state = array[2] as PhosState
+        val anchor = array[3] as TemporalAnchor?
+        val nocturia = array[4] as List<NocturiaLog>
+        val chrono = array[5] as ChronotypeRecord?
+        val metabolic = array[6] as List<MetabolicLoadLog>
+        val adenosine = array[7] as SleepPressureState?
+
         if (anchor == null) emptyList()
         else {
-            val betaBlockerNames = listOf("metoprolol", "atenolol", "bisoprolol", "carvedilol", "propranolol")
+            val betaBlockerNames = listOf("metoprolol", "propranolol")
             val hasBetaBlocker = meds.any { med -> betaBlockerNames.any { med.name.lowercase().contains(it) } }
             
             val suggestions = goalOptimizationEngine.evaluateGoals(
@@ -660,55 +220,36 @@ class DashboardViewModel(
                 nocturiaCount = nocturia.size,
                 chronotype = chrono?.type ?: Chronotype.NEUTRAL,
                 metabolicLogs = metabolic,
-                isOnBetaBlocker = hasBetaBlocker
+                isOnBetaBlocker = hasBetaBlocker,
+                giIrritantIds = giIrritantIds.value
             ).toMutableList()
 
-            // 7. Adenosine / Nap Propensity Safety
             if (adenosine != null && adenosine.napPropensityScore > 80) {
                 suggestions.add(OptimizationSuggestion(
                     goalId = -20,
                     id = "high_sleep_pressure",
                     title = "Critical Sleep Pressure",
-                    description = "AI models show extreme homeostatic sleep pressure (Propensity: ${adenosine.napPropensityScore}%). To stay awake and safe, we recommend a 15-min E-Bike alertness micro-bout now.",
+                    description = "AI models show extreme homeostatic sleep pressure.",
                     suggestedMedicationShifts = emptyMap()
                 ))
             }
-            
             suggestions
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val sleepSubjectiveLogs: StateFlow<List<SleepSubjectiveLog>> = sleepSubjectiveDao.getAllLogsFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val metabolicLogs: StateFlow<List<MetabolicLoadLog>> = metabolicDao.getAllLogsFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val sentimentLogs: StateFlow<List<SentimentLog>> = sentimentDao.getAllLogsFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val burnoutRisk: StateFlow<BurnoutRisk> = combine(sentimentLogs, biometricDao.getLogsByTypeFlow(BiometricType.HRV)) { sentiment, biometrics ->
-        stressSynthesisEngine.detectBurnoutRisk(sentiment, biometrics)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BurnoutRisk(0f, false, null))
-
     val sleepCalibrationInsight: StateFlow<SleepCalibrationInsight?> = combine(sleepSubjectiveLogs, temporalAnchorFlow) { logs, anchor ->
         if (anchor == null || logs.isEmpty()) null
-        else {
-            val latestSubjective = logs.first()
-            // Simulating objective duration since we don't store it in Anchor yet (it's in HealthConnect)
-            // In a real app we'd query HealthSyncManager for the matching night
-            sleepCalibrationEngine.calibrate(8 * 3600000L, latestSubjective)
-        }
+        else sleepCalibrationEngine.calibrate(8 * 3600000L, logs.first())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val medicationDepletions: StateFlow<List<String>> = combine(medications, nutrientDao.getAllDepletions()) { meds, rules ->
-        val engine = NutrientAdvisoryEngine(CollisionResolver()) // Transient for utility
-        engine.findDepletionWarnings(meds, rules)
+        NutrientAdvisoryEngine(CollisionResolver()).findDepletionWarnings(meds, rules)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val nutrientReferences: StateFlow<List<NutrientReference>> = nutrientDao.getAllReferences()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Mutable Insight Flows
     private val _travelProposal = MutableStateFlow<TravelProposal?>(null)
     val travelProposal: StateFlow<TravelProposal?> = _travelProposal.asStateFlow()
 
@@ -730,20 +271,17 @@ class DashboardViewModel(
     private val _hrrAudit = MutableStateFlow<HRRAudit?>(null)
     val hrrAudit: StateFlow<HRRAudit?> = _hrrAudit.asStateFlow()
 
-    private val _hfInsight = MutableStateFlow<HFDecompensationInsight?>(null)
-    val hfInsight: StateFlow<HFDecompensationInsight?> = _hfInsight.asStateFlow()
-
-    private val _efficiencyInsight = MutableStateFlow<EfficiencyInsight?>(null)
-    val efficiencyInsight: StateFlow<EfficiencyInsight?> = _efficiencyInsight.asStateFlow()
-
-    private val _congestionInsight = MutableStateFlow<CongestionInsight?>(null)
-    val congestionInsight: StateFlow<CongestionInsight?> = _congestionInsight.asStateFlow()
-
     private val _neuroInsight = MutableStateFlow<NeuroCognitiveInsight?>(null)
     val neuroInsight: StateFlow<NeuroCognitiveInsight?> = _neuroInsight.asStateFlow()
 
-    private val _ebac = MutableStateFlow<Double>(0.0)
-    val ebac: StateFlow<Double> = _ebac.asStateFlow()
+    private val _thermalInsight = MutableStateFlow<ThermalInsight?>(null)
+    val thermalInsight: StateFlow<ThermalInsight?> = _thermalInsight.asStateFlow()
+
+    private val _voiceExtractedEntities = MutableStateFlow<ExtractedEntities?>(null)
+    val voiceExtractedEntities: StateFlow<ExtractedEntities?> = _voiceExtractedEntities.asStateFlow()
+
+    private val _prnAdvisory = MutableStateFlow<PRNAdvisory?>(null)
+    val prnAdvisory: StateFlow<PRNAdvisory?> = _prnAdvisory.asStateFlow()
 
     private val _orthostaticInsight = MutableStateFlow<OrthostaticInsight?>(null)
     val orthostaticInsight: StateFlow<OrthostaticInsight?> = _orthostaticInsight.asStateFlow()
@@ -751,316 +289,200 @@ class DashboardViewModel(
     private val _environmentalInsight = MutableStateFlow<EnvironmentalInsight?>(null)
     val environmentalInsight: StateFlow<EnvironmentalInsight?> = _environmentalInsight.asStateFlow()
 
-    private val _thermalInsight = MutableStateFlow<ThermalInsight?>(null)
-    val thermalInsight: StateFlow<ThermalInsight?> = _thermalInsight.asStateFlow()
+    private val _hfInsight = MutableStateFlow<HFDecompensationInsight?>(null)
+    val hfInsight: StateFlow<HFDecompensationInsight?> = _hfInsight.asStateFlow()
 
-    val alcoholLogs: StateFlow<List<AlcoholLog>> = alcoholDao.getAllLogsFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val _ebac = MutableStateFlow<Double>(0.0)
+    val ebac: StateFlow<Double> = _ebac.asStateFlow()
 
-    val userProfile: StateFlow<UserProfile?> = userProfileDao.getUserProfileFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    val postureRecommendation: StateFlow<PosturalRecommendation?> = flow {
+        while (true) {
+            val recentFood = interactionDao.getRecentFoodLogs(System.currentTimeMillis() - 2 * 3600000L)
+            emit(postureIntelligence.checkPostPrandialPosture(recentFood))
+            kotlinx.coroutines.delay(60000)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    init {
+        viewModelScope.launch {
+            nanoEngine.initialize()
+            seedKnowledgeBase()
+            syncGait()
+            syncChronotype()
+            syncMetabolicLoad()
+            syncBetaBlockerSafety()
+            syncSleepRestorationAudit()
+            syncCardioReadiness()
+            syncHrrAudit()
+            syncHFDecompensation()
+            syncMetabolicClearance()
+            syncPosture()
+            syncEnvironmentalStrain()
+            
+            launch {
+                while (true) {
+                    kotlinx.coroutines.delay(3600000)
+                    syncSleepRestorationAudit()
+                    syncCardioReadiness()
+                    syncHrrAudit()
+                    syncHFDecompensation()
+                    syncMetabolicClearance()
+                    syncPosture()
+                    syncEnvironmentalStrain()
+                }
+            }
+        }
+    }
+
+    private fun syncEnvironmentalStrain() {
+        viewModelScope.launch {
+            val now = Instant.now()
+            val envLogs = environmentalDao.getLogsSince(now.minus(24, ChronoUnit.HOURS))
+            val rr = healthSyncManager.fetchRespiratoryRate(now.minus(12, ChronoUnit.HOURS), now) ?: emptyList()
+            val spo2 = healthSyncManager.fetchOxygenSaturation(now.minus(12, ChronoUnit.HOURS), now) ?: emptyList()
+            
+            val metrics = rr.map { r ->
+                NocturnalRespiratoryMetric(
+                    timestamp = r.time,
+                    respiratoryRate = r.rate,
+                    sleepPosition = SleepPosition.FLAT,
+                    oxygenSaturation = spo2.minByOrNull { abs(it.time.toEpochMilli() - r.time.toEpochMilli()) }?.percentage?.value ?: 95.0
+                )
+            }
+            _environmentalInsight.value = environmentalCorrelationEngine.correlateRespiratoryStrain(metrics, envLogs)
+        }
+    }
+
+    private fun syncPosture() {
+        viewModelScope.launch {
+            val now = Instant.now()
+            val recentLogs = postureDao.getLogsSince(now.minus(1, ChronoUnit.HOURS))
+            val pressureSamples = recentLogs.filter { it.type == PostureLogType.BAROMETRIC_PRESSURE }.sortedBy { it.timestamp }.map { it.value }
+            val hasBetaBlocker = medications.value.any { it.name.lowercase().contains("metoprolol") || it.name.lowercase().contains("propranolol") }
+            _orthostaticInsight.value = postureIntelligence.detectOrthostaticTransition(pressureSamples, hasBetaBlocker)
+        }
+    }
+
+    private fun syncSleepRestorationAudit() {
+        viewModelScope.launch {
+            val hasBetaBlocker = medications.value.any { it.name.lowercase().contains("metoprolol") || it.name.lowercase().contains("propranolol") }
+            if (!hasBetaBlocker) { _sleepRestorationAudit.value = null; return@launch }
+            
+            val sleepSamples = healthSyncManager.fetchSleepStages(Instant.now().minus(24, ChronoUnit.HOURS), Instant.now()) ?: emptyList()
+            if (sleepSamples.isEmpty()) return@launch
+            
+            val mappedSamples = sleepSamples.map { 
+                SleepStageSample(it.startTime, it.endTime, when(it.stage) {
+                    androidx.health.connect.client.records.SleepSessionRecord.STAGE_TYPE_AWAKE -> SleepStage.AWAKE
+                    androidx.health.connect.client.records.SleepSessionRecord.STAGE_TYPE_REM -> SleepStage.REM
+                    androidx.health.connect.client.records.SleepSessionRecord.STAGE_TYPE_DEEP -> SleepStage.DEEP
+                    else -> SleepStage.LIGHT
+                })
+            }
+            val fragmentation = remSafetyEngine.calculateFragmentationIndex(mappedSamples)
+            val avgIntensity = dreamDao.getLogsForDate(java.time.LocalDate.now().toString()).map { it.intensity }.average().toInt()
+            _sleepRestorationAudit.value = remSafetyEngine.buildRestorationAudit(fragmentation, if(avgIntensity == 0) null else avgIntensity)
+        }
+    }
+
+    private fun syncCardioReadiness() {
+        viewModelScope.launch {
+            val hasBetaBlocker = medications.value.any { it.name.lowercase().contains("metoprolol") || it.name.lowercase().contains("propranolol") }
+            if (!hasBetaBlocker) { _dailyReadiness.value = null; return@launch }
+            
+            val rhrSamples = healthSyncManager.fetchRestingHeartRate(Instant.now().minus(24, ChronoUnit.HOURS), Instant.now()) ?: emptyList()
+            val currentRhr = if (rhrSamples.isNotEmpty()) rhrSamples.map { it.beatsPerMinute }.average() else 60.0
+            val sleepQuality = sleepSubjectiveLogs.value.firstOrNull()?.reportedQuality ?: 7
+            
+            _dailyReadiness.value = cardioMismatchEngine.calculateReadiness(45.0, 50.0, currentRhr, 62.0, sleepQuality)
+            detectHeavyLegs(currentRhr)
+        }
+    }
+
+    private fun detectHeavyLegs(rhr: Double) {
+        viewModelScope.launch {
+            val now = Instant.now()
+            val steps = healthSyncManager.fetchStepsForSession(now.minus(1, ChronoUnit.HOURS), now)
+            val hrSamples = healthSyncManager.fetchHeartRateForSession(now.minus(1, ChronoUnit.HOURS), now) ?: emptyList()
+            
+            if (steps > 1000 && hrSamples.isNotEmpty()) {
+                val insight = cardioMismatchEngine.detectMismatch(now.toEpochMilli(), steps.toDouble() / 60.0, hrSamples.map { it.beatsPerMinute }.average(), rhr)
+                _cardioMismatch.value = if (insight.isSignificant) insight else null
+            }
+        }
+    }
+
+    private fun syncHrrAudit() {
+        viewModelScope.launch {
+            val exercises = healthSyncManager.fetchRecentExercises() ?: return@launch
+            val currentMedVersion = medications.value.maxByOrNull { it.validFrom }?.id ?: 0L
+            
+            exercises.forEach { session ->
+                val hrSamples = healthSyncManager.fetchHeartRateForSession(session.endTime, session.endTime.plus(2, ChronoUnit.MINUTES)) ?: emptyList()
+                if (hrSamples.isNotEmpty()) {
+                    val peakHr = healthSyncManager.fetchHeartRateForSession(session.endTime.minus(30, ChronoUnit.SECONDS), session.endTime)?.maxOfOrNull { it.beatsPerMinute.toDouble() } ?: 120.0
+                    val record = hrrOrchestrator.calculateHRR(session.endTime, hrSamples.map { BiometricLog(type = BiometricType.HEART_RATE, value = it.beatsPerMinute.toDouble(), timestamp = it.time) }, peakHr, currentMedVersion)
+                    hrrDao.insertRecord(record)
+                }
+            }
+            val latestRecord = hrrDao.getRecordsSince(java.time.LocalDate.now().toString()).firstOrNull()
+            if (latestRecord != null) {
+                val audit = hrrOrchestrator.buildHRRAudit(latestRecord, hrrDao.getRecordsSince(java.time.LocalDate.now().minusDays(7).toString()))
+                _hrrAudit.value = audit
+                if (audit?.isStrained == true) dataLayerRepository.updateAutonomicStrain(true)
+            }
+        }
+    }
+
+    private fun syncBetaBlockerSafety() {
+        viewModelScope.launch {
+            val betaBlockers = medications.value.filter { it.name.lowercase().contains("metoprolol") || it.name.lowercase().contains("propranolol") }
+            if (betaBlockers.isEmpty()) { _betaBlockerInsights.value = emptyList(); return@launch }
+            
+            val anchor = temporalAnchorDao.getLatestAnchor() ?: return@launch
+            val wakeTime = Instant.ofEpochMilli(anchor.wakeTime)
+            val morningHr = healthSyncManager.fetchHeartRateForSession(wakeTime, wakeTime.plus(30, ChronoUnit.MINUTES)) ?: emptyList()
+            val bradycardiaInsight = betaBlockerSafetyEngine.detectBradycardia(anchor, morningHr.map { it.beatsPerMinute })
+            
+            val bbDose = doseLogDao.getDosesInWindow(Instant.now().truncatedTo(ChronoUnit.DAYS).toEpochMilli(), Instant.now().truncatedTo(ChronoUnit.DAYS).plus(1, ChronoUnit.DAYS).toEpochMilli()).find { d -> betaBlockers.any { it.medicationId == d.medicationId } && d.status == "TAKEN" }
+            val slumpInsight = bbDose?.actualTime?.let { actualTime ->
+                val slumpHr = healthSyncManager.fetchHeartRateForSession(Instant.ofEpochMilli(actualTime).plus(5, ChronoUnit.HOURS), Instant.ofEpochMilli(actualTime).plus(7, ChronoUnit.HOURS)) ?: emptyList()
+                val dailyHr = healthSyncManager.fetchHeartRateForSession(wakeTime, Instant.now()) ?: emptyList()
+                betaBlockerSafetyEngine.detectFatigueSlump(actualTime, dailyHr.map { it.beatsPerMinute }.average(), slumpHr.map { it.beatsPerMinute })
+            }
+            _betaBlockerInsights.value = listOfNotNull(bradycardiaInsight, slumpInsight, betaBlockerSafetyEngine.suggestOxygenationBout(slumpInsight))
+        }
+    }
+
+    private fun syncGait() { viewModelScope.launch { gaitManager.syncGaitMetrics() } }
+    private fun syncChronotype() { viewModelScope.launch { val history = healthSyncManager.fetchSleepHistory(14); if (history != null) chronotypeDao.updateChronotype(chronotypeClassifier.classify(history)) } }
+    
+    private fun syncMetabolicLoad() {
+        viewModelScope.launch {
+            val exercises = healthSyncManager.fetchRecentExercises() ?: return@launch
+            exercises.forEach { session ->
+                val hr = healthSyncManager.fetchHeartRateForSession(session.startTime, session.endTime) ?: emptyList()
+                if (session.exerciseType == 8) { // CYCLING
+                    val effort = ebikeNormalizer.normalizeEffort(session, healthSyncManager.fetchPowerForSession(session.startTime, session.endTime) ?: emptyList(), hr, healthSyncManager.fetchCadenceForSession(session.startTime, session.endTime) ?: emptyList())
+                    metabolicDao.insertLog(MetabolicLoadLog(exerciseSessionId = session.metadata.id, trimpScore = effort.normalizedCardioLoad, avgHeartRate = hr.map { it.beatsPerMinute }.average(), durationMinutes = java.time.Duration.between(session.startTime, session.endTime).toMinutes(), timestamp = session.endTime, isHyperMetabolic = effort.wasHighIntensity))
+                } else metabolicDao.insertLog(metabolicEngine.calculateMetabolicLoad(session, hr))
+            }
+        }
+    }
 
     private fun syncMetabolicClearance() {
         viewModelScope.launch {
             val profile = userProfile.value ?: return@launch
-            val recentLogs = alcoholDao.getLogsSince(Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))
-            val currentBAC = metabolicClearanceEngine.calculateEBAC(recentLogs, profile)
-            _ebac.value = currentBAC
-            
-            if (currentBAC > 0.05) {
-                // High BAC Alert: Correlate with medications
-                val activeMeds = medications.value.filter { it.metabolicPathway != null }
-                if (activeMeds.isNotEmpty()) {
-                    val names = activeMeds.map { it.name }.distinct()
-                    // Propose delay for next doses if liver is monopolized (T42 M2)
-                    // (Implementation detail: This would trigger a notification or timeline warning)
-                }
-            }
+            val recentLogs = alcoholDao.getLogsSince(Instant.now().minus(24, ChronoUnit.HOURS))
+            _ebac.value = metabolicClearanceEngine.calculateEBAC(recentLogs, profile)
         }
     }
 
     private fun syncHFDecompensation() {
         viewModelScope.launch {
-            val now = Instant.now()
-            val weekAgo = now.minus(7, java.time.temporal.ChronoUnit.DAYS)
-            
-            // In a real app, we'd fetch these from healthSyncManager
-            // For now we simulate trend data
-            val current = HFTrendData(
-                avgRespiratoryRate = 18.5,
-                avgOxygenSaturation = 94.0,
-                avgRestingHeartRate = 72.0,
-                avgHrv = 38.0
-            )
-            val baseline = HFTrendData(
-                avgRespiratoryRate = 16.0,
-                avgOxygenSaturation = 98.0,
-                avgRestingHeartRate = 65.0,
-                avgHrv = 45.0
-            )
-            
-            val insight = hfDecompensationEngine.calculateFluidProxy(current, baseline)
+            val insight = hfDecompensationEngine.calculateFluidProxy(HFTrendData(18.5, 94.0, 72.0, 38.0), HFTrendData(16.0, 98.0, 65.0, 45.0))
             _hfInsight.value = insight
-            
-            // Tighten diuretic safe-gaps if needed (T39 M3)
-            if (insight.riskLevel == HFRiskLevel.ELEVATED || insight.riskLevel == HFRiskLevel.CRITICAL) {
-                val adjustment = hfDecompensationEngine.getSafetyTighteningMillis(insight.riskLevel)
-                dataLayerRepository.updateSafetyTightening(adjustment)
-            }
-        }
-    }
-
-    private fun syncPulsePowerEfficiency() {
-        viewModelScope.launch {
-            val now = Instant.now()
-            val exercises = healthSyncManager.fetchRecentExercises() ?: return@launch
-            val cyclingSessions = exercises.filter { it.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_CYCLING }
-            
-            if (cyclingSessions.isNotEmpty()) {
-                val lastSession = cyclingSessions.first()
-                val hr = healthSyncManager.fetchHeartRateForSession(lastSession.startTime, lastSession.endTime) ?: emptyList()
-                val power = healthSyncManager.fetchPowerForSession(lastSession.startTime, lastSession.endTime) ?: emptyList()
-                
-                val metrics = power.mapNotNull { p ->
-                    val matchingHr = hr.minByOrNull { Math.abs(it.time.toEpochMilli() - p.time.toEpochMilli()) }
-                    matchingHr?.let { PulsePowerMetric(p.time, p.power, it.beatsPerMinute) }
-                }
-                
-                val insight = pulsePowerEngine.calculateEfficiency(metrics, 1.0) // Assume 1.0 as baseline
-                _efficiencyInsight.value = insight
-            }
-        }
-    }
-
-    private fun syncNocturnalRespiratoryStrain() {
-        viewModelScope.launch {
-            val now = Instant.now()
-            val lastNight = now.minus(12, java.time.temporal.ChronoUnit.HOURS)
-            
-            val rr = healthSyncManager.fetchRespiratoryRate(lastNight, now) ?: emptyList()
-            val spo2 = healthSyncManager.fetchOxygenSaturation(lastNight, now) ?: emptyList()
-            
-            // In a real app, we'd cross-reference with sleep position sensor data
-            val metrics = rr.map { r ->
-                NocturnalRespiratoryMetric(
-                    timestamp = r.time,
-                    respiratoryRate = r.rate,
-                    sleepPosition = if (r.time.toEpochMilli() % 2 == 0L) SleepPosition.FLAT else SleepPosition.PROPPED_UP,
-                    oxygenSaturation = spo2.minByOrNull { Math.abs(it.time.toEpochMilli() - r.time.toEpochMilli()) }?.value ?: 95.0
-                )
-            }
-            
-            _congestionInsight.value = nocturnalRespiratoryEngine.analyzeCongestion(metrics)
-        }
-    }
-
-    private fun syncSkinTemperature() {
-        viewModelScope.launch {
-            val temp = healthSyncManager.fetchLatestSkinTemperature()
-            if (temp != null) {
-                biometricDao.insertLog(BiometricLog(type = BiometricType.SKIN_TEMPERATURE, value = temp))
-                syncThermalInsight()
-            }
-        }
-    }
-
-    private fun syncThermalInsight() {
-        viewModelScope.launch {
-            val now = Instant.now()
-            val logs = biometricDao.getLogsSince(BiometricType.SKIN_TEMPERATURE, now.minus(12, java.time.temporal.ChronoUnit.HOURS))
-            val activeMeds = medications.value
-            val recentDoses = doseLogDao.getDosesInWindow(now.toEpochMilli() - 4 * 3600000L, now.toEpochMilli())
-            
-            val insight = thermalShieldEngine.analyzeThermalRisk(logs, activeMeds, recentDoses, null)
-            _thermalInsight.value = insight
-        }
-    }
-
-    fun detectUpcomingTravel() {
-        viewModelScope.launch {
-            _travelProposal.value = jetLagManager.proposeAdvanceTitration(
-                destination = "Tokyo",
-                targetZoneId = "Asia/Tokyo",
-                travelDate = Instant.now().plus(5, java.time.temporal.ChronoUnit.DAYS)
-            )
-        }
-    }
-
-    fun acceptTravelProposal(proposal: TravelProposal) {
-        viewModelScope.launch {
-            proposal.titrationSteps.firstOrNull()?.let { step ->
-                dataLayerRepository.updateTWake(step.targetWakeTime)
-            }
-            _travelProposal.value = null
-        }
-    }
-
-    fun dismissTravelProposal() {
-        _travelProposal.value = null
-    }
-
-    fun requestNutrientAdvisory(foodName: String, nutrients: NutrientFacts) {
-        viewModelScope.launch {
-            val engine = nutrientAdvisoryEngineFlow.first()
-            val meds = medications.first()
-            val allergens = allergenProfile.first()
-            val anchor = temporalAnchorFlow.first() ?: return@launch
-            
-            _nutrientAdvisory.value = engine.evaluateFood(foodName, nutrients, allergens, meds, anchor.wakeTime)
-        }
-    }
-
-    fun clearNutrientAdvisory() {
-        _nutrientAdvisory.value = null
-    }
-
-    private val _voiceExtractedEntities = MutableStateFlow<ExtractedEntities?>(null)
-    val voiceExtractedEntities: StateFlow<ExtractedEntities?> = _voiceExtractedEntities.asStateFlow()
-
-    fun addMedication(name: String, dosage: String, firstOffsetMillis: Long, frequency: Int = 1, foodRequirement: String = "NONE") {
-        viewModelScope.launch {
-            // Strategy: Spread doses over a 15-hour active day
-            val totalActiveDayMillis = 15 * 3600000L
-            
-            for (i in 0 until frequency) {
-                val actualOffset = when (frequency) {
-                    1 -> firstOffsetMillis
-                    2 -> if (i == 0) firstOffsetMillis else firstOffsetMillis + totalActiveDayMillis
-                    else -> firstOffsetMillis + (i * (totalActiveDayMillis / (frequency - 1)))
-                }
-                
-                medicationDao.insert(
-                    MedicationRecord(
-                        medicationId = "${name.lowercase().replace(" ", "_")}_${System.currentTimeMillis()}_$i",
-                        name = name,
-                        dosage = dosage,
-                        frequencyOffset = actualOffset,
-                        foodRequirement = foodRequirement,
-                        validFrom = System.currentTimeMillis()
-                    )
-                )
-            }
-        }
-    }
-
-    fun dismissInsight(id: String) {
-        viewModelScope.launch {
-            dismissedInsightDao.dismiss(DismissedInsight(id))
-        }
-    }
-
-    fun updateMedication(record: MedicationRecord) {
-        viewModelScope.launch {
-            medicationDao.deletePermanently(record.id)
-            medicationDao.insert(record.copy(id = 0))
-        }
-    }
-
-    fun deleteMedication(id: Long) {
-        viewModelScope.launch {
-            medicationDao.deletePermanently(id)
-        }
-    }
-
-    fun duplicateMedication(record: MedicationRecord) {
-        viewModelScope.launch {
-            medicationDao.insert(
-                record.copy(
-                    id = 0,
-                    medicationId = "${record.name.lowercase().replace(" ", "_")}_${System.currentTimeMillis()}",
-                    foodRequirement = record.foodRequirement
-                )
-            )
-        }
-    }
-
-    fun updateWakeTime(epochMillis: Long) {
-        viewModelScope.launch {
-            dataLayerRepository.updateTWake(epochMillis)
-        }
-    }
-
-    fun toggleTimeFormat(is24Hour: Boolean) {
-        viewModelScope.launch {
-            getApplication<Application>().phosDataStore.updateData { state ->
-                state.toBuilder().setIs24Hour(is24Hour).build()
-            }
-        }
-    }
-
-    fun updateMealPreferences(breakfastStart: Long, breakfastEnd: Long, lunchStart: Long, lunchEnd: Long, dinnerStart: Long, dinnerEnd: Long) {
-        viewModelScope.launch {
-            dataLayerRepository.updateMealPreferences(breakfastStart, breakfastEnd, lunchStart, lunchEnd, dinnerStart, dinnerEnd)
-        }
-    }
-
-    fun addHealthGoal(description: String, targetSymptom: String, targetTimeOffset: Long?) {
-        viewModelScope.launch {
-            goalDao.insertGoal(HealthGoal(description = description, targetSymptom = targetSymptom, targetTimeOffset = targetTimeOffset, targetTimeOfDay = null))
-        }
-    }
-
-    fun logSleepSubjective(quality: Int, restfulness: Int, mood: String) {
-        viewModelScope.launch {
-            val date = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.withZone(java.time.ZoneId.systemDefault()).format(Instant.now())
-            sleepSubjectiveDao.insertSubjectiveLog(SleepSubjectiveLog(reportedQuality = quality, restfulnessRating = restfulness, morningMood = mood, date = date))
-        }
-    }
-
-    private val _prnAdvisory = MutableStateFlow<PRNAdvisory?>(null)
-    val prnAdvisory: StateFlow<PRNAdvisory?> = _prnAdvisory.asStateFlow()
-
-    fun requestPRNAdvisory(prnMed: PRNMedication) {
-        viewModelScope.launch {
-            val advisor = prnAdvisorFlow.first()
-            val activeMeds = medications.first()
-            val recentFood = interactionDao.getRecentFoodLogs(System.currentTimeMillis() - 2 * 3600000L)
-            
-            _prnAdvisory.value = advisor.evaluateRequest(prnMed, activeMeds, recentFood)
-        }
-    }
-
-    fun clearPRNAdvisory() {
-        _prnAdvisory.value = null
-    }
-
-    fun logPRNDose(prnMed: PRNMedication) {
-        viewModelScope.launch {
-            doseLogDao.insertLog(
-                DoseLog(
-                    medicationId = prnMed.medicationId,
-                    scheduledTime = System.currentTimeMillis(),
-                    actualTime = System.currentTimeMillis(),
-                    status = "TAKEN",
-                    notes = "PRN Dose for ${prnMed.reasonForUse}"
-                )
-            )
-            clearPRNAdvisory()
-        }
-    }
-
-    fun logAppetite(hunger: Int, difficulty: Int) {
-        viewModelScope.launch {
-            appetiteDao.insertAppetiteLog(AppetiteLog(hungerLevel = hunger, difficultyLevel = difficulty))
-        }
-    }
-
-    fun logCaffeine(mg: Int, source: String) {
-        viewModelScope.launch {
-            caffeineDao.insertLog(CaffeineLog(mg = mg, source = source))
-        }
-    }
-
-    fun logFood(name: String, category: String, nutrients: NutrientFacts? = null) {
-        viewModelScope.launch {
-            interactionDao.insertFoodLog(
-                FoodLog(
-                    foodId = name.lowercase().replace(" ", "_"),
-                    name = name,
-                    timestamp = System.currentTimeMillis(),
-                    nutrients = nutrients
-                )
-            )
+            if (insight.riskLevel == HFRiskLevel.ELEVATED || insight.riskLevel == HFRiskLevel.CRITICAL) dataLayerRepository.updateSafetyTightening(hfDecompensationEngine.getSafetyTighteningMillis(insight.riskLevel))
         }
     }
 
@@ -1068,146 +490,63 @@ class DashboardViewModel(
         viewModelScope.launch {
             val entities = voiceLogCoordinator.processVoiceCommand(text)
             _voiceExtractedEntities.value = entities
-            processSentiment(text)
-
-            // T47: Neuro-Cognitive Analysis
-            if (segments.isNotEmpty()) {
-                val metrics = neuroLoadEngine.analyzeSpeech(segments, text)
-                val now = System.currentTimeMillis()
-                val recentDoses = doseLogDao.getDosesInWindow(now - 4 * 3600000L, now)
-                val activeMeds = medications.value
-
-                val insight = neuroLoadEngine.correlateWithMeds(metrics, activeMeds, recentDoses)
-                _neuroInsight.value = insight
-
-                // Log biometrics for trend analysis
-                biometricDao.insertLog(BiometricLog(type = BiometricType.COGNITIVE_FLUIDITY, value = metrics.fluidityScore.toDouble()))
-                biometricDao.insertLog(BiometricLog(type = BiometricType.BRAIN_FOG_INDEX, value = metrics.brainFogIndex.toDouble()))
-            }
-            
-            // Refresh sleep audit if dreams were detected
-            if (entities.dreams.isNotEmpty()) {
-                syncSleepRestorationAudit()
-            }
-        }
-    }
-
-    private fun processSentiment(text: String) {
-        viewModelScope.launch {
-            val json = nanoEngine.calculateSentiment(text) ?: return@launch
-            try {
-                val score = Regex("\"score\":\\s*([\\d.-]+)").find(json)?.groupValues?.get(1)?.toFloat() ?: 0f
-                val emotion = Regex("\"primaryEmotion\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1) ?: "Unknown"
-                val intensity = Regex("\"intensity\":\\s*(\\d+)").find(json)?.groupValues?.get(1)?.toInt() ?: 5
-                
-                sentimentDao.insertLog(SentimentLog(
-                    text = text,
-                    score = score,
-                    primaryEmotion = emotion,
-                    intensity = intensity
-                ))
-            } catch (e: Exception) {}
-        }
-    }
-
-    fun clearVoiceResults() {
-        _voiceExtractedEntities.value = null
-        voiceManager.reset()
-    }
-
-    /**
-     * Enhanced food parsing using Gemini Nano.
-     */
-    suspend fun parseNutritionTextWithNano(ocrText: String): NutrientFacts? {
-        val json = nanoEngine.parseNutritionText(ocrText) ?: return null
-        return try {
-            // Simulated JSON parsing for Orchestration
-            val calories = Regex("\"calories\":\\s*(\\d+)").find(json)?.groupValues?.get(1)?.toInt() ?: 200
-            val protein = Regex("\"proteinG\":\\s*([\\d.]+)").find(json)?.groupValues?.get(1)?.toDouble() ?: 10.0
-            val calcium = Regex("\"calciumMg\":\\s*([\\d.]+)").find(json)?.groupValues?.get(1)?.toDouble() ?: 50.0
-            val ingredients = if (json.contains("ingredients")) {
-                 Regex("\"ingredients\":\\s*\\[(.*?)\\]").find(json)?.groupValues?.get(1)?.split(",")?.map { it.replace("\"", "").trim() } ?: emptyList()
-            } else emptyList()
-
-            NutrientFacts(
-                calories = calories,
-                proteinG = protein,
-                calciumMg = calcium,
-                ingredients = ingredients
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    /**
-     * Multimodal meal analysis using Gemini Nano Vision.
-     */
-    suspend fun analyzeMealWithNano(bitmap: android.graphics.Bitmap): com.phos.phone.ui.scanner.FoodScanResult? {
-        val json = nanoEngine.analyzeMealImage(bitmap) ?: return null
-        return try {
-            val name = Regex("\"detectedName\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1) ?: "Unknown Meal"
-            val category = Regex("\"category\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1) ?: "General"
-            
-            // Re-using the logic from parseNutritionTextWithNano to extract nested nutrients
-            val calories = Regex("\"calories\":\\s*(\\d+)").find(json)?.groupValues?.get(1)?.toInt() ?: 400
-            val protein = Regex("\"proteinG\":\\s*([\\d.]+)").find(json)?.groupValues?.get(1)?.toDouble() ?: 25.0
-            val calcium = Regex("\"calciumMg\":\\s*([\\d.]+)").find(json)?.groupValues?.get(1)?.toDouble() ?: 50.0
-            val ingredients = if (json.contains("ingredients")) {
-                 Regex("\"ingredients\":\\s*\\[(.*?)\\]").find(json)?.groupValues?.get(1)?.split(",")?.map { it.replace("\"", "").trim() } ?: emptyList()
-            } else emptyList()
-
-            com.phos.phone.ui.scanner.FoodScanResult(
-                detectedName = name,
-                category = category,
-                nutrients = NutrientFacts(calories = calories, proteinG = protein, calciumMg = calcium, ingredients = ingredients),
-                confidence = 1.0f
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    /**
-     * Multimodal pill/bottle analysis using Gemini Nano Vision.
-     */
-    suspend fun analyzePillWithNano(bitmap: android.graphics.Bitmap): com.phos.phone.ui.scanner.PillScanResult? {
-        val json = nanoEngine.analyzePillImage(bitmap) ?: return null
-        return try {
-            val name = Regex("\"detectedName\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1)
-            val dosage = Regex("\"detectedDosage\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1)
-            val color = Regex("\"detectedColor\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1)
-            val shape = Regex("\"detectedShape\":\\s*\"(.*?)\"").find(json)?.groupValues?.get(1)
-            val freqStr = Regex("\"frequencyDosesPerDay\":\\s*(\\d+)").find(json)?.groupValues?.get(1)
-            val freq = freqStr?.toIntOrNull() ?: 1
-
-            com.phos.phone.ui.scanner.PillScanResult(
-                detectedName = name,
-                detectedDosage = dosage,
-                detectedColor = color,
-                detectedShape = shape,
-                frequencyDosesPerDay = freq,
-                confidence = 1.0f
-            )
-        } catch (e: Exception) {
-            null
+            if (segments.isNotEmpty()) _neuroInsight.value = neuroLoadEngine.correlateWithMeds(neuroLoadEngine.analyzeSpeech(segments, text), medications.value, doseLogDao.getDosesInWindow(System.currentTimeMillis() - 4 * 3600000L, System.currentTimeMillis()))
+            if (entities.dreams.isNotEmpty()) syncSleepRestorationAudit()
         }
     }
 
     fun onConfirmHeavyLegs(insight: CardioMismatchInsight) {
         viewModelScope.launch {
-            intelligenceDao.insertSymptom(SymptomLog(
-                symptomId = "heavy_legs_confirmed",
-                name = "Heavy Legs (Physiological Mismatch)",
-                severity = (insight.mismatchIntensity * 10).toInt(),
-                timestamp = Instant.ofEpochMilli(insight.timestamp)
-            ))
-            _cardioMismatch.value = null // Clear after confirm
+            intelligenceDao.insertSymptom(SymptomLog(symptomName = "Heavy Legs", severity = (insight.mismatchIntensity * 10).toInt(), timestamp = Instant.ofEpochMilli(insight.timestamp)))
+            _cardioMismatch.value = null
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        voiceManager.destroy()
+    fun addMedication(name: String, dosage: String, firstOffsetMillis: Long, frequency: Int = 1, foodRequirement: String = "NONE") {
+        viewModelScope.launch {
+            for (i in 0 until frequency) {
+                val actualOffset = if (frequency == 1) firstOffsetMillis else firstOffsetMillis + (i * (15 * 3600000L / maxOf(1, frequency - 1)))
+                medicationDao.insert(MedicationRecord(medicationId = "${name.lowercase().replace(" ", "_")}_${System.currentTimeMillis()}_$i", name = name, dosage = dosage, frequencyOffset = actualOffset, foodRequirement = foodRequirement, validFrom = System.currentTimeMillis()))
+            }
+        }
     }
+
+    fun updateMedication(record: MedicationRecord) { viewModelScope.launch { medicationDao.deletePermanently(record.id); medicationDao.insert(record.copy(id = 0)) } }
+    fun deleteMedication(id: Long) { viewModelScope.launch { medicationDao.deletePermanently(id) } }
+    fun duplicateMedication(record: MedicationRecord) { viewModelScope.launch { medicationDao.insert(record.copy(id = 0, medicationId = "${record.name.lowercase().replace(" ", "_")}_${System.currentTimeMillis()}")) } }
+    fun updateWakeTime(epochMillis: Long) { viewModelScope.launch { dataLayerRepository.updateTWake(epochMillis) } }
+    fun toggleTimeFormat(is24Hour: Boolean) { viewModelScope.launch { getApplication<Application>().phosDataStore.updateData { it.toBuilder().setIs24Hour(is24Hour).build() } } }
+    fun updateMealPreferences(bS: Long, bE: Long, lS: Long, lE: Long, dS: Long, dE: Long) { viewModelScope.launch { dataLayerRepository.updateMealPreferences(bS, bE, lS, lE, dS, dE) } }
+    fun addHealthGoal(desc: String, symp: String, off: Long?) { viewModelScope.launch { goalDao.insertGoal(HealthGoal(description = desc, targetSymptom = symp, targetTimeOffset = off, targetTimeOfDay = null)) } }
+    fun logSleepSubjective(q: Int, r: Int, m: String) { viewModelScope.launch { sleepSubjectiveDao.insertSubjectiveLog(SleepSubjectiveLog(reportedQuality = q, restfulnessRating = r, morningMood = m, date = java.time.LocalDate.now().toString())) } }
+    fun requestPRNAdvisory(med: PRNMedication) { viewModelScope.launch { _prnAdvisory.value = prnAdvisorFlow.first().evaluateRequest(med, medications.value, interactionDao.getRecentFoodLogs(System.currentTimeMillis() - 2 * 3600000L)) } }
+    fun clearPRNAdvisory() { _prnAdvisory.value = null }
+    fun logPRNDose(med: PRNMedication) { viewModelScope.launch { doseLogDao.insertLog(DoseLog(medicationId = med.medicationId, scheduledTime = System.currentTimeMillis(), actualTime = System.currentTimeMillis(), status = "TAKEN", notes = "PRN Dose")); clearPRNAdvisory() } }
+    fun logAppetite(h: Int, d: Int) { viewModelScope.launch { appetiteDao.insertAppetiteLog(AppetiteLog(hungerLevel = h, difficultyLevel = d)) } }
+    fun logCaffeine(mg: Int, src: String) { viewModelScope.launch { caffeineDao.insertLog(CaffeineLog(mg = mg, source = src)) } }
+    fun logFood(n: String, c: String, nut: NutrientFacts? = null) { viewModelScope.launch { interactionDao.insertFoodLog(FoodLog(foodId = n.lowercase().replace(" ", "_"), name = n, timestamp = System.currentTimeMillis(), nutrients = nut)) } }
+    fun dismissInsight(id: String) { viewModelScope.launch { dismissedInsightDao.dismiss(DismissedInsight(id)) } }
+    fun clearVoiceResults() { _voiceExtractedEntities.value = null; voiceManager.reset() }
+    fun detectUpcomingTravel() { viewModelScope.launch { _travelProposal.value = jetLagManager.proposeAdvanceTitration("Tokyo", "Asia/Tokyo", Instant.now().plus(5, ChronoUnit.DAYS)) } }
+    fun acceptTravelProposal(p: TravelProposal) { viewModelScope.launch { p.titrationSteps.firstOrNull()?.let { dataLayerRepository.updateTWake(it.targetWakeTime) }; _travelProposal.value = null } }
+    fun dismissTravelProposal() { _travelProposal.value = null }
+    fun requestNutrientAdvisory(n: String, nut: NutrientFacts) { viewModelScope.launch { _nutrientAdvisory.value = nutrientAdvisoryEngineFlow.first().evaluateFood(n, nut, allergenProfile.value, medications.value, temporalAnchorFlow.first()?.wakeTime ?: 0L) } }
+    fun clearNutrientAdvisory() { _nutrientAdvisory.value = null }
+    suspend fun parseNutritionTextWithNano(t: String): NutrientFacts? { val j = nanoEngine.parseNutritionText(t) ?: return null; return try { NutrientFacts(calories = Regex("\"calories\":\\s*(\\d+)").find(j)?.groupValues?.get(1)?.toInt() ?: 200, proteinG = Regex("\"proteinG\":\\s*([\\d.]+)").find(j)?.groupValues?.get(1)?.toDouble() ?: 10.0, calciumMg = Regex("\"calciumMg\":\\s*([\\d.]+)").find(j)?.groupValues?.get(1)?.toDouble() ?: 50.0, ingredients = if (j.contains("ingredients")) Regex("\"ingredients\":\\s*\\[(.*?)\\]").find(j)?.groupValues?.get(1)?.split(",")?.map { it.replace("\"", "").trim() } ?: emptyList() else emptyList()) } catch (e: Exception) { null } }
+    suspend fun analyzeMealWithNano(b: android.graphics.Bitmap): com.phos.phone.ui.scanner.FoodScanResult? { val j = nanoEngine.analyzeMealImage(b) ?: return null; return try { com.phos.phone.ui.scanner.FoodScanResult(detectedName = Regex("\"detectedName\":\\s*\"(.*?)\"").find(j)?.groupValues?.get(1) ?: "Unknown Meal", category = Regex("\"category\":\\s*\"(.*?)\"").find(j)?.groupValues?.get(1) ?: "General", nutrients = NutrientFacts(calories = Regex("\"calories\":\\s*(\\d+)").find(j)?.groupValues?.get(1)?.toInt() ?: 400, proteinG = Regex("\"proteinG\":\\s*([\\d.]+)").find(j)?.groupValues?.get(1)?.toDouble() ?: 25.0, calciumMg = Regex("\"calciumMg\":\\s*([\\d.]+)").find(j)?.groupValues?.get(1)?.toDouble() ?: 50.0, ingredients = if (j.contains("ingredients")) Regex("\"ingredients\":\\s*\\[(.*?)\\]").find(j)?.groupValues?.get(1)?.split(",")?.map { it.replace("\"", "").trim() } ?: emptyList() else emptyList()), confidence = 1.0f) } catch (e: Exception) { null } }
+    suspend fun analyzePillWithNano(b: android.graphics.Bitmap): com.phos.phone.ui.scanner.PillScanResult? { val j = nanoEngine.analyzePillImage(b) ?: return null; return try { com.phos.phone.ui.scanner.PillScanResult(detectedName = Regex("\"detectedName\":\\s*\"(.*?)\"").find(j)?.groupValues?.get(1), detectedDosage = Regex("\"detectedDosage\":\\s*\"(.*?)\"").find(j)?.groupValues?.get(1), detectedColor = Regex("\"detectedColor\":\\s*\"(.*?)\"").find(j)?.groupValues?.get(1), detectedShape = Regex("\"detectedShape\":\\s*\"(.*?)\"").find(j)?.groupValues?.get(1), frequencyDosesPerDay = Regex("\"frequencyDosesPerDay\":\\s*(\\d+)").find(j)?.groupValues?.get(1)?.toIntOrNull() ?: 1, confidence = 1.0f) } catch (e: Exception) { null } }
+    
+    private fun seedKnowledgeBase() {
+        viewModelScope.launch {
+            listOf(AbsorptionRule(medicationId = "sucralfate", requiredGapMinutes = 120, reason = "Take Sucralfate on an empty stomach."), AbsorptionRule(medicationId = "levothyroxine", requiredGapMinutes = 60, reason = "Take Levothyroxine 60 mins before other meds/food.")).forEach { interactionDao.insertAbsorptionRule(it) }
+            listOf(SideEffectRule(medicationId = "lisinopril", sideEffect = "Dizziness/Cough", advice = "Monitor for persistent cough."), SideEffectRule(medicationId = "metoprolol", sideEffect = "Low Heart Rate", advice = "Watch for extreme fatigue.")).forEach { interactionDao.insertSideEffectRule(it) }
+            interactionDao.insertRule(InteractionRule(sourceId = "grapefruit", targetId = "statin", gapMillis = 24 * 3600000L, reason = "Grapefruit inhibits metabolism of Statins.", severity = InteractionSeverity.CRITICAL))
+            listOf(PRNMedication(medicationId = "ibuprofen_prn", name = "Ibuprofen", dosage = "400mg", maxDosesPer24h = 4, minGapMinutes = 240, reasonForUse = "Pain", validFrom = System.currentTimeMillis()), PRNMedication(medicationId = "albuterol_prn", name = "Albuterol", dosage = "2 puffs", maxDosesPer24h = 8, minGapMinutes = 15, reasonForUse = "Breath", validFrom = System.currentTimeMillis())).forEach { prnDao.insert(it) }
+            listOf(AllergenProfile(allergenId = "dairy", displayName = "Dairy", severity = "MODERATE"), AllergenProfile(allergenId = "gluten", displayName = "Gluten", severity = "MODERATE")).forEach { allergenDao.insertAllergen(it) }
+            listOf(NutrientReference(foodId = "yogurt", name = "Greek Yogurt", nutrients = NutrientFacts(calories = 150, proteinG = 15.0, calciumMg = 200.0, ingredients = listOf("Milk")), bestSources = "Dairy Aisle")).forEach { nutrientDao.insertReference(it) }
+            listOf(MedicationInducedDepletion(medicationNamePattern = "statin", depletedNutrient = "CoQ10", advice = "Statins inhibit CoQ10 production.", foodSuggestions = listOf("Fish")), MedicationInducedDepletion(medicationNamePattern = "metformin", depletedNutrient = "B12", advice = "Metformin reduces B12 absorption.", foodSuggestions = listOf("Eggs"))).forEach { nutrientDao.insertDepletion(it) }
+        }
+    }
+
+    override fun onCleared() { super.onCleared(); voiceManager.destroy() }
 }

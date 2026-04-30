@@ -142,6 +142,17 @@ class HealthSyncManager(private val context: Context) {
         } catch (e: Exception) { return null }
     }
 
+    suspend fun fetchSleepStages(startTime: Instant, endTime: Instant): List<SleepSessionRecord.Stage>? {
+        try {
+            if (!hasPermissions()) return null
+            val request = ReadRecordsRequest(
+                recordType = SleepSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+            )
+            return healthConnectClient.readRecords(request).records.flatMap { it.stages }
+        } catch (e: Exception) { return null }
+    }
+
     suspend fun fetchRecentExercises(): List<ExerciseSessionRecord>? {
         try {
             if (!hasPermissions()) return null

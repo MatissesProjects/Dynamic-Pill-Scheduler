@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.phos.core.data"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26
@@ -43,7 +43,7 @@ dependencies {
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
 
-    implementation("androidx.health.connect:connect-client:$healthConnectVersion")
+    api("androidx.health.connect:connect-client:$healthConnectVersion")
 
     implementation("com.google.android.horologist:horologist-datalayer:$horologistVersion")
     implementation("com.google.android.horologist:horologist-datalayer-phone:$horologistVersion")
