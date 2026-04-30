@@ -25,7 +25,9 @@ class HealthSyncManager(private val context: Context) {
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(PowerRecord::class),
         HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class),
-        HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class)
+        HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class),
+        HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+        HealthPermission.getReadPermission(RespiratoryRateRecord::class)
     )
 
     suspend fun hasPermissions(): Boolean {

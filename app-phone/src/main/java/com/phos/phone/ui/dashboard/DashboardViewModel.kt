@@ -57,6 +57,7 @@ class DashboardViewModel(
     private val userProfileDao = db.userProfileDao()
     private val postureDao = db.postureDao()
     private val environmentalDao = db.environmentalDao()
+    private val bioVelocityDao = db.bioVelocityDao()
 
     private val healthSyncManager = HealthSyncManager(application)
     private val gaitManager = GaitManager(gaitDao, healthSyncManager)
@@ -84,6 +85,7 @@ class DashboardViewModel(
     private val hormonalSyncEngine = HormonalSyncEngine(mealScheduler)
     private val thermalShieldEngine = ThermalShieldEngine()
     private val environmentalCorrelationEngine = EnvironmentalCorrelationEngine()
+    private val bioVelocityEngine = BioVelocityEngine(injectedNanoEngine ?: GeminiNanoEngine(application))
     
     private val nanoEngine = injectedNanoEngine ?: GeminiNanoEngine(application)
     private val neuroLoadEngine = NeuroLoadEngine(nanoEngine)
@@ -137,6 +139,12 @@ class DashboardViewModel(
 
     val userProfile: StateFlow<UserProfile?> = userProfileDao.getUserProfileFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val bioVelocityLogs: StateFlow<List<BioVelocityLog>> = bioVelocityDao.getAllLogs()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _bioVelocityInsight = MutableStateFlow<String?>(null)
+    val bioVelocityInsight: StateFlow<String?> = _bioVelocityInsight.asStateFlow()
 
     val alcoholLogs: StateFlow<List<AlcoholLog>> = alcoholDao.getAllLogsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -318,6 +326,7 @@ class DashboardViewModel(
             syncMetabolicClearance()
             syncPosture()
             syncEnvironmentalStrain()
+            syncBioVelocity()
             
             launch {
                 while (true) {
@@ -329,8 +338,38 @@ class DashboardViewModel(
                     syncMetabolicClearance()
                     syncPosture()
                     syncEnvironmentalStrain()
+                    syncBioVelocity()
                 }
             }
+        }
+    }
+
+    private fun syncBioVelocity() {
+        viewModelScope.launch {
+            val profile = userProfile.value ?: return@launch
+            val birthYear = profile.birthYear ?: 1980
+            
+            val now = Instant.now()
+            val rhrSamples = healthSyncManager.fetchRestingHeartRate(now.minus(7, ChronoUnit.DAYS), now) ?: emptyList()
+            val hrvSamples = healthSyncManager.fetchHrv(now.minus(7, ChronoUnit.DAYS), now) ?: emptyList()
+            
+            if (rhrSamples.isEmpty() || hrvSamples.isEmpty()) return@launch
+            
+            val currentRhr = rhrSamples.map { it.beatsPerMinute }.average()
+            val currentHrv = hrvSamples.map { it.value }.average()
+            
+            var baseline = bioVelocityDao.getBaseline()
+            if (baseline == null) {
+                baseline = BioBaseline(baselineHrv = currentHrv, baselineRhr = currentRhr, baselineSleepConsistency = 0.8)
+                bioVelocityDao.upsertBaseline(baseline)
+            }
+            
+            val doses = doseLogDao.getDosesInWindow(now.minus(7, ChronoUnit.DAYS).toEpochMilli(), now.toEpochMilli())
+            val adherence = if (doses.isNotEmpty()) doses.count { it.status == "TAKEN" }.toDouble() / doses.size else 1.0
+            
+            val log = bioVelocityEngine.calculateBioVelocity(birthYear, currentHrv, currentRhr, baseline, adherence)
+            bioVelocityDao.insertLog(log)
+            _bioVelocityInsight.value = bioVelocityEngine.generateVelocityInsight(log)
         }
     }
 
