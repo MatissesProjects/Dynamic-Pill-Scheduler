@@ -52,7 +52,7 @@
 | T49 | Endocrine & Hormonal Sync | **Orchestration:** Aligning meds with circadian cortisol peaks. | conductor/tracks/hormonal-sync/ | Completed |
 | T50 | Biological Velocity Modeling | **Modeling:** Tracking Pace of Aging via HRV-derived metrics. | conductor/tracks/bio-velocity/ | Completed |
 | T51 | Privacy-Preserving Care Mesh | **Social:** ZKP status sharing without revealing medication details. | conductor/tracks/care-mesh/ | Completed |
-| T52 | Acoustic Stress Correlation | **Environment:** Correlating noise pollution with BP and efficacy. | conductor/tracks/acoustic-stress/ | Proposed |
+| T52 | Acoustic Stress Correlation | **Environment:** Correlating noise pollution with BP and efficacy. | conductor/tracks/acoustic-stress/ | Completed |
 
 ### Track Milestones
 
@@ -167,6 +167,6 @@
 - [x] Ensure specific medication names and biometric values never leave the device.
 
 #### T52: Acoustic Stress Correlation
-- [ ] Integrate ambient noise monitoring via Watch microphone.
-- [ ] Correlate high-decibel windows with elevated blood pressure logs.
-- [ ] Implement "Acoustic Shielding" reminders for hypertensive patients.
+- [x] Integrate ambient noise monitoring via Watch microphone.
+- [x] Correlate high-decibel windows with elevated blood pressure logs.
+- [x] Implement "Acoustic Shielding" reminders for hypertensive patients.
