@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.phos.core.intelligence"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 31
@@ -53,7 +53,7 @@ protobuf {
 
 dependencies {
     implementation(project(":core-data"))
-    implementation("androidx.health.connect:connect-client:1.2.0-alpha04")
+    implementation("androidx.health.connect:connect-client:1.1.0")
     
     // ML Kit GenAI Prompt (Multimodal bridge to Gemini Nano)
     implementation("com.google.mlkit:genai-prompt:1.0.0-beta2")

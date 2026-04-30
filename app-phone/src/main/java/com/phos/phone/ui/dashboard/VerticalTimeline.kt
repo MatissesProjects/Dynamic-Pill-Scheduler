@@ -26,16 +26,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.phos.core.data.engine.NapOverlap
-import com.phos.core.data.engine.OptimalEatingWindow
-import com.phos.core.data.engine.PRNAdvisory
-import com.phos.core.data.engine.NutrientAdvisory
+import com.phos.core.data.engine.*
 import com.phos.core.data.model.*
 import com.phos.core.data.proto.PhosState
-import com.phos.core.intelligence.ExtractedEntities
-import com.phos.core.intelligence.PosturalRecommendation
-import com.phos.core.intelligence.OptimizationSuggestion
-import com.phos.core.intelligence.SleepCalibrationInsight
+import com.phos.core.intelligence.*
 import com.phos.phone.ui.scanner.PillScanResult
 import com.phos.phone.ui.scanner.PillScannerScreen
 import com.phos.phone.ui.scanner.FoodScanResult
@@ -63,7 +57,7 @@ fun MainDashboard(
     nutrientReferences: List<NutrientReference>,
     healthGoals: List<HealthGoal>,
     optimizationSuggestions: List<OptimizationSuggestion>,
-    betaBlockerInsights: List<BetaBlockerInsight>,
+    hormonalHarmony: HormonalHarmonyReport?,
     sleepRestorationAudit: SleepRestorationAudit?,
     dailyReadiness: DailyReadiness?,
     cardioMismatch: CardioMismatchInsight?,
@@ -87,7 +81,7 @@ fun MainDashboard(
     onClearPRNAdvisory: () -> Unit,
     onStartVoiceListening: () -> Unit,
     onStopVoiceListening: () -> Unit,
-    onProcessVoiceCommand: (String) -> Unit,
+    onProcessVoiceCommand: (String, List<SpeechSegment>) -> Unit,
     onClearVoiceResults: () -> Unit,
     onAcceptTravelProposal: (TravelProposal) -> Unit,
     onDismissTravelProposal: () -> Unit,
@@ -110,119 +104,38 @@ fun MainDashboard(
     var prefilledDosage by remember { mutableStateOf("") }
     var prefilledFrequency by remember { mutableStateOf(1) }
     var showGoalDialog by remember { mutableStateOf(false) }
-    
     var lastScannedFoodResult by remember { mutableStateOf<FoodScanResult?>(null) }
 
     val context = LocalContext.current
-    var hasCameraPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        )
-    }
-    
-    val cameraLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasCameraPermission = isGranted
-    }
+    val audioLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
-    var hasAudioPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        )
-    }
-
-    val audioLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasAudioPermission = isGranted
-    }
-
-    // Morning Sleep Check-in Trigger
     var showSleepCheckIn by remember { mutableStateOf(false) }
     LaunchedEffect(sleepSubjectiveLogs) {
         val today = DateTimeFormatter.ISO_LOCAL_DATE.withZone(ZoneId.systemDefault()).format(Instant.now())
-        if (sleepSubjectiveLogs.none { it.date == today }) {
-            showSleepCheckIn = true
-        }
+        if (sleepSubjectiveLogs.none { it.date == today }) showSleepCheckIn = true
     }
 
     Scaffold(
         bottomBar = {
             NavigationBar {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.Timeline, contentDescription = "Timeline") },
-                    label = { Text("Timeline") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.MedicalServices, contentDescription = "As-Needed") },
-                    label = { Text("PRN") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.CameraAlt, contentDescription = "Scanner") },
-                    label = { Text("Scanner") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
-                    icon = { Icon(Icons.Default.Restaurant, contentDescription = "Meals") },
-                    label = { Text("Meals") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 4,
-                    onClick = { selectedTab = 4 },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings") }
-                )
+                NavigationBarItem(selected = selectedTab == 0, onClick = { selectedTab = 0 }, icon = { Icon(Icons.Default.Timeline, null) }, label = { Text("Timeline") })
+                NavigationBarItem(selected = selectedTab == 1, onClick = { selectedTab = 1 }, icon = { Icon(Icons.Default.MedicalServices, null) }, label = { Text("PRN") })
+                NavigationBarItem(selected = selectedTab == 2, onClick = { selectedTab = 2 }, icon = { Icon(Icons.Default.CameraAlt, null) }, label = { Text("Scanner") })
+                NavigationBarItem(selected = selectedTab == 3, onClick = { selectedTab = 3 }, icon = { Icon(Icons.Default.Restaurant, null) }, label = { Text("Meals") })
+                NavigationBarItem(selected = selectedTab == 4, onClick = { selectedTab = 4 }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") })
             }
         },
         floatingActionButton = {
             if (selectedTab == 0) {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    FloatingActionButton(
-                        onClick = { showAppetiteDialog = true },
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                    ) {
-                        Icon(Icons.Default.Fastfood, contentDescription = "Log Appetite")
-                    }
-
-                    FloatingActionButton(
-                        onClick = { 
-                            if (hasAudioPermission) {
-                                if (voiceState is VoiceState.Listening) onStopVoiceListening()
-                                else onStartVoiceListening()
-                            } else {
-                                audioLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                            }
-                        },
-                        containerColor = if (voiceState is VoiceState.Listening) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
-                    ) {
-                        Icon(if (voiceState is VoiceState.Listening) Icons.Default.MicOff else Icons.Default.Mic, contentDescription = "Voice Log")
-                    }
-
-                    FloatingActionButton(onClick = { 
-                        prefilledName = ""
-                        prefilledDosage = ""
-                        prefilledFrequency = 1
-                        showAddDialog = true 
-                    }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Medication")
-                    }
+                    FloatingActionButton(onClick = { showAppetiteDialog = true }, containerColor = MaterialTheme.colorScheme.tertiaryContainer) { Icon(Icons.Default.Fastfood, null) }
+                    FloatingActionButton(onClick = { if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) { if (voiceState is VoiceState.Listening) onStopVoiceListening() else onStartVoiceListening() } else audioLauncher.launch(Manifest.permission.RECORD_AUDIO) }, containerColor = if (voiceState is VoiceState.Listening) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer) { Icon(if (voiceState is VoiceState.Listening) Icons.Default.MicOff else Icons.Default.Mic, null) }
+                    FloatingActionButton(onClick = { prefilledName = ""; prefilledDosage = ""; prefilledFrequency = 1; showAddDialog = true }) { Icon(Icons.Default.Add, null) }
                 }
             }
         }
     ) { padding ->
-        Box(modifier = Modifier
-            .padding(padding)
-            .fillMaxSize()
-            .statusBarsPadding()
-        ) {
+        Box(Modifier.padding(padding).fillMaxSize().statusBarsPadding()) {
             when (selectedTab) {
                 0 -> VerticalTimeline(
                     medications = medications,
@@ -232,600 +145,61 @@ fun MainDashboard(
                     is24Hour = phosState.is24Hour,
                     healthInsights = healthInsights,
                     sideEffectAlerts = sideEffectAlerts,
+                    betaBlockerInsights = betaBlockerInsights,
                     napOverlaps = napOverlaps,
                     postureRecommendation = postureRecommendation,
                     travelProposal = travelProposal,
                     optimizationSuggestions = optimizationSuggestions,
+                    hormonalHarmony = hormonalHarmony,
                     sleepRestorationAudit = sleepRestorationAudit,
+                    dailyReadiness = dailyReadiness,
+                    cardioMismatch = cardioMismatch,
+                    hrrAudit = hrrAudit,
                     sleepCalibrationInsight = sleepCalibrationInsight,
+                    neuroInsight = neuroInsight,
+                    thermalInsight = thermalInsight,
                     onUpdateMedication = onUpdateMedication,
                     onDeleteMedication = onDeleteMedication,
                     onDuplicateMedication = onDuplicateMedication,
                     onUpdateWakeTime = onUpdateWakeTime,
                     onDismissInsight = onDismissInsight,
                     onAcceptTravelProposal = onAcceptTravelProposal,
-                    onDismissTravelProposal = onDismissTravelProposal
+                    onDismissTravelProposal = onDismissTravelProposal,
+                    onConfirmHeavyLegs = onConfirmHeavyLegs
                 )
-                1 -> PRNList(
-                    prnMedications = prnMedications,
-                    onRequestAdvisory = onRequestPRNAdvisory
-                )
-                2 -> {
-                    if (hasCameraPermission) {
-                        PillScannerScreen(
-                            onPillScanned = { result ->
-                                prefilledName = result.detectedName ?: "${result.detectedColor} ${result.detectedShape} Pill"
-                                prefilledDosage = result.detectedDosage ?: ""
-                                prefilledFrequency = result.frequencyDosesPerDay
-                                showAddDialog = true
-                                selectedTab = 0 
-                            },
-                            onFoodScanned = { result ->
-                                lastScannedFoodResult = result
-                                if (result.nutrients != null) {
-                                    onRequestNutrientAdvisory(result.detectedName ?: "Food Item", result.nutrients!!)
-                                } else {
-                                    onLogFood(result.detectedName ?: "Unknown", result.category ?: "General", null)
-                                    selectedTab = 3
-                                }
-                            },
-                            aiTextParser = aiTextParser,
-                            aiVisionParser = aiVisionParser,
-                            aiPillVisionParser = aiPillVisionParser
-                        )
-                    } else {
-                        Column(
-                            Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("Camera permission required for scanner")
-                            Button(onClick = { cameraLauncher.launch(Manifest.permission.CAMERA) }) {
-                                Text("Grant Permission")
-                            }
-                        }
-                    }
-                }
-                3 -> MealSyncDashboard(
-                    eatingWindows = eatingWindows,
-                    is24Hour = phosState.is24Hour,
-                    depletionWarnings = medicationDepletions,
-                    foodReferences = nutrientReferences
-                )
-                4 -> Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "System Settings & Goals",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    ListItem(
-                        headlineContent = { Text("24-Hour Time Format") },
-                        trailingContent = {
-                            Switch(
-                                checked = phosState.is24Hour,
-                                onCheckedChange = onToggleTimeFormat
-                            )
-                        }
-                    )
-                    
-                    Divider()
-                    JetLagSimulator()
-
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = onDetectTravel,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Flight, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Simulate Travel Detection")
-                    }
-
-                    Divider()
-                    Text("Health Goals", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    healthGoals.forEach { goal ->
-                        Text("• ${goal.description}", style = MaterialTheme.typography.bodySmall)
-                    }
-                    Button(
-                        onClick = { showGoalDialog = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.AddTask, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Add Health Goal")
-                    }
-
-                    Divider()
-                    Text("Meal Preferences (Offset from T-Wake)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    
-                    var bStart by remember { mutableStateOf((phosState.mealPreferences?.breakfastStartOffset ?: 0L).toString()) }
-                    var bEnd by remember { mutableStateOf((phosState.mealPreferences?.breakfastEndOffset ?: 3600000L).toString()) }
-                    var lStart by remember { mutableStateOf((phosState.mealPreferences?.lunchStartOffset ?: 14400000L).toString()) }
-                    var lEnd by remember { mutableStateOf((phosState.mealPreferences?.lunchEndOffset ?: 18000000L).toString()) }
-                    var dStart by remember { mutableStateOf((phosState.mealPreferences?.dinnerStartOffset ?: 36000000L).toString()) }
-                    var dEnd by remember { mutableStateOf((phosState.mealPreferences?.dinnerEndOffset ?: 39600000L).toString()) }
-
-                    Column {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            OutlinedTextField(value = bStart, onValueChange = {bStart = it}, label = {Text("Bfast Start (ms)")}, modifier = Modifier.weight(1f))
-                            Spacer(Modifier.width(8.dp))
-                            OutlinedTextField(value = bEnd, onValueChange = {bEnd = it}, label = {Text("Bfast End (ms)")}, modifier = Modifier.weight(1f))
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            OutlinedTextField(value = lStart, onValueChange = {lStart = it}, label = {Text("Lunch Start (ms)")}, modifier = Modifier.weight(1f))
-                            Spacer(Modifier.width(8.dp))
-                            OutlinedTextField(value = lEnd, onValueChange = {lEnd = it}, label = {Text("Lunch End (ms)")}, modifier = Modifier.weight(1f))
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            OutlinedTextField(value = dStart, onValueChange = {dStart = it}, label = {Text("Dinner Start (ms)")}, modifier = Modifier.weight(1f))
-                            Spacer(Modifier.width(8.dp))
-                            OutlinedTextField(value = dEnd, onValueChange = {dEnd = it}, label = {Text("Dinner End (ms)")}, modifier = Modifier.weight(1f))
-                        }
-                        Button(onClick = {
-                            onUpdateMealPreferences(bStart.toLong(), bEnd.toLong(), lStart.toLong(), lEnd.toLong(), dStart.toLong(), dEnd.toLong())
-                        }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                            Text("Save Meal Preferences")
-                        }
-                    }
-                }
+                1 -> PRNList(prnMedications, onRequestPRNAdvisory)
+                2 -> PillScannerScreen(onPillScanned = { result -> prefilledName = result.detectedName ?: "Pill"; prefilledDosage = result.detectedDosage ?: ""; prefilledFrequency = result.frequencyDosesPerDay; showAddDialog = true; selectedTab = 0 }, onFoodScanned = { result -> lastScannedFoodResult = result; if (result.nutrients != null) onRequestNutrientAdvisory(result.detectedName ?: "Food", result.nutrients!!) else { onLogFood(result.detectedName ?: "Food", result.category ?: "General", null); selectedTab = 3 } }, aiTextParser = aiTextParser, aiVisionParser = aiVisionParser, aiPillVisionParser = aiPillVisionParser)
+                3 -> MealSyncDashboard(eatingWindows, phosState.is24Hour, medicationDepletions, nutrientReferences)
+                4 -> SettingsScreen(phosState, onToggleTimeFormat, onDetectTravel, healthGoals, { showGoalDialog = true }, onUpdateMealPreferences)
             }
-
-            // Voice Feedback Overlay
-            AnimatedVisibility(
-                visible = voiceState !is VoiceState.Idle,
-                enter = fadeIn() + slideInVertically { it },
-                exit = fadeOut() + slideOutVertically { it }
-            ) {
-                VoiceOverlay(
-                    state = voiceState,
-                    extractedEntities = voiceExtractedEntities,
-                    onProcess = onProcessVoiceCommand,
-                    onDismiss = onClearVoiceResults
-                )
+            AnimatedVisibility(visible = voiceState !is VoiceState.Idle, enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
+                VoiceOverlay(state = voiceState, extractedEntities = voiceExtractedEntities, neuroInsight = neuroInsight, onProcess = onProcessVoiceCommand, onDismiss = onClearVoiceResults)
             }
         }
     }
-
-    if (showSleepCheckIn) {
-        SleepCheckInDialog(
-            onDismiss = { showSleepCheckIn = false },
-            onConfirm = { quality, restfulness, mood ->
-                onLogSleepSubjective(quality, restfulness, mood)
-                showSleepCheckIn = false
-            }
-        )
-    }
-
-    if (showAppetiteDialog) {
-        AppetiteLogDialog(
-            onDismiss = { showAppetiteDialog = false },
-            onConfirm = { hunger, difficulty ->
-                onLogAppetite(hunger, difficulty)
-                showAppetiteDialog = false
-            }
-        )
-    }
-
-    if (showGoalDialog) {
-        AddGoalDialog(
-            onDismiss = { showGoalDialog = false },
-            onConfirm = { desc, symp, off ->
-                onAddHealthGoal(desc, symp, off)
-                showGoalDialog = false
-            }
-        )
-    }
-
-    prnAdvisory?.let { advisory ->
-        PRNAdvisoryDialog(
-            advisory = advisory,
-            onDismiss = onClearPRNAdvisory,
-            onConfirm = {
-                // Find the med that triggered this
-                prnMedications.find { advisory.reason.contains(it.name) || it.name.contains(advisory.reason.split(" ").last().replace(".","")) }?.let {
-                    onLogPRNDose(it)
-                } ?: onClearPRNAdvisory()
-            }
-        )
-    }
-
-    nutrientAdvisory?.let { advisory ->
-        NutrientAdvisoryDialog(
-            advisory = advisory,
-            onDismiss = onClearNutrientAdvisory,
-            onConfirm = {
-                val result = lastScannedFoodResult
-                if (result != null) {
-                    onLogFood(result.detectedName ?: "Food Item", result.category ?: "General", result.nutrients)
-                }
-                onClearNutrientAdvisory()
-                selectedTab = 3
-            }
-        )
-    }
-
-    if (showAddDialog) {
-        AddMedicationDialog(
-            initialName = prefilledName,
-            initialDosage = prefilledDosage,
-            initialFrequency = prefilledFrequency,
-            onDismiss = { showAddDialog = false },
-            onConfirm = { name, dosage, offset, frequency, foodReq ->
-                onAddMedication(name, dosage, offset, frequency, foodReq)
-                showAddDialog = false
-            }
-        )
-    }
+    if (showSleepCheckIn) SleepCheckInDialog({ showSleepCheckIn = false }, { q, r, m -> onLogSleepSubjective(q, r, m); showSleepCheckIn = false })
+    if (showAppetiteDialog) AppetiteLogDialog({ showAppetiteDialog = false }, onLogAppetite)
+    if (showGoalDialog) AddGoalDialog({ showGoalDialog = false }, onAddHealthGoal)
+    prnAdvisory?.let { adv -> PRNAdvisoryDialog(adv, onClearPRNAdvisory) { prnMedications.find { m -> adv.reason.contains(m.name) }?.let { onLogPRNDose(it) } ?: onClearPRNAdvisory() } }
+    nutrientAdvisory?.let { adv -> NutrientAdvisoryDialog(adv, onClearNutrientAdvisory) { lastScannedFoodResult?.let { onLogFood(it.detectedName ?: "Food", it.category ?: "General", it.nutrients) }; onClearNutrientAdvisory(); selectedTab = 3 } }
+    if (showAddDialog) AddMedicationDialog(prefilledName, prefilledDosage, "1", prefilledFrequency, "NONE", { showAddDialog = false }, onAddMedication)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SleepCheckInDialog(onDismiss: () -> Unit, onConfirm: (Int, Int, String) -> Unit) {
-    var quality by remember { mutableStateOf(5f) }
-    var restfulness by remember { mutableStateOf(5f) }
-    var mood by remember { mutableStateOf("Tired") }
-    val moods = listOf("Tired", "Groggy", "Alert", "Neutral")
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Morning Sleep Check-in") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("How would you rate your sleep quality? (1-10)")
-                Slider(value = quality, onValueChange = { quality = it }, valueRange = 1f..10f, steps = 8)
-                Text("How restful do you feel? (1-10)")
-                Slider(value = restfulness, onValueChange = { restfulness = it }, valueRange = 1f..10f, steps = 8)
-                Text("Current Mood:")
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    moods.forEach { m ->
-                        FilterChip(selected = mood == m, onClick = { mood = m }, label = { Text(m) })
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onConfirm(quality.toInt(), restfulness.toInt(), mood) }) { Text("Log Feeling") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Later") }
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AddGoalDialog(onDismiss: () -> Unit, onConfirm: (String, String, Long?) -> Unit) {
-    var desc by remember { mutableStateOf("") }
-    var symp by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add Health Goal") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Goal (e.g. Prevent stomach pain at 4am)") })
-                OutlinedTextField(value = symp, onValueChange = { symp = it }, label = { Text("Target Symptom (e.g. Stomach pain)") })
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onConfirm(desc, symp, null) }) { Text("Save") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
-}
-
-@Composable
-fun NutrientAdvisoryDialog(
-    advisory: NutrientAdvisory,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(if (advisory.isGoodIdea) Icons.Default.CheckCircle else Icons.Default.Warning, contentDescription = null, tint = if (advisory.isGoodIdea) Color.Green else MaterialTheme.colorScheme.error) },
-        title = { Text(if (advisory.isGoodIdea) "Nutrient Check Passed" else "Dietary Warning") },
-        text = {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.heightIn(max = 300.dp)) {
-                item { Text(advisory.summary, fontWeight = FontWeight.Bold) }
-                items(advisory.warnings) { warning ->
-                    Text("• $warning", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
-                items(advisory.suggestions) { suggestion ->
-                    Text("💡 $suggestion", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = onConfirm) { Text("Log Anyway") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(if (advisory.isGoodIdea) "Cancel" else "Dismiss") }
-        }
-    )
-}
-
-@Composable
-fun AppetiteLogDialog(onDismiss: () -> Unit, onConfirm: (Int, Int) -> Unit) {
-    var hunger by remember { mutableStateOf(5f) }
-    var difficulty by remember { mutableStateOf(1f) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Appetite & Hunger Log") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("How hungry do you feel? (1-10)")
-                Slider(value = hunger, onValueChange = { hunger = it }, valueRange = 1f..10f, steps = 8)
-                Text("Difficulty eating right now? (1-10)")
-                Slider(value = difficulty, onValueChange = { difficulty = it }, valueRange = 1f..10f, steps = 8)
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onConfirm(hunger.toInt(), difficulty.toInt()) }) { Text("Save") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MealSyncDashboard(
-    eatingWindows: List<OptimalEatingWindow>, 
-    is24Hour: Boolean,
-    depletionWarnings: List<String> = emptyList(),
-    foodReferences: List<NutrientReference> = emptyList()
-) {
-    val timeFormatter = DateTimeFormatter.ofPattern(if (is24Hour) "HH:mm" else "hh:mm a").withZone(ZoneId.systemDefault())
-    
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item {
-            Text("Adaptive Nutrition Orchestration", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Dynamically calculated windows based on your schedule and hunger logs.", style = MaterialTheme.typography.bodySmall)
-            Spacer(Modifier.height(8.dp))
-        }
-
-        if (depletionWarnings.isNotEmpty()) {
-            item {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
-                    Column(Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Nutrient Watch", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-                        }
-                        depletionWarnings.forEach { warning ->
-                            Text("• $warning", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
-                        }
-                    }
-                }
-            }
-        }
-        
-        items(eatingWindows) { window ->
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (window.isSacred) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                ),
-                border = if (window.isSacred) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = if (window.isSacred) Icons.Default.HealthAndSafety else Icons.Default.Restaurant,
-                            contentDescription = null,
-                            tint = if (window.isSacred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "${timeFormatter.format(Instant.ofEpochMilli(window.startTime))} - ${timeFormatter.format(Instant.ofEpochMilli(window.endTime))}",
-                            fontWeight = FontWeight.ExtraBold,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        if (window.isSacred) {
-                            Spacer(Modifier.weight(1f))
-                            Badge(containerColor = MaterialTheme.colorScheme.primary) { Text("SACRED WINDOW", color = Color.White) }
-                        }
-                    }
-                    Text(window.reason, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp))
-                    
-                    LinearProgressIndicator(
-                        progress = window.score / 10f,
-                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp).height(4.dp),
-                        color = if (window.isSacred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                    )
-                }
-            }
-        }
-
-        if (foodReferences.isNotEmpty()) {
-            item {
-                Text("Healthy Sourcing", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-            }
-            items(foodReferences) { ref ->
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(ref.name, fontWeight = FontWeight.Bold)
-                            Text("${ref.nutrients.proteinG}g Protein | ${ref.nutrients.calories} kcal", style = MaterialTheme.typography.labelSmall)
-                            ref.bestSources?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
-                        }
-                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
-                    }
-                }
-            }
-        }
-        
-        if (eatingWindows.isEmpty()) {
-            item { 
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No clear windows detected. Try adjusting medication offsets.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center) 
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun VoiceOverlay(
-    state: VoiceState,
-    extractedEntities: ExtractedEntities?,
-    neuroInsight: NeuroCognitiveInsight?,
-    onProcess: (String, List<com.phos.core.intelligence.SpeechSegment>) -> Unit,
-    onDismiss: () -> Unit
-) {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
-            .clickable { onDismiss() },
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        Card(
-            Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .clickable(enabled = false) {},
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                when (state) {
-                    is VoiceState.Listening -> {
-                        Text("Listening...", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.height(16.dp))
-                        LinearProgressIndicator(Modifier.fillMaxWidth())
-                    }
-                    is VoiceState.Success -> {
-                        Text("Extracting...", style = MaterialTheme.typography.bodyLarge)
-                        LaunchedEffect(state.text) { onProcess(state.text, state.segments) }
-                    }
-                    is VoiceState.Error -> {
-                        Icon(Icons.Default.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(48.dp))
-                        Text(state.message, textAlign = TextAlign.Center)
-                        Button(onClick = onDismiss, Modifier.padding(top = 16.dp)) { Text("Dismiss") }
-                    }
-                    else -> {}
-                }
-
-                neuroInsight?.let { insight ->
-                    Spacer(Modifier.height(16.dp))
-                    Card(colors = CardDefaults.cardColors(containerColor = if (insight.isSignificant) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer)) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text("🧠 Neuro-Cognitive Audit", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                            Text("Brain Fog: ${"%.1f".format(insight.brainFogIndex * 100)}% | Fluidity: ${"%.1f".format(insight.fluidityScore * 100)}%", style = MaterialTheme.typography.bodySmall)
-                            insight.advice?.let { Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp)) }
-                        }
-                    }
-                }
-
-                extractedEntities?.let { entities ->
-                    Spacer(Modifier.height(16.dp))
-                    Text("Understood:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    
-                    if (entities.medications.isEmpty() && entities.symptoms.isEmpty() && entities.foods.isEmpty()) {
-                        Text("Nothing recognized. Try saying 'Took my lisinopril' or 'Feeling a headache'.")
-                    } else {
-                        entities.medications.forEach { Text("✅ Logged Dose: ${it.name}", color = Color.Green) }
-                        entities.symptoms.forEach { Text("✅ Logged Symptom: ${it.name}", color = Color.Cyan) }
-                        entities.foods.forEach { Text("✅ Logged Food: ${it.name}", color = Color.Yellow) }
-                    }
-                    
-                    Button(onClick = onDismiss, Modifier.padding(top = 16.dp)) { Text("Done") }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun PRNList(
-    prnMedications: List<PRNMedication>,
-    onRequestAdvisory: (PRNMedication) -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            Text("As-Needed Medications", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Select a medication to request a safety check before taking.", style = MaterialTheme.typography.bodySmall)
-            Spacer(Modifier.height(16.dp))
-        }
-        
-        items(prnMedications) { med ->
-            Card(
-                modifier = Modifier.fillMaxWidth().clickable { onRequestAdvisory(med) },
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(med.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(med.dosage, style = MaterialTheme.typography.bodySmall)
-                        med.reasonForUse?.let { Text("Used for: $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
-                    }
-                    Icon(Icons.Default.ChevronRight, contentDescription = null)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun PRNAdvisoryDialog(
-    advisory: PRNAdvisory,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(if (advisory.isApproved) Icons.Default.CheckCircle else Icons.Default.Warning, contentDescription = null, tint = if (advisory.isApproved) Color.Green else MaterialTheme.colorScheme.error) },
-        title = { Text(if (advisory.isApproved) "Safety Check Passed" else "Safety Warning") },
-        text = {
-            Column {
-                Text(advisory.reason)
-                advisory.alternativeAdvice?.let {
-                    Spacer(Modifier.height(8.dp))
-                    Text("Recommendation: $it", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                }
-            }
-        },
-        confirmButton = {
-            if (advisory.isApproved) {
-                Button(onClick = onConfirm) { Text("Log Dose") }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(if (advisory.isApproved) "Cancel" else "Dismiss") }
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VerticalTimeline(
     medications: List<MedicationRecord>,
     tWakeEpoch: Long,
-    wasInterrupted: Boolean = false,
+    wasInterrupted: Boolean,
     lastAiInsight: String,
     is24Hour: Boolean,
     healthInsights: List<String>,
     sideEffectAlerts: List<SideEffectRule>,
-    betaBlockerInsights: List<BetaBlockerInsight> = emptyList(),
+    betaBlockerInsights: List<BetaBlockerInsight>,
     napOverlaps: List<NapOverlap>,
     postureRecommendation: PosturalRecommendation?,
     travelProposal: TravelProposal?,
     optimizationSuggestions: List<OptimizationSuggestion>,
+    hormonalHarmony: HormonalHarmonyReport?,
     sleepRestorationAudit: SleepRestorationAudit?,
     dailyReadiness: DailyReadiness?,
     cardioMismatch: CardioMismatchInsight?,
@@ -839,352 +213,156 @@ fun VerticalTimeline(
     onUpdateWakeTime: (Long) -> Unit,
     onDismissInsight: (String) -> Unit,
     onAcceptTravelProposal: (TravelProposal) -> Unit,
-    onDismissTravelProposal: () -> Unit
+    onDismissTravelProposal: () -> Unit,
+    onConfirmHeavyLegs: (CardioMismatchInsight) -> Unit
 ) {
-    val pattern = if (is24Hour) "HH:mm" else "hh:mm a"
-    val timeFormatter = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
-    
+    val timeFormatter = DateTimeFormatter.ofPattern(if (is24Hour) "HH:mm" else "hh:mm a").withZone(ZoneId.systemDefault())
     var showTimePicker by remember { mutableStateOf(false) }
     var editingMedication by remember { mutableStateOf<MedicationRecord?>(null) }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-            WakeTimeHeader(tWakeEpoch, timeFormatter) { showTimePicker = true }
-        }
-
-        if (wasInterrupted) {
-            item {
-                InsightCard(
-                    title = "Sleep Session Bridged",
-                    insight = "Detected and bridged short wake gaps (bathroom breaks) to ensure T-Wake accuracy.",
-                    icon = Icons.Default.History,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    onDismiss = { /* In T22 we can implement persistent dismissal */ }
-                )
-            }
-        }
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        item { Spacer(Modifier.height(8.dp)); WakeTimeHeader(tWakeEpoch, timeFormatter) { showTimePicker = true } }
+        if (wasInterrupted) item { InsightCard("Sleep Session Bridged", "Detected and bridged short wake gaps.", Icons.Default.History) { } }
+        sleepCalibrationInsight?.let { item { InsightCard(it.title, it.description, Icons.Default.Bedtime, MaterialTheme.colorScheme.tertiaryContainer) { } } }
+        optimizationSuggestions.forEach { item { InsightCard("Goal Optimization", it.description, Icons.Default.ModelTraining, MaterialTheme.colorScheme.tertiaryContainer) { } } }
+        if (lastAiInsight.isNotEmpty()) item { InsightCard("AI Baseline Insight", lastAiInsight, Icons.Default.AutoAwesome) { onDismissInsight("baseline") } }
+        hormonalHarmony?.let { report -> item { InsightCard("Hormonal Harmony: ${report.alignmentScore}/100", if (report.alerts.isEmpty()) "Perfectly aligned." else report.alerts.joinToString("\n") { "• ${it.message}" }, Icons.Default.SelfImprovement, when { report.alignmentScore > 80 -> MaterialTheme.colorScheme.tertiaryContainer; report.alignmentScore > 50 -> MaterialTheme.colorScheme.secondaryContainer; else -> MaterialTheme.colorScheme.errorContainer }) { } } }
+        sleepRestorationAudit?.let { item { InsightCard("Sleep Restoration Audit: ${it.remStabilityScore}/100", it.restorationMessage, Icons.Default.Bedtime) { onDismissInsight("sleep_audit_${it.date}") } } }
+        dailyReadiness?.let { item { InsightCard("Daily Readiness: ${it.score}/100", it.recommendation, Icons.Default.Bolt) { onDismissInsight("readiness_${it.date}") } } }
+        hrrAudit?.let { audit -> item { InsightCard("Heart Rate Recovery Audit", audit.advice, if (audit.isStrained) Icons.Default.Warning else Icons.Default.History, if (audit.isStrained) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer) { onDismissInsight("hrr_audit_${audit.date}") } } }
+        cardioMismatch?.let { mismatch -> item { Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) { Column(Modifier.padding(16.dp)) { Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.HeartBroken, null, tint = Color.Red); Spacer(Modifier.width(8.dp)); Text("Muscle-Heart Mismatch", fontWeight = FontWeight.Bold) }; Text("Step Rate: ${mismatch.stepRate} HR: ${mismatch.heartRate}", style = MaterialTheme.typography.bodySmall); Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { TextButton(onClick = { onDismissInsight("mismatch") }) { Text("Dismiss") }; Button(onClick = { onConfirmHeavyLegs(mismatch) }) { Text("Confirm Heavy Legs") } } } } } }
+        travelProposal?.let { p -> item { Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) { Column(Modifier.padding(16.dp)) { Text("Travel Detected: ${p.destination}", fontWeight = FontWeight.Bold); Text(p.explanation ?: "", style = MaterialTheme.typography.bodySmall); Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { TextButton(onClick = onDismissTravelProposal) { Text("Dismiss") }; Button(onClick = { onAcceptTravelProposal(p) }) { Text("Accept") } } } } } }
+        postureRecommendation?.let { item { InsightCard(it.title, it.recommendation, Icons.Default.VerticalAlignTop) { onDismissInsight("posture") } } }
+        thermalInsight?.let { item { if(it.riskLevel != ThermalRiskLevel.LOW) InsightCard("Thermal Strain: ${it.riskLevel}", it.advice ?: "", Icons.Default.Thermostat, if(it.riskLevel == ThermalRiskLevel.CRITICAL) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer) { onDismissInsight("thermal") } } }
+        napOverlaps.forEach { item { InsightCard("Nap Detected: ${it.medicationName} Shift", "Suggested shift: ${it.suggestedShiftMillis/60000} mins.", Icons.Default.Bedtime) { onDismissInsight("nap_${it.medicationId}") } } }
+        healthInsights.forEach { item { InsightCard("Absorption Spacing", it, Icons.Default.Info) { onDismissInsight("absorption") } } }
+        sideEffectAlerts.forEach { item { InsightCard("Side Effect Watch: ${it.sideEffect}", it.advice, Icons.Default.Warning, MaterialTheme.colorScheme.errorContainer) { onDismissInsight("side_effect") } } }
+        betaBlockerInsights.forEach { item { InsightCard(it.title, it.description, when(it.type) { BetaBlockerInsightType.BRADYCARDIA -> Icons.Default.Warning; BetaBlockerInsightType.FATIGUE_SLUMP -> Icons.Default.BatteryAlert; else -> Icons.Default.DirectionsWalk }, if(it.isCritical) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer) { onDismissInsight("bb_${it.type}") } } }
         
-        sleepCalibrationInsight?.let { insight ->
-             item {
-                InsightCard(
-                    title = insight.title,
-                    insight = insight.description,
-                    icon = Icons.Default.Bedtime,
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                    onDismiss = { }
-                )
-            }
-        }
-        
-        optimizationSuggestions.forEach { opt ->
-            item {
-                InsightCard(
-                    title = "Goal Optimization",
-                    insight = opt.description + (opt.suggestedMealShifts?.let { "\n💡 $it" } ?: ""),
-                    icon = Icons.Default.ModelTraining,
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                    onDismiss = { }
-                )
-            }
-        }
+        if (medications.isEmpty()) item { Text("No medications scheduled.", Modifier.fillMaxWidth().padding(32.dp), textAlign = TextAlign.Center) }
+        items(medications.sortedBy { it.frequencyOffset }) { TimelineItem(it, tWakeEpoch, timeFormatter, { editingMedication = it }, { onDuplicateMedication(it) }, { onDeleteMedication(it.id) }) }
+        item { Spacer(Modifier.height(80.dp)) }
+    }
+    if (showTimePicker) WakeTimePickerDialog(tWakeEpoch, is24Hour, { showTimePicker = false }, { onUpdateWakeTime(it); showTimePicker = false })
+    editingMedication?.let { med -> AddMedicationDialog(med.name, med.dosage, (med.frequencyOffset/3600000.0).toString(), 1, med.foodRequirement, { editingMedication = null }, { n, d, o, f, fr -> onUpdateMedication(med.copy(name = n, dosage = d, frequencyOffset = o, foodRequirement = fr)); editingMedication = null }) }
+}
 
-        if (lastAiInsight.isNotEmpty()) {
-            item { InsightCard(title = "AI Baseline Insight", insight = lastAiInsight, icon = Icons.Default.AutoAwesome, onDismiss = { onDismissInsight("baseline") }) }
-        }
+@Composable
+fun SettingsScreen(state: PhosState, onToggleTimeFormat: (Boolean) -> Unit, onDetectTravel: () -> Unit, healthGoals: List<HealthGoal>, onAddGoal: () -> Unit, onUpdateMeals: (Long, Long, Long, Long, Long, Long) -> Unit) {
+    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        ListItem(headlineContent = { Text("24-Hour Format") }, trailingContent = { Switch(state.is24Hour, onToggleTimeFormat) })
+        Divider()
+        Button(onClick = onDetectTravel, Modifier.fillMaxWidth()) { Icon(Icons.Default.Flight, null); Spacer(Modifier.width(8.dp)); Text("Detect Travel") }
+        Divider()
+        Text("Goals", fontWeight = FontWeight.Bold); healthGoals.forEach { Text("• ${it.description}", style = MaterialTheme.typography.bodySmall) }
+        Button(onClick = onAddGoal, Modifier.fillMaxWidth()) { Icon(Icons.Default.AddTask, null); Text("Add Goal") }
+        Divider()
+        Text("Meal Prefs (ms offset)", fontWeight = FontWeight.Bold)
+        var bS by remember { mutableStateOf((state.mealPreferences?.breakfastStartOffset ?: 0L).toString()) }
+        var bE by remember { mutableStateOf((state.mealPreferences?.breakfastEndOffset ?: 3600000L).toString()) }
+        Row { OutlinedTextField(bS, {bS=it}, label={Text("BStart")}, modifier=Modifier.weight(1f)); Spacer(Modifier.width(8.dp)); OutlinedTextField(bE, {bE=it}, label={Text("BEnd")}, modifier=Modifier.weight(1f)) }
+        Button(onClick = { onUpdateMeals(bS.toLong(), bE.toLong(), 0, 0, 0, 0) }, Modifier.fillMaxWidth()) { Text("Save") }
+    }
+}
 
-        sleepRestorationAudit?.let { audit ->
-            item {
-                InsightCard(
-                    title = "Sleep Restoration Audit: ${audit.remStabilityScore}/100 Stability",
-                    insight = audit.restorationMessage,
-                    icon = Icons.Default.Bedtime,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    onDismiss = { onDismissInsight("sleep_audit_${audit.date}") }
-                )
-            }
-        }
-
-        dailyReadiness?.let { readiness ->
-            item {
-                InsightCard(
-                    title = "Daily Readiness: ${readiness.score}/100",
-                    insight = readiness.recommendation,
-                    icon = Icons.Default.Bolt,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    onDismiss = { onDismissInsight("readiness_${readiness.date}") }
-                )
-            }
-        }
-
-        hrrAudit?.let { audit ->
-            item {
-                InsightCard(
-                    title = "Heart Rate Recovery Audit",
-                    insight = "Current 1-min recovery: ${"%.0f".format(audit.currentOneMin)} BPM. Trend: ${if (audit.trendDelta >= 0) "+" else ""}${"%.1f".format(audit.trendDelta * 100)}%\n\n${audit.advice}",
-                    icon = if (audit.isStrained) Icons.Default.Warning else Icons.Default.History,
-                    color = if (audit.isStrained) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
-                    onDismiss = { onDismissInsight("hrr_audit_${audit.date}") }
-                )
-            }
-        }
-
-        cardioMismatch?.let { mismatch ->
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.HeartBroken, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Muscle-Heart Mismatch Detected", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-                        }
-                        Text(
-                            text = "Your physical activity (Step Rate: ${"%.1f".format(mismatch.stepRate)}) is out-pacing your cardiac response (HR: ${"%.1f".format(mismatch.heartRate)}). This often feels like 'Heavy Legs'.",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                            TextButton(onClick = { onDismissInsight("mismatch_${mismatch.timestamp}") }) { Text("Dismiss") }
-                            Button(
-                                onClick = { onConfirmHeavyLegs(mismatch) },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                            ) {
-                                Text("Confirm Heavy Legs")
-                            }
-                        }
-                    }
+@Composable
+fun VoiceOverlay(state: VoiceState, extractedEntities: ExtractedEntities?, neuroInsight: NeuroCognitiveInsight?, onProcess: (String, List<com.phos.core.intelligence.SpeechSegment>) -> Unit, onDismiss: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(0.6f)).clickable { onDismiss() }, contentAlignment = Alignment.BottomCenter) {
+        Card(Modifier.fillMaxWidth().padding(16.dp).clickable(false) {}, shape = MaterialTheme.shapes.extraLarge) {
+            Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                when (state) {
+                    is VoiceState.Listening -> { Text("Listening...", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary); Spacer(Modifier.height(16.dp)); LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                    is VoiceState.Success -> { Text("Processing...", style = MaterialTheme.typography.bodyLarge); LaunchedEffect(state.text) { onProcess(state.text, state.segments) } }
+                    is VoiceState.Error -> { Icon(Icons.Default.Error, null, tint = Color.Red); Text(state.message); Button(onDismiss) { Text("Dismiss") } }
+                    else -> {}
+                }
+                neuroInsight?.let { Card(colors = CardDefaults.cardColors(containerColor = if(it.isSignificant) Color.Red else Color.Gray)) { Text("Neuro Audit: Fog ${it.brainFogIndex}", Modifier.padding(8.dp)) } }
+                extractedEntities?.let { entities ->
+                    entities.medications.forEach { Text("✅ ${it.name}", color = Color.Green) }
+                    Button(onDismiss) { Text("Done") }
                 }
             }
         }
-        
-        travelProposal?.let { proposal ->
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.FlightTakeoff, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Travel Detected: ${proposal.destination}", fontWeight = FontWeight.Bold)
-                        }
-                        Text(proposal.explanation ?: "", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
-                        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                            TextButton(onClick = onDismissTravelProposal) { Text("Dismiss") }
-                            Button(onClick = { onAcceptTravelProposal(proposal) }) { Text("Accept Plan") }
-                        }
-                    }
-                }
-            }
-        }
-        
-        postureRecommendation?.let { rec ->
-            item { InsightCard(title = rec.title, insight = rec.recommendation, icon = Icons.Default.VerticalAlignTop, color = MaterialTheme.colorScheme.primaryContainer, onDismiss = { onDismissInsight("posture_${rec.hashCode()}") }) }
-        }
-
-        thermalInsight?.let { insight ->
-            if (insight.riskLevel != ThermalRiskLevel.LOW) {
-                item {
-                    InsightCard(
-                        title = "Thermal Strain: ${insight.riskLevel}",
-                        insight = insight.advice ?: "Detected significant skin temperature delta (${"%.1f".format(insight.tempDelta)}°C).",
-                        icon = Icons.Default.Thermostat,
-                        color = if (insight.riskLevel == ThermalRiskLevel.CRITICAL) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
-                        onDismiss = { onDismissInsight("thermal_${insight.hashCode()}") }
-                    )
-                }
-            }
-        }
-
-        napOverlaps.forEach { overlap ->
-            item { InsightCard(title = "Nap Detected: ${overlap.medicationName} Shift", insight = "Your ${overlap.overlapDurationMinutes}-minute nap overlapped with this dose. Suggesting a shift of ${(overlap.suggestedShiftMillis / 60000)} minutes.", icon = Icons.Default.Bedtime, color = MaterialTheme.colorScheme.secondaryContainer, onDismiss = { onDismissInsight("nap_${overlap.medicationId}") }) }
-        }
-        
-        healthInsights.forEach { insight ->
-            item { InsightCard(title = "Absorption Spacing", insight = insight, icon = Icons.Default.Info, color = MaterialTheme.colorScheme.secondaryContainer, onDismiss = { onDismissInsight("absorption_${insight.hashCode()}") }) }
-        }
-
-        sideEffectAlerts.forEach { alert ->
-            item { InsightCard(title = "Side Effect Watch: ${alert.sideEffect}", insight = alert.advice, icon = Icons.Default.Warning, color = MaterialTheme.colorScheme.errorContainer, onDismiss = { onDismissInsight("side_effect_${alert.medicationId}_${alert.sideEffect}") }) }
-        }
-
-        betaBlockerInsights.forEach { insight ->
-            item {
-                InsightCard(
-                    title = insight.title,
-                    insight = insight.description,
-                    icon = when(insight.type) {
-                        BetaBlockerInsightType.BRADYCARDIA -> Icons.Default.Warning
-                        BetaBlockerInsightType.FATIGUE_SLUMP -> Icons.Default.BatteryAlert
-                        BetaBlockerInsightType.OXYGENATION_REMINDER -> Icons.Default.DirectionsWalk
-                    },
-                    color = if (insight.isCritical) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
-                    onDismiss = { onDismissInsight("beta_blocker_${insight.type}_${insight.hashCode()}") }
-                )
-            }
-        }
-
-        if (medications.isEmpty()) {
-            item { EmptyTimelineMessage() }
-        }
-
-        items(medications.sortedBy { it.frequencyOffset }) { med ->
-            TimelineItem(
-                med = med,
-                tWakeEpoch = tWakeEpoch,
-                timeFormatter = timeFormatter,
-                onEdit = { editingMedication = med },
-                onDuplicate = { onDuplicateMedication(med) },
-                onDelete = { onDeleteMedication(med.id) }
-            )
-        }
-        
-        item {
-            Spacer(modifier = Modifier.height(80.dp))
-        }
     }
+}
 
-    if (showTimePicker) {
-        WakeTimePickerDialog(
-            initialEpoch = tWakeEpoch,
-            is24Hour = is24Hour,
-            onDismiss = { showTimePicker = false },
-            onConfirm = { newEpoch ->
-                onUpdateWakeTime(newEpoch)
-                showTimePicker = false
-            }
-        )
+@Composable
+fun PRNList(prnMedications: List<PRNMedication>, onRequestAdvisory: (PRNMedication) -> Unit) {
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { Text("PRN Medications", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Spacer(Modifier.height(16.dp)) }
+        items(prnMedications) { med -> Card(Modifier.fillMaxWidth().clickable { onRequestAdvisory(med) }) { Row(Modifier.padding(16.dp)) { Column(Modifier.weight(1f)) { Text(med.name, fontWeight = FontWeight.Bold); Text(med.dosage) }; Icon(Icons.Default.ChevronRight, null) } } }
     }
+}
 
-    editingMedication?.let { med ->
-        AddMedicationDialog(
-            initialName = med.name,
-            initialDosage = med.dosage,
-            initialOffsetHours = (med.frequencyOffset / 3600000.0).toString(),
-            initialFoodRequirement = med.foodRequirement,
-            onDismiss = { editingMedication = null },
-            onConfirm = { name, dosage, offset, frequency, foodReq ->
-                onUpdateMedication(med.copy(name = name, dosage = dosage, frequencyOffset = offset, foodRequirement = foodReq))
-                editingMedication = null
-            }
-        )
+@Composable
+fun MealSyncDashboard(windows: List<OptimalEatingWindow>, is24h: Boolean, depletions: List<String>, refs: List<NutrientReference>) {
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        item { Text("Adaptive Nutrition", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) }
+        if (depletions.isNotEmpty()) item { Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) { Column(Modifier.padding(16.dp)) { depletions.forEach { Text("• $it") } } } }
+        items(windows) { w -> Card { Column(Modifier.padding(16.dp)) { Text("${w.startTime} - ${w.endTime}", fontWeight = FontWeight.Bold); Text(w.reason) } } }
     }
+}
+
+@Composable
+fun SleepCheckInDialog(onDismiss: () -> Unit, onConfirm: (Int, Int, String) -> Unit) {
+    var q by remember { mutableStateOf(5f) }; var r by remember { mutableStateOf(5f) }; var m by remember { mutableStateOf("Neutral") }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Sleep Check-in") }, text = { Column { Text("Quality: ${q.toInt()}"); Slider(q, {q=it}, valueRange=1f..10f); Text("Restfulness: ${r.toInt()}"); Slider(r, {r=it}, valueRange=1f..10f) } }, confirmButton = { Button({ onConfirm(q.toInt(), r.toInt(), m) }) { Text("Log") } })
+}
+
+@Composable
+fun AppetiteLogDialog(onDismiss: () -> Unit, onConfirm: (Int, Int) -> Unit) {
+    var h by remember { mutableStateOf(5f) }; var d by remember { mutableStateOf(1f) }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Appetite") }, text = { Column { Text("Hunger: ${h.toInt()}"); Slider(h, {h=it}, valueRange=1f..10f); Text("Difficulty: ${d.toInt()}"); Slider(d, {d=it}, valueRange=1f..10f) } }, confirmButton = { Button({ onConfirm(h.toInt(), d.toInt()) }) { Text("Save") } })
+}
+
+@Composable
+fun AddGoalDialog(onDismiss: () -> Unit, onConfirm: (String, String, Long?) -> Unit) {
+    var d by remember { mutableStateOf("") }; var s by remember { mutableStateOf("") }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("New Goal") }, text = { Column { OutlinedTextField(d, {d=it}, label={Text("Goal")}); OutlinedTextField(s, {s=it}, label={Text("Symptom")}) } }, confirmButton = { Button({ onConfirm(d, s, null) }) { Text("Save") } })
+}
+
+@Composable
+fun NutrientAdvisoryDialog(adv: NutrientAdvisory, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Nutrient Check") }, text = { Column { Text(adv.summary, fontWeight = FontWeight.Bold); adv.warnings.forEach { Text("• $it", color = Color.Red) } } }, confirmButton = { Button(onConfirm) { Text("Log Anyway") } })
+}
+
+@Composable
+fun PRNAdvisoryDialog(adv: PRNAdvisory, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Safety Check") }, text = { Column { Text(adv.reason); if(!adv.isApproved) Text("Alternative: ${adv.alternativeAdvice}", fontWeight = FontWeight.Bold) } }, confirmButton = { if(adv.isApproved) Button(onConfirm) { Text("Log") } })
 }
 
 @Composable
 fun InsightCard(title: String, insight: String, icon: ImageVector, color: Color = MaterialTheme.colorScheme.tertiaryContainer, onDismiss: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = color)
-    ) {
+    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = color)) {
         Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Dismiss", modifier = Modifier.size(16.dp))
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = insight, style = MaterialTheme.typography.bodyMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) { Icon(icon, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text(title, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)); IconButton(onDismiss, Modifier.size(24.dp)) { Icon(Icons.Default.Close, null, Modifier.size(16.dp)) } }
+            Text(insight, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp))
         }
     }
 }
 
 @Composable
-fun WakeTimeHeader(tWakeEpoch: Long, timeFormatter: DateTimeFormatter, onEdit: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onEdit() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(text = "T-Wake Anchor", style = MaterialTheme.typography.labelMedium)
-                Text(
-                    text = timeFormatter.format(Instant.ofEpochMilli(tWakeEpoch)),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Icon(Icons.Default.Edit, contentDescription = "Edit")
+fun WakeTimeHeader(t: Long, f: DateTimeFormatter, onEdit: () -> Unit) {
+    Card(Modifier.fillMaxWidth().clickable { onEdit() }, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column { Text("T-Wake Anchor", style = MaterialTheme.typography.labelMedium); Text(f.format(Instant.ofEpochMilli(t)), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }
+            Icon(Icons.Default.Edit, null)
         }
     }
 }
 
 @Composable
-fun EmptyTimelineMessage() {
-    Text(
-        text = "No medications scheduled. Tap + to add one.",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 32.dp).fillMaxWidth(),
-        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-    )
-}
-
-@Composable
-fun TimelineItem(
-    med: MedicationRecord,
-    tWakeEpoch: Long,
-    timeFormatter: DateTimeFormatter,
-    onEdit: () -> Unit,
-    onDuplicate: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val scheduledTime = Instant.ofEpochMilli(tWakeEpoch).plusMillis(med.frequencyOffset)
-
-        Text(
-            text = timeFormatter.format(scheduledTime),
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.width(70.dp)
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Box(modifier = Modifier
-            .size(8.dp)
-            .background(MaterialTheme.colorScheme.primary, CircleShape))
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Card(
-            modifier = Modifier.weight(1f),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = med.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(text = med.dosage, style = MaterialTheme.typography.bodySmall)
-                    if (med.foodRequirement != "NONE") {
-                        Text(text = "Food: ${med.foodRequirement}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-                IconButton(onClick = onDuplicate) { Icon(Icons.Default.ContentCopy, contentDescription = "Duplicate", modifier = Modifier.size(18.dp)) }
-                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(18.dp)) }
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error) }
+fun TimelineItem(med: MedicationRecord, t: Long, f: DateTimeFormatter, onEdit: () -> Unit, onDuplicate: () -> Unit, onDelete: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(f.format(Instant.ofEpochMilli(t).plusMillis(med.frequencyOffset)), style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(70.dp))
+        Spacer(Modifier.width(8.dp)); Box(Modifier.size(8.dp).background(MaterialTheme.colorScheme.primary, CircleShape)); Spacer(Modifier.width(8.dp))
+        Card(Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) { Text(med.name, fontWeight = FontWeight.Bold); Text(med.dosage, style = MaterialTheme.typography.bodySmall) }
+                IconButton(onDuplicate) { Icon(Icons.Default.ContentCopy, null, Modifier.size(18.dp)) }
+                IconButton(onEdit) { Icon(Icons.Default.Edit, null, Modifier.size(18.dp)) }
+                IconButton(onDelete) { Icon(Icons.Default.Delete, null, Modifier.size(18.dp), tint = Color.Red) }
             }
         }
     }
@@ -1192,98 +370,15 @@ fun TimelineItem(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddMedicationDialog(
-    initialName: String = "",
-    initialDosage: String = "",
-    initialOffsetHours: String = "1",
-    initialFrequency: Int = 1,
-    initialFoodRequirement: String = "NONE",
-    onDismiss: () -> Unit,
-    onConfirm: (String, String, Long, Int, String) -> Unit
-) {
-    var name by remember { mutableStateOf(initialName) }
-    var dosage by remember { mutableStateOf(initialDosage) }
-    var offsetHours by remember { mutableStateOf(initialOffsetHours) }
-    var frequency by remember { mutableStateOf(initialFrequency.toString()) }
-    var foodReq by remember { mutableStateOf(initialFoodRequirement) }
-    
-    LaunchedEffect(initialName, initialDosage, initialFrequency, initialFoodRequirement) {
-        name = initialName
-        dosage = initialDosage
-        frequency = initialFrequency.toString()
-        foodReq = initialFoodRequirement
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (initialName.isEmpty() && initialDosage.isEmpty()) "New Medication" else "Review Medication") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
-                OutlinedTextField(value = dosage, onValueChange = { dosage = it }, label = { Text("Dosage") })
-                OutlinedTextField(value = offsetHours, onValueChange = { offsetHours = it }, label = { Text("First T-Wake Offset (Hours)") })
-                OutlinedTextField(value = frequency, onValueChange = { frequency = it }, label = { Text("Frequency (times/day)") })
-                
-                Text("Food Requirement:", style = MaterialTheme.typography.labelMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = foodReq == "NONE", onClick = { foodReq = "NONE" }, label = { Text("None") })
-                    FilterChip(selected = foodReq == "WITH_FOOD", onClick = { foodReq = "WITH_FOOD" }, label = { Text("With Food") })
-                    FilterChip(selected = foodReq == "EMPTY_STOMACH", onClick = { foodReq = "EMPTY_STOMACH" }, label = { Text("Empty Stomach") })
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = { 
-                val offset = ((offsetHours.toDoubleOrNull() ?: 1.0) * 3600000L).toLong()
-                val freq = frequency.toIntOrNull() ?: 1
-                onConfirm(name, dosage, offset, freq, foodReq) 
-            }) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
+fun AddMedicationDialog(iN: String, iD: String, iO: String, iF: Int, iFR: String, onDismiss: () -> Unit, onConfirm: (String, String, Long, Int, String) -> Unit) {
+    var name by remember { mutableStateOf(iN) }; var dosage by remember { mutableStateOf(iD) }; var offset by remember { mutableStateOf(iO) }; var freq by remember { mutableStateOf(iF.toString()) }; var food by remember { mutableStateOf(iFR) }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Medication") }, text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(name, {name=it}, label={Text("Name")}); OutlinedTextField(dosage, {dosage=it}, label={Text("Dosage")}); OutlinedTextField(offset, {offset=it}, label={Text("Offset (h)")}); OutlinedTextField(freq, {freq=it}, label={Text("Freq")}); Row { FilterChip(food=="NONE", {food="NONE"}, label={Text("None")}); Spacer(Modifier.width(4.dp)); FilterChip(food=="WITH_FOOD", {food="WITH_FOOD"}, label={Text("Food")}) } } }, confirmButton = { Button(onClick = { onConfirm(name, dosage, ((offset.toDoubleOrNull() ?: 1.0)*3600000L).toLong(), freq.toIntOrNull() ?: 1, food) }) { Text("Save") } }, dismissButton = { TextButton(onDismiss) { Text("Cancel") } })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WakeTimePickerDialog(
-    initialEpoch: Long,
-    is24Hour: Boolean,
-    onDismiss: () -> Unit,
-    onConfirm: (Long) -> Unit
-) {
-    val initialTime = Instant.ofEpochMilli(initialEpoch).atZone(ZoneId.systemDefault()).toLocalTime()
-    val timePickerState = rememberTimePickerState(
-        initialHour = initialTime.hour,
-        initialMinute = initialTime.minute,
-        is24Hour = is24Hour
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Set Wake Time") },
-        text = {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                TimePicker(state = timePickerState)
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                val newTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
-                val newEpoch = Instant.now().atZone(ZoneId.systemDefault())
-                    .with(newTime)
-                    .toInstant()
-                    .toEpochMilli()
-                onConfirm(newEpoch)
-            }) {
-                Text("Confirm")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
+fun WakeTimePickerDialog(iE: Long, is24: Boolean, onDismiss: () -> Unit, onConfirm: (Long) -> Unit) {
+    val t = Instant.ofEpochMilli(iE).atZone(ZoneId.systemDefault()).toLocalTime()
+    val s = rememberTimePickerState(t.hour, t.minute, is24)
+    AlertDialog(onDismissRequest = onDismiss, text = { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { TimePicker(s) } }, confirmButton = { Button(onClick = { onConfirm(Instant.now().atZone(ZoneId.systemDefault()).with(LocalTime.of(s.hour, s.minute)).toInstant().toEpochMilli()) }) { Text("OK") } }, dismissButton = { TextButton(onDismiss) { Text("Cancel") } })
 }

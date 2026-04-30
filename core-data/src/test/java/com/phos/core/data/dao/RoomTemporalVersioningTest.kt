@@ -60,6 +60,7 @@ class RoomTemporalVersioningTest {
                 markAsInactiveCalled = true
                 assertEquals(oldId, id)
             }
+            override fun getGIIrritantIdsFlow(maxLong: Long): kotlinx.coroutines.flow.Flow<List<String>> = mock()
             override suspend fun deletePermanently(id: Long) {}
             
             // Re-implementing the logic from the interface to test it in unit test

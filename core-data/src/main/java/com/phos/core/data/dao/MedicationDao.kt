@@ -35,6 +35,9 @@ interface MedicationDao {
     @Query("UPDATE medications SET validTo = :timestamp WHERE id = :id")
     suspend fun markAsInactive(id: Long, timestamp: Long)
 
+    @Query("SELECT medicationId FROM medications WHERE (name LIKE '%ibuprofen%' OR name LIKE '%aspirin%' OR name LIKE '%naproxen%' OR name LIKE '%diclofenac%') AND validTo = :maxLong")
+    fun getGIIrritantIdsFlow(maxLong: Long = Long.MAX_VALUE): Flow<List<String>>
+
     @Query("DELETE FROM medications WHERE id = :id")
     suspend fun deletePermanently(id: Long)
 }
