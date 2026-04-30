@@ -66,6 +66,14 @@ class DataLayerRepository(
         }
     }
 
+    suspend fun updateAcousticDb(db: Double) {
+        dataStore.updateData { currentState ->
+            currentState.toBuilder()
+                .setLatestAcousticDb(db)
+                .build()
+        }
+    }
+
     suspend fun addMedication(medicationId: String, name: String, scheduledTime: Long) {
         dataStore.updateData { currentState ->
             val medication = com.phos.core.data.proto.Medication.newBuilder()

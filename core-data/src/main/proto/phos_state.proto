@@ -12,6 +12,7 @@ message PhosState {
   MealPreferences meal_preferences = 6;
   bool autonomic_strain_detected = 7;
   int64 safety_tightening_millis = 8;
+  double latest_acoustic_db = 9;
 }
 
 message Medication {

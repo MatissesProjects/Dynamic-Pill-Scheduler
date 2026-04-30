@@ -43,9 +43,10 @@ import com.phos.core.data.model.*
         EnvironmentalLog::class,
         ChelationRule::class,
         BioVelocityLog::class,
-        BioBaseline::class
+        BioBaseline::class,
+        AcousticLog::class
     ],
-    version = 27
+    version = 28
 )
 @TypeConverters(Converters::class)
 abstract class PhosDatabase : RoomDatabase() {
@@ -78,4 +79,5 @@ abstract class PhosDatabase : RoomDatabase() {
     abstract fun postureDao(): PostureDao
     abstract fun environmentalDao(): EnvironmentalDao
     abstract fun bioVelocityDao(): BioVelocityDao
+    abstract fun acousticDao(): AcousticDao
 }
