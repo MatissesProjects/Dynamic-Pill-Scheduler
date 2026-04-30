@@ -70,6 +70,7 @@ fun MainDashboard(
     bioVelocityInsight: String? = null,
     safetyStatus: SafetyStatus = SafetyStatus.GREEN,
     safetyProof: ZkpPayload? = null,
+    acousticInsight: AcousticInsight? = null,
     voiceState: VoiceState,
     voiceExtractedEntities: ExtractedEntities?,
     onAddMedication: (String, String, Long, Int, String) -> Unit,
@@ -221,6 +222,7 @@ fun VerticalTimeline(
     bioVelocityInsight: String? = null,
     safetyStatus: SafetyStatus = SafetyStatus.GREEN,
     safetyProof: ZkpPayload? = null,
+    acousticInsight: AcousticInsight? = null,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
     onDuplicateMedication: (MedicationRecord) -> Unit,
@@ -244,6 +246,7 @@ fun VerticalTimeline(
                 showProofDialog = true
             } 
         }
+        acousticInsight?.let { item { InsightCard(it.title, it.description, Icons.Default.VolumeUp, when(it.riskLevel) { AcousticRiskLevel.CRITICAL -> MaterialTheme.colorScheme.errorContainer; AcousticRiskLevel.HIGH -> MaterialTheme.colorScheme.secondaryContainer; else -> MaterialTheme.colorScheme.tertiaryContainer }) { onDismissInsight("acoustic") } } }
         if (wasInterrupted) item { InsightCard("Sleep Session Bridged", "Detected and bridged short wake gaps.", Icons.Default.History) { } }
         sleepCalibrationInsight?.let { item { InsightCard(it.title, it.description, Icons.Default.Bedtime, MaterialTheme.colorScheme.tertiaryContainer) { } } }
         optimizationSuggestions.forEach { item { InsightCard("Goal Optimization", it.description, Icons.Default.ModelTraining, MaterialTheme.colorScheme.tertiaryContainer) { } } }

@@ -88,6 +88,7 @@ class DashboardViewModel(
     private val bioVelocityEngine = BioVelocityEngine(injectedNanoEngine ?: GeminiNanoEngine(application))
     private val safetyAggregator = SafetyAggregator()
     private val zkpEngine = ZkpEngine()
+    private val acousticStressEngine = AcousticStressEngine()
     
     private val nanoEngine = injectedNanoEngine ?: GeminiNanoEngine(application)
     private val neuroLoadEngine = NeuroLoadEngine(nanoEngine)
@@ -305,6 +306,9 @@ class DashboardViewModel(
     private val _ebac = MutableStateFlow<Double>(0.0)
     val ebac: StateFlow<Double> = _ebac.asStateFlow()
 
+    private val _acousticInsight = MutableStateFlow<AcousticInsight?>(null)
+    val acousticInsight: StateFlow<AcousticInsight?> = _acousticInsight.asStateFlow()
+
     val postureRecommendation: StateFlow<PosturalRecommendation?> = flow {
         while (true) {
             val recentFood = interactionDao.getRecentFoodLogs(System.currentTimeMillis() - 2 * 3600000L)
@@ -329,6 +333,7 @@ class DashboardViewModel(
             syncPosture()
             syncEnvironmentalStrain()
             syncBioVelocity()
+            syncAcousticStress()
             
             launch {
                 while (true) {
@@ -341,8 +346,24 @@ class DashboardViewModel(
                     syncPosture()
                     syncEnvironmentalStrain()
                     syncBioVelocity()
+                    syncAcousticStress()
                 }
             }
+        }
+    }
+
+    private fun syncAcousticStress() {
+        viewModelScope.launch {
+            val db = phosState.value.latestAcousticDb
+            if (db <= 0) return@launch
+            
+            val now = Instant.now()
+            acousticDao.insertLog(AcousticLog(decibels = db, durationMillis = 1000, timestamp = now.toEpochMilli()))
+            
+            val hrSamples = healthSyncManager.fetchHeartRateForSession(now.minus(5, ChronoUnit.MINUTES), now) ?: emptyList()
+            val recentBiometrics = hrSamples.map { BiometricLog(type = BiometricType.HEART_RATE, value = it.beatsPerMinute.toDouble(), timestamp = it.time) }
+            
+            _acousticInsight.value = acousticStressEngine.analyzeAcousticStress(db, medications.value, recentBiometrics)
         }
     }
 

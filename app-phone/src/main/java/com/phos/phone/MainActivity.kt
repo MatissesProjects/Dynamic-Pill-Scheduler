@@ -63,6 +63,7 @@ class MainActivity : ComponentActivity() {
 
             val safetyStatus by viewModel.safetyStatus.collectAsState()
             val safetyProof by viewModel.safetyProof.collectAsState()
+            val acousticInsight by viewModel.acousticInsight.collectAsState()
 
             val voiceState by viewModel.voiceManager.state.collectAsState()
             val voiceExtractedEntities by viewModel.voiceExtractedEntities.collectAsState()
@@ -101,6 +102,7 @@ class MainActivity : ComponentActivity() {
                         bioVelocityInsight = bioVelocityInsight,
                         safetyStatus = safetyStatus,
                         safetyProof = safetyProof,
+                        acousticInsight = acousticInsight,
                         voiceState = voiceState,
                         voiceExtractedEntities = voiceExtractedEntities,
                         onAddMedication = { name, dosage, offset, frequency, foodRequirement ->
