@@ -68,6 +68,8 @@ fun MainDashboard(
     thermalInsight: ThermalInsight?,
     bioVelocityLogs: List<BioVelocityLog> = emptyList(),
     bioVelocityInsight: String? = null,
+    safetyStatus: SafetyStatus = SafetyStatus.GREEN,
+    safetyProof: ZkpPayload? = null,
     voiceState: VoiceState,
     voiceExtractedEntities: ExtractedEntities?,
     onAddMedication: (String, String, Long, Int, String) -> Unit,
@@ -95,6 +97,7 @@ fun MainDashboard(
     onAddHealthGoal: (String, String, Long?) -> Unit,
     onUpdateMealPreferences: (Long, Long, Long, Long, Long, Long) -> Unit,
     onLogSleepSubjective: (Int, Int, String) -> Unit,
+    onGenerateSafetyProof: () -> Unit = {},
     aiTextParser: (suspend (String) -> NutrientFacts?)? = null,
     aiVisionParser: (suspend (Bitmap) -> FoodScanResult?)? = null,
     aiPillVisionParser: (suspend (Bitmap) -> PillScanResult?)? = null
@@ -160,6 +163,10 @@ fun MainDashboard(
                     sleepCalibrationInsight = sleepCalibrationInsight,
                     neuroInsight = neuroInsight,
                     thermalInsight = thermalInsight,
+                    bioVelocityLogs = bioVelocityLogs,
+                    bioVelocityInsight = bioVelocityInsight,
+                    safetyStatus = safetyStatus,
+                    safetyProof = safetyProof,
                     onUpdateMedication = onUpdateMedication,
                     onDeleteMedication = onDeleteMedication,
                     onDuplicateMedication = onDuplicateMedication,
@@ -167,7 +174,8 @@ fun MainDashboard(
                     onDismissInsight = onDismissInsight,
                     onAcceptTravelProposal = onAcceptTravelProposal,
                     onDismissTravelProposal = onDismissTravelProposal,
-                    onConfirmHeavyLegs = onConfirmHeavyLegs
+                    onConfirmHeavyLegs = onConfirmHeavyLegs,
+                    onGenerateSafetyProof = onGenerateSafetyProof
                 )
                 1 -> PRNList(prnMedications, onRequestPRNAdvisory)
                 2 -> PillScannerScreen(onPillScanned = { result -> prefilledName = result.detectedName ?: "Pill"; prefilledDosage = result.detectedDosage ?: ""; prefilledFrequency = result.frequencyDosesPerDay; showAddDialog = true; selectedTab = 0 }, onFoodScanned = { result -> lastScannedFoodResult = result; if (result.nutrients != null) onRequestNutrientAdvisory(result.detectedName ?: "Food", result.nutrients!!) else { onLogFood(result.detectedName ?: "Food", result.category ?: "General", null); selectedTab = 3 } }, aiTextParser = aiTextParser, aiVisionParser = aiVisionParser, aiPillVisionParser = aiPillVisionParser)
@@ -211,6 +219,8 @@ fun VerticalTimeline(
     thermalInsight: ThermalInsight?,
     bioVelocityLogs: List<BioVelocityLog> = emptyList(),
     bioVelocityInsight: String? = null,
+    safetyStatus: SafetyStatus = SafetyStatus.GREEN,
+    safetyProof: ZkpPayload? = null,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
     onDuplicateMedication: (MedicationRecord) -> Unit,
@@ -218,14 +228,22 @@ fun VerticalTimeline(
     onDismissInsight: (String) -> Unit,
     onAcceptTravelProposal: (TravelProposal) -> Unit,
     onDismissTravelProposal: () -> Unit,
-    onConfirmHeavyLegs: (CardioMismatchInsight) -> Unit
+    onConfirmHeavyLegs: (CardioMismatchInsight) -> Unit,
+    onGenerateSafetyProof: () -> Unit = {}
 ) {
     val timeFormatter = DateTimeFormatter.ofPattern(if (is24Hour) "HH:mm" else "hh:mm a").withZone(ZoneId.systemDefault())
     var showTimePicker by remember { mutableStateOf(false) }
     var editingMedication by remember { mutableStateOf<MedicationRecord?>(null) }
+    var showProofDialog by remember { mutableStateOf(false) }
 
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Spacer(Modifier.height(8.dp)); WakeTimeHeader(tWakeEpoch, timeFormatter) { showTimePicker = true } }
+        item { 
+            SafetyStatusCard(safetyStatus) { 
+                onGenerateSafetyProof()
+                showProofDialog = true
+            } 
+        }
         if (wasInterrupted) item { InsightCard("Sleep Session Bridged", "Detected and bridged short wake gaps.", Icons.Default.History) { } }
         sleepCalibrationInsight?.let { item { InsightCard(it.title, it.description, Icons.Default.Bedtime, MaterialTheme.colorScheme.tertiaryContainer) { } } }
         optimizationSuggestions.forEach { item { InsightCard("Goal Optimization", it.description, Icons.Default.ModelTraining, MaterialTheme.colorScheme.tertiaryContainer) { } } }
@@ -250,15 +268,57 @@ fun VerticalTimeline(
     }
     if (showTimePicker) WakeTimePickerDialog(tWakeEpoch, is24Hour, { showTimePicker = false }, { onUpdateWakeTime(it); showTimePicker = false })
     editingMedication?.let { med -> AddMedicationDialog(med.name, med.dosage, (med.frequencyOffset/3600000.0).toString(), 1, med.foodRequirement, { editingMedication = null }, { n, d, o, f, fr -> onUpdateMedication(med.copy(name = n, dosage = d, frequencyOffset = o, foodRequirement = fr)); editingMedication = null }) }
+    if (showProofDialog && safetyProof != null) {
+        AlertDialog(
+            onDismissRequest = { showProofDialog = false },
+            title = { Text("Care Mesh Proof") },
+            text = { 
+                Column {
+                    Text("This proof mathematically verifies your ${safetyProof.status} status without revealing your raw health data.", style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Commitment: ${safetyProof.commitment.take(16)}...", fontWeight = FontWeight.Bold)
+                    Text("Proof Z: ${safetyProof.proofZ.take(16)}...", fontWeight = FontWeight.Bold)
+                }
+            },
+            confirmButton = { Button({ showProofDialog = false }) { Text("Close") } }
+        )
+    }
 }
 
 @Composable
-fun SettingsScreen(state: PhosState, onToggleTimeFormat: (Boolean) -> Unit, onDetectTravel: () -> Unit, healthGoals: List<HealthGoal>, onAddGoal: () -> Unit, onUpdateMeals: (Long, Long, Long, Long, Long, Long) -> Unit) {
+fun SafetyStatusCard(status: SafetyStatus, onShare: () -> Unit) {
+    val color = when (status) {
+        SafetyStatus.GREEN -> Color(0xFF4CAF50)
+        SafetyStatus.YELLOW -> Color(0xFFFFC107)
+        SafetyStatus.RED -> Color(0xFFF44336)
+    }
+    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.2f))) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(24.dp).background(color, CircleShape))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Safety Status: $status", fontWeight = FontWeight.Bold)
+                Text("Privacy-Preserving Care Mesh Active", style = MaterialTheme.typography.labelSmall)
+            }
+            IconButton(onClick = onShare) { Icon(Icons.Default.Share, null) }
+        }
+    }
+}
+
+@Composable
+fun SettingsScreen(state: PhosState, onToggleTimeFormat: (Boolean) -> Unit, onDetectTravel: () -> Unit, healthGoals: List<HealthGoal>, onAddGoal: () -> Unit, onUpdateMeals: (Long, Long, Long, Long, Long, Long) -> Unit, onGenerateSafetyProof: () -> Unit = {}) {
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         ListItem(headlineContent = { Text("24-Hour Format") }, trailingContent = { Switch(state.is24Hour, onToggleTimeFormat) })
         Divider()
         Button(onClick = onDetectTravel, Modifier.fillMaxWidth()) { Icon(Icons.Default.Flight, null); Spacer(Modifier.width(8.dp)); Text("Detect Travel") }
+        Divider()
+        Text("Care Mesh", fontWeight = FontWeight.Bold)
+        Button(onClick = onGenerateSafetyProof, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) { 
+            Icon(Icons.Default.Security, null)
+            Spacer(Modifier.width(8.dp))
+            Text("Generate Privacy-Preserving Proof") 
+        }
         Divider()
         Text("Goals", fontWeight = FontWeight.Bold); healthGoals.forEach { Text("• ${it.description}", style = MaterialTheme.typography.bodySmall) }
         Button(onClick = onAddGoal, Modifier.fillMaxWidth()) { Icon(Icons.Default.AddTask, null); Text("Add Goal") }

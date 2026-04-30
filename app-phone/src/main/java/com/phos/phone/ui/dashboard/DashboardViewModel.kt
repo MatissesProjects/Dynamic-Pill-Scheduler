@@ -86,6 +86,8 @@ class DashboardViewModel(
     private val thermalShieldEngine = ThermalShieldEngine()
     private val environmentalCorrelationEngine = EnvironmentalCorrelationEngine()
     private val bioVelocityEngine = BioVelocityEngine(injectedNanoEngine ?: GeminiNanoEngine(application))
+    private val safetyAggregator = SafetyAggregator()
+    private val zkpEngine = ZkpEngine()
     
     private val nanoEngine = injectedNanoEngine ?: GeminiNanoEngine(application)
     private val neuroLoadEngine = NeuroLoadEngine(nanoEngine)
@@ -575,6 +577,28 @@ class DashboardViewModel(
     suspend fun analyzeMealWithNano(b: android.graphics.Bitmap): com.phos.phone.ui.scanner.FoodScanResult? { val j = nanoEngine.analyzeMealImage(b) ?: return null; return try { com.phos.phone.ui.scanner.FoodScanResult(detectedName = Regex("\"detectedName\":\\s*\"(.*?)\"").find(j)?.groupValues?.get(1) ?: "Unknown Meal", category = Regex("\"category\":\\s*\"(.*?)\"").find(j)?.groupValues?.get(1) ?: "General", nutrients = NutrientFacts(calories = Regex("\"calories\":\\s*(\\d+)").find(j)?.groupValues?.get(1)?.toInt() ?: 400, proteinG = Regex("\"proteinG\":\\s*([\\d.]+)").find(j)?.groupValues?.get(1)?.toDouble() ?: 25.0, calciumMg = Regex("\"calciumMg\":\\s*([\\d.]+)").find(j)?.groupValues?.get(1)?.toDouble() ?: 50.0, ingredients = if (j.contains("ingredients")) Regex("\"ingredients\":\\s*\\[(.*?)\\]").find(j)?.groupValues?.get(1)?.split(",")?.map { it.replace("\"", "").trim() } ?: emptyList() else emptyList()), confidence = 1.0f) } catch (e: Exception) { null } }
     suspend fun analyzePillWithNano(b: android.graphics.Bitmap): com.phos.phone.ui.scanner.PillScanResult? { val j = nanoEngine.analyzePillImage(b) ?: return null; return try { com.phos.phone.ui.scanner.PillScanResult(detectedName = Regex("\"detectedName\":\\s*\"(.*?)\"").find(j)?.groupValues?.get(1), detectedDosage = Regex("\"detectedDosage\":\\s*\"(.*?)\"").find(j)?.groupValues?.get(1), detectedColor = Regex("\"detectedColor\":\\s*\"(.*?)\"").find(j)?.groupValues?.get(1), detectedShape = Regex("\"detectedShape\":\\s*\"(.*?)\"").find(j)?.groupValues?.get(1), frequencyDosesPerDay = Regex("\"frequencyDosesPerDay\":\\s*(\\d+)").find(j)?.groupValues?.get(1)?.toIntOrNull() ?: 1, confidence = 1.0f) } catch (e: Exception) { null } }
     
+    val safetyStatus: StateFlow<SafetyStatus> = combine(
+        medications, hfInsight, betaBlockerInsights, sideEffectAlerts
+    ) { meds, hf, bb, sideEffects ->
+        // For production, this would be calculated from real dose logs.
+        val adherence = if (meds.isEmpty()) 1.0 else 0.98 
+        safetyAggregator.calculateStatus(
+            adherenceScore = adherence,
+            hfInsight = hf,
+            betaBlockerInsights = bb,
+            activeCollisions = sideEffects.size
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SafetyStatus.GREEN)
+
+    private val _safetyProof = MutableStateFlow<ZkpPayload?>(null)
+    val safetyProof: StateFlow<ZkpPayload?> = _safetyProof.asStateFlow()
+
+    fun generateSafetyProof() {
+        viewModelScope.launch {
+            _safetyProof.value = zkpEngine.generateProof(safetyStatus.value)
+        }
+    }
+
     private fun seedKnowledgeBase() {
         viewModelScope.launch {
             listOf(AbsorptionRule(medicationId = "sucralfate", requiredGapMinutes = 120, reason = "Take Sucralfate on an empty stomach."), AbsorptionRule(medicationId = "levothyroxine", requiredGapMinutes = 60, reason = "Take Levothyroxine 60 mins before other meds/food.")).forEach { interactionDao.insertAbsorptionRule(it) }

@@ -60,10 +60,13 @@ class MainActivity : ComponentActivity() {
             val thermalInsight by viewModel.thermalInsight.collectAsState()
             val bioVelocityLogs by viewModel.bioVelocityLogs.collectAsState()
             val bioVelocityInsight by viewModel.bioVelocityInsight.collectAsState()
-            
+
+            val safetyStatus by viewModel.safetyStatus.collectAsState()
+            val safetyProof by viewModel.safetyProof.collectAsState()
+
             val voiceState by viewModel.voiceManager.state.collectAsState()
             val voiceExtractedEntities by viewModel.voiceExtractedEntities.collectAsState()
-            
+
             PhosTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize()
@@ -96,6 +99,8 @@ class MainActivity : ComponentActivity() {
                         thermalInsight = thermalInsight,
                         bioVelocityLogs = bioVelocityLogs,
                         bioVelocityInsight = bioVelocityInsight,
+                        safetyStatus = safetyStatus,
+                        safetyProof = safetyProof,
                         voiceState = voiceState,
                         voiceExtractedEntities = voiceExtractedEntities,
                         onAddMedication = { name, dosage, offset, frequency, foodRequirement ->
@@ -141,7 +146,6 @@ class MainActivity : ComponentActivity() {
                             viewModel.processVoiceCommand(text, segments)
                         },
                         onClearVoiceResults = {
-
                             viewModel.clearVoiceResults()
                         },
                         onAcceptTravelProposal = { proposal ->
@@ -174,6 +178,9 @@ class MainActivity : ComponentActivity() {
                         onLogSleepSubjective = { qual, rest, mood ->
                             viewModel.logSleepSubjective(qual, rest, mood)
                         },
+                        onGenerateSafetyProof = {
+                            viewModel.generateSafetyProof()
+                        },
                         aiTextParser = { text ->
                             viewModel.parseNutritionTextWithNano(text)
                         },
@@ -189,3 +196,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
