@@ -58,6 +58,8 @@ class MainActivity : ComponentActivity() {
             
             val neuroInsight by viewModel.neuroInsight.collectAsState()
             val thermalInsight by viewModel.thermalInsight.collectAsState()
+            val bioVelocityLogs by viewModel.bioVelocityLogs.collectAsState()
+            val bioVelocityInsight by viewModel.bioVelocityInsight.collectAsState()
             
             val voiceState by viewModel.voiceManager.state.collectAsState()
             val voiceExtractedEntities by viewModel.voiceExtractedEntities.collectAsState()
@@ -92,6 +94,8 @@ class MainActivity : ComponentActivity() {
                         sleepSubjectiveLogs = sleepSubjectiveLogs,
                         neuroInsight = neuroInsight,
                         thermalInsight = thermalInsight,
+                        bioVelocityLogs = bioVelocityLogs,
+                        bioVelocityInsight = bioVelocityInsight,
                         voiceState = voiceState,
                         voiceExtractedEntities = voiceExtractedEntities,
                         onAddMedication = { name, dosage, offset, frequency, foodRequirement ->

@@ -66,6 +66,8 @@ fun MainDashboard(
     sleepSubjectiveLogs: List<SleepSubjectiveLog>,
     neuroInsight: NeuroCognitiveInsight?,
     thermalInsight: ThermalInsight?,
+    bioVelocityLogs: List<BioVelocityLog> = emptyList(),
+    bioVelocityInsight: String? = null,
     voiceState: VoiceState,
     voiceExtractedEntities: ExtractedEntities?,
     onAddMedication: (String, String, Long, Int, String) -> Unit,
@@ -207,6 +209,8 @@ fun VerticalTimeline(
     sleepCalibrationInsight: SleepCalibrationInsight?,
     neuroInsight: NeuroCognitiveInsight?,
     thermalInsight: ThermalInsight?,
+    bioVelocityLogs: List<BioVelocityLog> = emptyList(),
+    bioVelocityInsight: String? = null,
     onUpdateMedication: (MedicationRecord) -> Unit,
     onDeleteMedication: (Long) -> Unit,
     onDuplicateMedication: (MedicationRecord) -> Unit,
@@ -234,6 +238,7 @@ fun VerticalTimeline(
         travelProposal?.let { p -> item { Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) { Column(Modifier.padding(16.dp)) { Text("Travel Detected: ${p.destination}", fontWeight = FontWeight.Bold); Text(p.explanation ?: "", style = MaterialTheme.typography.bodySmall); Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { TextButton(onClick = onDismissTravelProposal) { Text("Dismiss") }; Button(onClick = { onAcceptTravelProposal(p) }) { Text("Accept") } } } } } }
         postureRecommendation?.let { item { InsightCard(it.title, it.recommendation, Icons.Default.VerticalAlignTop) { onDismissInsight("posture") } } }
         thermalInsight?.let { item { if(it.riskLevel != ThermalRiskLevel.LOW) InsightCard("Thermal Strain: ${it.riskLevel}", it.advice ?: "", Icons.Default.Thermostat, if(it.riskLevel == ThermalRiskLevel.CRITICAL) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer) { onDismissInsight("thermal") } } }
+        bioVelocityLogs.firstOrNull()?.let { log -> item { InsightCard("Biological Age: ${"%.1f".format(log.biologicalAge)}", bioVelocityInsight ?: "Aging at ${"%.2f".format(log.paceOfAging)}x speed. Adherence impact: ${"%.1f".format(log.adherenceImpact)}y saved.", Icons.Default.Timeline, when { log.paceOfAging < 0.9 -> MaterialTheme.colorScheme.tertiaryContainer; log.paceOfAging > 1.1 -> MaterialTheme.colorScheme.errorContainer; else -> MaterialTheme.colorScheme.secondaryContainer }) { onDismissInsight("bio_velocity") } } }
         napOverlaps.forEach { item { InsightCard("Nap Detected: ${it.medicationName} Shift", "Suggested shift: ${it.suggestedShiftMillis/60000} mins.", Icons.Default.Bedtime) { onDismissInsight("nap_${it.medicationId}") } } }
         healthInsights.forEach { item { InsightCard("Absorption Spacing", it, Icons.Default.Info) { onDismissInsight("absorption") } } }
         sideEffectAlerts.forEach { item { InsightCard("Side Effect Watch: ${it.sideEffect}", it.advice, Icons.Default.Warning, MaterialTheme.colorScheme.errorContainer) { onDismissInsight("side_effect") } } }
